@@ -941,24 +941,23 @@ def save_telegram_offset(offset: int, path: str = TELEGRAM_OFFSET_PATH) -> None:
 def normalize_query_symbol(text: str) -> str | None:
     """把手機輸入轉成 XXXUSDT；無法辨識則 None。"""
     raw = (text or "").strip().upper()
-    if not raw or raw.startswith("/"):
-        # 允許 /btc /detail btc
+    if raw.startswith("/"):
         raw = raw.lstrip("/").strip().upper()
         if raw.startswith("DETAIL "):
             raw = raw[7:].strip()
         elif raw.startswith("D "):
             raw = raw[2:].strip()
-        elif raw in {"START", "HELP", "STATS", "JOURNAL", "JS"}:
-            return raw
     raw = raw.replace("-", "").replace("/", "").replace(" ", "")
-    if not raw or not raw.replace("USDT", "").isalnum():
+    if not raw:
         return None
-    if raw in {"START", "HELP", "STATS", "JOURNAL", "JS"}:
-        return raw
+    if raw in {"START", "HELP", "STATS", "JOURNAL", "JS", "統計"}:
+        return "HELP" if raw == "統計" else raw
+    # 只接受英數幣種，避免中文被誤加成 XXXUSDT
+    base = raw[:-4] if raw.endswith("USDT") else raw
+    if not base.isascii() or not base.isalnum() or not (2 <= len(base) <= 15):
+        return None
     if not raw.endswith("USDT"):
-        raw += "USDT"
-    if len(raw) < 6 or len(raw) > 20:
-        return None
+        raw = base + "USDT"
     return raw
 
 
