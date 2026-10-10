@@ -19,6 +19,10 @@ from typing import Any, Callable
 JOURNAL_PATH = Path(__file__).resolve().parent / "yes_journal.jsonl"
 TZ_TW = timezone(timedelta(hours=8))
 
+# 目前生效規則標籤（新訊號寫入此值；舊檔無欄位視為 legacy）
+CURRENT_RULESET = "v2"
+LEGACY_RULESET = "legacy"
+
 # 同一幣種同方向去重冷卻（秒）
 DEDUP_SECONDS = 4 * 3600
 # 結算最長觀察根數（15m × 96 ≈ 24h；1h 可另傳）
@@ -50,6 +54,7 @@ class JournalEntry:
     note: str = ""
     mfe_r: float = 0.0  # 最大有利偏移（R）
     mae_r: float = 0.0  # 最大不利偏移（R）
+    ruleset: str = LEGACY_RULESET  # legacy | v2（新規則單獨統計）
 
     def risk(self) -> float:
         return abs(self.entry - self.stop)
@@ -149,6 +154,7 @@ def record_yes_signals(
             structure=str(getattr(s, "structure", "")),
             missing_steps=str(getattr(s, "missing_steps", "")),
             status="open",
+            ruleset=CURRENT_RULESET,
         )
         append_entry(je, path)
         added.append(je)
@@ -386,9 +392,9 @@ def compute_stats(rows: list[JournalEntry] | None = None, path: Path = JOURNAL_P
     return st
 
 
-def print_stats(st: JournalStats) -> None:
+def print_stats(st: JournalStats, title: str = "YES 訊號追蹤統計") -> None:
     print()
-    print("══ YES 訊號追蹤統計 ══")
+    print(f"══ {title} ══")
     print(f"總筆數 {st.total} ｜ 未結算 {st.open_n} ｜ 勝 {st.win_n} ｜ 負 {st.loss_n} ｜ 超時 {st.timeout_n}")
     if st.win_n + st.loss_n > 0:
         print(f"勝率(不含超時) {st.win_rate:.1f}%  （win/(win+loss)）")
@@ -408,20 +414,42 @@ def print_stats(st: JournalStats) -> None:
     print()
 
 
+def rows_by_ruleset(rows: list[JournalEntry], ruleset: str) -> list[JournalEntry]:
+    return [r for r in rows if (r.ruleset or LEGACY_RULESET) == ruleset]
+
+
+def print_stats_by_ruleset(rows: list[JournalEntry] | None = None, path: Path = JOURNAL_PATH) -> None:
+    """全部 + 新規則(v2) + 舊規則(legacy) 分開印勝率。"""
+    rows = rows if rows is not None else load_journal(path)
+    print_stats(compute_stats(rows), "全部（含舊＋新）")
+    v2 = rows_by_ruleset(rows, CURRENT_RULESET)
+    legacy = rows_by_ruleset(rows, LEGACY_RULESET)
+    print_stats(compute_stats(v2), f"新規則 {CURRENT_RULESET}（單獨勝率）")
+    if legacy:
+        print_stats(compute_stats(legacy), f"舊規則 {LEGACY_RULESET}（對照）")
+    else:
+        print(f"（尚無 {LEGACY_RULESET} 舊紀錄）\n")
+
+
 def print_journal(rows: list[JournalEntry] | None = None, limit: int = 30) -> None:
     rows = rows if rows is not None else load_journal()
     rows = list(reversed(rows))[:limit]
     print()
     print(f"══ 訊號日記（最近 {len(rows)} 筆）══")
-    print(f"{'時間':<19} {'幣種':<12} {'邊':<4} {'狀態':<8} {'計畫RR':>6} {'實現R':>7} {'入場':>10}")
-    print("-" * 90)
+    print(
+        f"{'時間':<19} {'幣種':<12} {'邊':<4} {'狀態':<8} "
+        f"{'規則':<6} {'計畫RR':>6} {'實現R':>7} {'入場':>10}"
+    )
+    print("-" * 100)
     for r in rows:
         side = "多" if r.side == "long" else "空"
         st_map = {"open": "未結算", "win": "勝", "loss": "負", "timeout": "超時"}
         st = st_map.get(r.status, r.status)
         rr = f"{r.planned_rr:.1f}" if r.planned_rr else "-"
         real = f"{r.realized_r:+.2f}" if r.status != "open" else "-"
+        rs = (r.ruleset or LEGACY_RULESET)[:6]
         print(
-            f"{r.ts:<19} {r.symbol:<12} {side:<4} {st:<8} {rr:>6} {real:>7} {r.entry:>10.6g}"
+            f"{r.ts:<19} {r.symbol:<12} {side:<4} {st:<8} "
+            f"{rs:<6} {rr:>6} {real:>7} {r.entry:>10.6g}"
         )
     print()

@@ -34,11 +34,15 @@ def now_tw() -> datetime:
     return datetime.now(TZ_TW)
 
 from sr_logic import ChecklistResult, evaluate_setup, parse_klines
+from risk_manager import (
+    count_open_by_side,
+    filter_yes_by_risk,
+    format_risk_line,
+    load_risk_config,
+)
 from signal_tracker import (
-    compute_stats,
-    load_journal,
     print_journal,
-    print_stats,
+    print_stats_by_ruleset,
     record_yes_signals,
     resolve_all,
 )
@@ -964,6 +968,10 @@ def format_telegram_card(r: ChecklistResult, *, kind: str) -> str:
     )
     if ban:
         lines.append(ban)
+    if kind == "yes" and r.entry and r.stop:
+        rl = format_risk_line(r.entry, r.stop)
+        if rl:
+            lines.append(_esc(rl))
     lines.append(f"備註: {note}")
     return "\n".join(lines)
 
@@ -992,16 +1000,20 @@ def format_console_card(r: ChecklistResult, *, kind: str) -> str:
         ban = "禁多"
     else:
         ban = "禁方向"
-    return "\n".join(
-        [
-            f"  ┌ {r.symbol}  {side_txt} ｜ {status} ｜ {group} ｜ {ban}",
-            f"  │ 入場 {_px(r.entry)}",
-            f"  │ 停損 {_px(r.stop)}  （約 {risk_pct:.2f}%）",
-            f"  │ 止盈 {_px(r.tp)}  （約 {reward_pct:.2f}%）",
-            f"  │ RR {r.rr:.1f} ｜ 流程 {r.workflow_passed}/11 ｜ 分 {r.setup_score:.0f}",
-            f"  └ MTF: {mtf}",
-        ]
-    )
+    lines = [
+        f"  ┌ {r.symbol}  {side_txt} ｜ {status} ｜ {group} ｜ {ban}",
+        f"  │ 入場 {_px(r.entry)}",
+        f"  │ 停損 {_px(r.stop)}  （約 {risk_pct:.2f}%）",
+        f"  │ 止盈 {_px(r.tp)}  （約 {reward_pct:.2f}%）",
+        f"  │ RR {r.rr:.1f} ｜ 流程 {r.workflow_passed}/11 ｜ 分 {r.setup_score:.0f}",
+        f"  │ MTF: {mtf}",
+    ]
+    if kind == "yes" and r.entry and r.stop:
+        rl = format_risk_line(r.entry, r.stop)
+        if rl:
+            lines.append(f"  │ {rl}")
+    lines[-1] = "  └" + lines[-1][3:] if lines[-1].startswith("  │") else lines[-1]
+    return "\n".join(lines)
 
 
 def build_telegram_message(title: str, setups: list[ChecklistResult], *, kind: str) -> str:
@@ -1435,6 +1447,7 @@ def run_filtered_setup(
             yes_take, _ = pick_wave_alerts(
                 yes, [], max_n=cfg.max_alerts_per_wave, signals=signals, cfg=cfg
             )
+            yes_take = _apply_yes_risk_gate(yes_take)
             record_yes_signals(yes_take, interval=interval)
     return filtered
 
@@ -1596,6 +1609,28 @@ def send_session_major_plans(
     return sent, cleaned
 
 
+def _apply_yes_risk_gate(
+    yes_list: list[ChecklistResult],
+) -> list[ChecklistResult]:
+    """固定 1R 資訊僅顯示；此處擋「同向／總倉」超量。"""
+    if not yes_list:
+        return yes_list
+    rc = load_risk_config()
+    open_c = count_open_by_side()
+    allowed, blocked = filter_yes_by_risk(yes_list, cfg=rc)
+    if blocked:
+        print(
+            color(
+                f"風控擋下 {len(blocked)} 檔｜"
+                f"未結多{open_c['long']}/空{open_c['short']}｜"
+                f"同向≤{rc.max_same_side} 總≤{rc.max_total_open}｜"
+                + "、".join(blocked[:8]),
+                "1;33",
+            )
+        )
+    return allowed
+
+
 def watch_once(
     *,
     n: int = 40,
@@ -1611,16 +1646,26 @@ def watch_once(
     enable_ansi()
     cooldown = load_alert_cooldown()
     cfg = SetupFilterConfig()
+    rc = load_risk_config()
     print(
         color(
             f"單次掃描｜冷卻 {cooldown_min:.0f} 分｜"
             f"風險{DEFAULT_MIN_RISK_PCT}~{DEFAULT_MAX_RISK_PCT}%｜"
-            f"RR{DEFAULT_MIN_RR}~{DEFAULT_MAX_RR}｜同波≤{DEFAULT_MAX_ALERTS_PER_WAVE}",
+            f"RR{DEFAULT_MIN_RR}~{DEFAULT_MAX_RR}｜同波≤{DEFAULT_MAX_ALERTS_PER_WAVE}｜"
+            f"1R={rc.risk_pct_per_r:g}%×{rc.account_usdt:g}U｜同向≤{rc.max_same_side}",
             "1;36",
         )
     )
     if not os.environ.get("TELEGRAM_BOT_TOKEN") or not os.environ.get("TELEGRAM_CHAT_ID"):
         print("警告: 未設定 TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID，不會推播")
+
+    # 先結算日記，釋放已平倉的同向名額
+    try:
+        n_upd, n_open = resolve_all(fetch_klines, parse_klines, max_bars=96)
+        if n_upd:
+            print(f"日記結算：更新 {n_upd} 筆，未結 {n_open}")
+    except Exception as ex:
+        print(f"日記結算略過: {ex}")
 
     signals = scan(min_vol=cfg.min_quote_vol)
     price_map = {s.symbol: s.last for s in signals}
@@ -1647,6 +1692,7 @@ def watch_once(
         signals=signals,
         cfg=cfg,
     )
+    new_yes = _apply_yes_risk_gate(new_yes)
     # 沒被選上的不寫進冷卻時間戳（允許下一波再競爭）— 需把未選的從 cooldown 撤回
     sent_syms = {r.symbol for r in new_yes} | {r.symbol for r in new_near}
     for r in cand_yes + cand_near:
@@ -1761,6 +1807,7 @@ def watch_loop(
                 signals=signals,
                 cfg=cfg,
             )
+            new_yes = _apply_yes_risk_gate(new_yes)
             sent_syms = {r.symbol for r in new_yes} | {r.symbol for r in new_near}
             for r in cand_yes + cand_near:
                 if r.symbol not in sent_syms and r.symbol in cooldown:
@@ -1909,11 +1956,11 @@ def interactive() -> None:
             print("正在用後續 K 線結算未平倉訊號…")
             n_upd, n_open = resolve_all(fetch_klines, parse_klines, max_bars=96)
             print(f"本輪更新 {n_upd} 筆，仍未結算 {n_open} 筆")
-            print_stats(compute_stats())
+            print_stats_by_ruleset()
         elif low in {"js", "stats"}:
-            # 先嘗試結算再開統計
+            # 先嘗試結算再開統計（全部／新規則 v2／舊規則分開）
             resolve_all(fetch_klines, parse_klines, max_bars=96)
-            print_stats(compute_stats())
+            print_stats_by_ruleset()
         else:
             print("未知指令")
 
@@ -2084,10 +2131,10 @@ def main() -> None:
                 fetch_klines, parse_klines, max_bars=args.max_bars
             )
             print(f"本輪更新 {n_upd} 筆，仍未結算 {n_open} 筆")
-            print_stats(compute_stats())
+            print_stats_by_ruleset()
         elif args.action == "stats":
             resolve_all(fetch_klines, parse_klines, max_bars=args.max_bars)
-            print_stats(compute_stats())
+            print_stats_by_ruleset()
             print_journal(limit=min(args.limit, 15))
         return
 

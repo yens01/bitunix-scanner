@@ -32,6 +32,18 @@ Bitunix 掃描器 → GitHub Actions 上雲步驟
    Body: {"ref":"main"}
 
 
+【可選 Secrets（實盤風控；不設則用預設）】
+- RISK_ACCOUNT_USDT＝帳戶資金（預設 1000）
+- RISK_PCT_PER_R＝每筆風險%（預設 1＝固定 1R）
+- RISK_MAX_SAME_SIDE＝同向未結上限（預設 2）
+- RISK_MAX_TOTAL_OPEN＝總未結上限（預設 4）
+
+【統計】
+- 本機：python bitunix_scanner.py journal stats
+  → 全部／新規則 v2／舊規則 legacy 分開勝率
+- 雲端會 cache yes_journal.jsonl（與冷卻一齊），同向倉才跨次生效
+
+
 【注意】
 - 不要上傳 telegram.local.env
 - Public：程式碼看得到，Secrets 仍保密

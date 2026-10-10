@@ -1,44 +1,60 @@
-# 自動掃描推 Telegram（schedule + 可手動）
+# 手動掃描（不要跟 Auto Scan 搶排程，避免重複推播）
 name: Bitunix Scan
 
 on:
-  schedule:
-    # 每 15 分鐘（UTC）。避開整點 :00，較不易被 GitHub 排隊丟掉
-    # 台灣時間約 :07/:22/:37/:52
-    - cron: "7,22,37,52 * * * *"
-  workflow_dispatch: # Actions 頁可手動「Run workflow」
+  workflow_dispatch:
+
+concurrency:
+  group: bitunix-manual-scan
+  cancel-in-progress: true
 
 jobs:
   scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 8
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Restore cooldown cache
+      - name: Restore cooldown + journal
         uses: actions/cache@v4
         with:
-          path: alert_cooldown.json
-          key: alert-cooldown-${{ github.run_id }}
+          path: |
+            alert_cooldown.json
+            yes_journal.jsonl
+          key: state-v3-${{ github.run_id }}
           restore-keys: |
-            alert-cooldown-
+            state-v3-
+            cooldown-v2-
+
+      - name: Ensure state files
+        run: |
+          if [ ! -f alert_cooldown.json ]; then
+            echo '{}' > alert_cooldown.json
+          fi
+          if [ ! -f yes_journal.jsonl ]; then
+            touch yes_journal.jsonl
+          fi
 
       - name: Run one scan
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RISK_ACCOUNT_USDT: ${{ secrets.RISK_ACCOUNT_USDT }}
+          RISK_PCT_PER_R: ${{ secrets.RISK_PCT_PER_R }}
+          RISK_MAX_SAME_SIDE: ${{ secrets.RISK_MAX_SAME_SIDE }}
+          RISK_MAX_TOTAL_OPEN: ${{ secrets.RISK_MAX_TOTAL_OPEN }}
           PYTHONIOENCODING: utf-8
-        run: python bitunix_scanner.py watch-once --n 40
+        run: python bitunix_scanner.py watch-once --n 30
 
-      - name: Keep cooldown for next run
+      - name: Save cooldown + journal
         if: always()
         uses: actions/cache/save@v4
         with:
-          path: alert_cooldown.json
-          key: alert-cooldown-${{ github.run_id }}
+          path: |
+            alert_cooldown.json
+            yes_journal.jsonl
+          key: state-v3-${{ github.run_id }}
