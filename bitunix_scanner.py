@@ -80,19 +80,19 @@ load_local_env()
 
 # ── Setup 過濾預設（去重／降噪）────────────────────────────────────────────
 DEFAULT_MIN_SETUP_VOL = 500_000      # 最低 24h 成交額 USDT
-DEFAULT_MAX_RANGE_PCT = 40.0         # 排除過度瘋狂振幅
+DEFAULT_MAX_RANGE_PCT = 50.0         # 排除過度瘋狂振幅（略放寬）
 DEFAULT_MIN_LIST_DAYS = 7.0          # 上市未滿 N 天排除
-DEFAULT_MAX_RR = 2.5                 # RR 鎖上緣（過高多半停損太近／目標過遠）
+DEFAULT_MAX_RR = 3.0                 # RR 鎖上緣（過高多半停損太近／目標過遠）
 DEFAULT_MIN_RR = 1.5                 # RR 鎖下緣
 DEFAULT_IDEAL_RR_LO = 1.5            # 品質排序：理想 RR 下緣
 DEFAULT_IDEAL_RR_HI = 2.5            # 品質排序：理想 RR 上緣
 DEFAULT_TOP_MAJOR_PER_SIDE = 2       # 大幣同向名額
-DEFAULT_TOP_ALT_PER_SIDE = 2         # 山寨同向名額
-DEFAULT_MIN_RISK_PCT = 0.5           # 風險幅度下限（停損太近易掃損）
-DEFAULT_MAX_RISK_PCT = 0.8           # 風險幅度上限（過寬風險失控）
-DEFAULT_NEAR_ZONE_PCT = 0.5          # 等回測：距區 ≤0.5% 才推卡片
+DEFAULT_TOP_ALT_PER_SIDE = 3         # 山寨同向名額（略放寬）
+DEFAULT_MIN_RISK_PCT = 0.4           # 風險幅度下限（停損太近易掃損）
+DEFAULT_MAX_RISK_PCT = 1.0           # 風險幅度上限（過寬風險失控）
+DEFAULT_NEAR_ZONE_PCT = 0.8          # 等回測：距區 ≤0.8% 才推卡片
 DEFAULT_ALERT_COOLDOWN_MIN = 45      # 同一幣冷卻分鐘
-DEFAULT_MAX_ALERTS_PER_WAVE = 3      # 同波最多推播檔數（YES+靠近合計）
+DEFAULT_MAX_ALERTS_PER_WAVE = 4      # 同波最多推播檔數（YES+靠近合計）
 # BTC/ETH 日內規劃時段（台灣時間）：下午四點／晚上八點／美股開盤
 # 美股開盤：夏令約 21:30、冬令約 22:30；預設用 21:30（夏令），冬令可改 22:30
 SESSION_PLAN_SLOTS: tuple[tuple[int, int, str], ...] = (
