@@ -342,17 +342,28 @@ def detect_structure(candles: list[Candle]) -> tuple[str, str, str, str]:
     # HH+HL 明確多；LH+LL 明確空
     clear_bull = "HH" in detail_parts and "HL" in detail_parts
     clear_bear = "LH" in detail_parts and "LL" in detail_parts
+    detail = " / ".join(detail_parts) if detail_parts else ""
+
+    # LH/LL 與 CHOCH轉多／MA多頭同時出現 → 結構打架，標盤整（避免硬做空）
+    if clear_bear and (
+        "CHOCH轉多" in detail_parts or "MA多頭" in detail_parts or score > 0
+    ):
+        return "盤整", (detail or "結構衝突") + "｜多空訊號打架", ma_detail, bos_tag
+    if clear_bull and (
+        "CHOCH轉空" in detail_parts or "MA空頭" in detail_parts or score < 0
+    ):
+        return "盤整", (detail or "結構衝突") + "｜多空訊號打架", ma_detail, bos_tag
 
     if ranging and not clear_bull and not clear_bear and abs(score) < 3:
-        return "盤整", " / ".join(detail_parts) or "箱體盤整", ma_detail, bos_tag
+        return "盤整", detail or "箱體盤整", ma_detail, bos_tag
 
     if clear_bull or score >= 3:
-        return "偏多", " / ".join(detail_parts) or "多頭結構", ma_detail, bos_tag
+        return "偏多", detail or "多頭結構", ma_detail, bos_tag
     if clear_bear or score <= -3:
-        return "偏空", " / ".join(detail_parts) or "空頭結構", ma_detail, bos_tag
+        return "偏空", detail or "空頭結構", ma_detail, bos_tag
     if ranging:
-        return "盤整", " / ".join(detail_parts) or "箱體盤整", ma_detail, bos_tag
-    return "盤整", " / ".join(detail_parts) or "方向未明", ma_detail, bos_tag
+        return "盤整", detail or "箱體盤整", ma_detail, bos_tag
+    return "盤整", detail or "方向未明", ma_detail, bos_tag
 
 
 def build_zones(candles: list[Candle], atr_v: float) -> tuple[list[Zone], list[Zone]]:
@@ -971,17 +982,18 @@ def check_mtf_alignment(structure: str, mtf: dict[str, str]) -> tuple[bool, str]
     # 任一關鍵高週期（4H/1D）逆向 → 不對齊
     critical = [k for k in ("4H", "1D") if k in mtf and mtf[k] == opposite]
     if critical:
-        return False, f"逆高週期({','.join(critical)}偏{opposite[-1]})｜{detail}"
+        return False, f"逆高週期({','.join(critical)})｜{detail}"
 
     # 多數高週期逆向
     if len(opp_list) >= 2 and len(same_list) == 0:
         return False, f"高週期多數逆向｜{detail}"
 
+    # YES 必須至少一個高週期同向（純盤整不算對齊，避免亂扣板機）
     if same_list:
         return True, f"高週期同向({','.join(same_list)})｜{detail}"
     if range_list and not opp_list:
-        return True, f"高週期偏盤整，未明顯逆向｜{detail}"
-    return True, f"高週期可接受｜{detail}"
+        return False, f"高週期無同向確認（多為盤整）｜{detail}"
+    return False, f"高週期未確認同向｜{detail}"
 
 
 def summarize_missing_steps(workflow: list[tuple[str, bool, str]]) -> str:
@@ -1338,15 +1350,20 @@ def evaluate_setup(
     sigs_prev = detect_candle_signals(prev, candles[-3], atr_v) if len(candles) >= 3 else []
     candle_signals = list(dict.fromkeys(sigs + [f"{s}(前一根)" for s in sigs_prev if s not in sigs]))
 
-    bull_react = any(
-        x in s for s in candle_signals for x in ("下影收針", "多頭吞噬", "假突破收回(下)")
+    # 硬反應：當根收針／吞噬；軟反應：假突破／十字（含前一根）
+    hard_bull = any(x in s for s in sigs for x in ("下影收針", "多頭吞噬"))
+    hard_bear = any(x in s for s in sigs for x in ("上影收針", "空頭吞噬"))
+    soft_bull = any(
+        x in s for s in candle_signals for x in ("假突破收回(下)",)
     ) or ("十字K" in candle_signals and at_zone and zone_kind == "support")
-    bear_react = any(
-        x in s for s in candle_signals for x in ("上影收針", "空頭吞噬", "假突破收回(上)")
+    soft_bear = any(
+        x in s for s in candle_signals for x in ("假突破收回(上)",)
     ) or ("十字K" in candle_signals and at_zone and zone_kind == "resistance")
+    bull_react = hard_bull or soft_bull
+    bear_react = hard_bear or soft_bear
 
     # 多空反應同時出現 = 方向衝突，不算有效反應
-    react_conflict = bull_react and bear_react
+    react_conflict = (hard_bull and hard_bear) or (bull_react and bear_react)
 
     reaction_ok = False
     if at_zone and active_zone and candle_signals and not react_conflict:
@@ -1358,9 +1375,10 @@ def evaluate_setup(
             or active_zone.near(last.close, atr_v)
         )
         if touched:
-            if structure == "偏多" and bull_react and zone_kind == "support":
+            # 扣板機等級：必須當根硬反應（避免「前一根假突破＋當根多頭吞噬」誤開空）
+            if structure == "偏多" and hard_bull and zone_kind == "support":
                 reaction_ok = True
-            elif structure == "偏空" and bear_react and zone_kind == "resistance":
+            elif structure == "偏空" and hard_bear and zone_kind == "resistance":
                 reaction_ok = True
             # 盤整：有反應也不鼓勵扣板機（等方向）
 
@@ -1555,7 +1573,9 @@ def evaluate_setup(
         and reaction_ok
         and not chasing
         and not waiting_retest
-        and (hard_conf or soft_conf)
+        and not struct_conflict
+        and not react_conflict
+        and bool(hard_conf)  # 軟匯合不夠，至少一個硬匯合
         and rr_ok
         and mtf_aligned
     )
