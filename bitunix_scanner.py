@@ -74,15 +74,17 @@ load_local_env()
 DEFAULT_MIN_SETUP_VOL = 500_000      # 最低 24h 成交額 USDT
 DEFAULT_MAX_RANGE_PCT = 40.0         # 排除過度瘋狂振幅
 DEFAULT_MIN_LIST_DAYS = 7.0          # 上市未滿 N 天排除
-DEFAULT_MAX_RR = 10.0                # RR 過高多半停損太近
-DEFAULT_MIN_RR = 1.5
+DEFAULT_MAX_RR = 2.5                 # RR 鎖上緣（過高多半停損太近／目標過遠）
+DEFAULT_MIN_RR = 1.5                 # RR 鎖下緣
 DEFAULT_IDEAL_RR_LO = 1.5            # 品質排序：理想 RR 下緣
-DEFAULT_IDEAL_RR_HI = 3.0            # 品質排序：理想 RR 上緣
-DEFAULT_TOP_MAJOR_PER_SIDE = 3       # 大幣同向名額
-DEFAULT_TOP_ALT_PER_SIDE = 4         # 山寨同向名額
-DEFAULT_MIN_RISK_PCT = 0.25          # 風險幅度過窄不推（停損太近）
+DEFAULT_IDEAL_RR_HI = 2.5            # 品質排序：理想 RR 上緣
+DEFAULT_TOP_MAJOR_PER_SIDE = 2       # 大幣同向名額
+DEFAULT_TOP_ALT_PER_SIDE = 2         # 山寨同向名額
+DEFAULT_MIN_RISK_PCT = 0.5           # 風險幅度下限（停損太近易掃損）
+DEFAULT_MAX_RISK_PCT = 0.8           # 風險幅度上限（過寬風險失控）
 DEFAULT_NEAR_ZONE_PCT = 0.5          # 等回測：距區 ≤0.5% 才推卡片
 DEFAULT_ALERT_COOLDOWN_MIN = 45      # 同一幣冷卻分鐘
+DEFAULT_MAX_ALERTS_PER_WAVE = 3      # 同波最多推播檔數（YES+靠近合計）
 COOLDOWN_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "alert_cooldown.json")
 
 # 大幣組（同向名額獨立，避免被山寨擠掉）
@@ -106,8 +108,11 @@ class SetupFilterConfig:
     top_major_per_side: int = DEFAULT_TOP_MAJOR_PER_SIDE
     top_alt_per_side: int = DEFAULT_TOP_ALT_PER_SIDE
     min_risk_pct: float = DEFAULT_MIN_RISK_PCT
+    max_risk_pct: float = DEFAULT_MAX_RISK_PCT
     near_zone_pct: float = DEFAULT_NEAR_ZONE_PCT
+    max_alerts_per_wave: int = DEFAULT_MAX_ALERTS_PER_WAVE
     require_mtf_aligned: bool = True
+    lock_rr_band: bool = True  # YES／可推單鎖在 min_rr～max_rr
 
 
 # ── HTTP ─────────────────────────────────────────────────────────────────────
@@ -601,16 +606,22 @@ def filter_setups(
             if age_days < cfg.min_list_days:
                 reasons.append(f"上市{age_days:.1f}天")
 
+        # RR 鎖 1.5～2.5：YES 硬擋；計畫單超過上限也擋
         if r.rr > 0 and r.rr > cfg.max_rr:
-            reasons.append(f"RR{r.rr:.1f}>上限{cfg.max_rr:.0f}")
+            reasons.append(f"RR{r.rr:.1f}>{cfg.max_rr:.1f}")
         if r.trigger_ready and r.rr > 0 and r.rr < cfg.min_rr:
             reasons.append(f"RR{r.rr:.1f}<{cfg.min_rr}")
+        if cfg.lock_rr_band and r.trigger_ready and r.rr > 0:
+            if not (cfg.min_rr <= r.rr <= cfg.max_rr):
+                reasons.append(f"RR不在{cfg.min_rr:.1f}~{cfg.max_rr:.1f}")
 
-        # 停損過近：可進與計畫單都擋
+        # 風險幅度鎖 0.5%～0.8%
         if r.entry > 0 and r.stop > 0:
             risk_pct = abs(r.entry - r.stop) / r.entry * 100
             if risk_pct < cfg.min_risk_pct:
                 reasons.append(f"停損過近{risk_pct:.2f}%")
+            elif risk_pct > cfg.max_risk_pct and (r.trigger_ready or r.side != "none"):
+                reasons.append(f"停損過寬{risk_pct:.2f}%")
 
         if cfg.require_mtf_aligned and not r.mtf_aligned and r.trigger_ready:
             reasons.append("逆高週期")
@@ -673,6 +684,30 @@ def filter_setups(
         reverse=True,
     )
     return limited, rejected
+
+
+def pick_wave_alerts(
+    yes: list[ChecklistResult],
+    near: list[ChecklistResult],
+    *,
+    max_n: int = DEFAULT_MAX_ALERTS_PER_WAVE,
+    signals: list[CoinSignal] | None = None,
+    cfg: SetupFilterConfig | None = None,
+) -> tuple[list[ChecklistResult], list[ChecklistResult]]:
+    """同波最多推 max_n 檔：先 YES 再靠近區，皆依品質分排序。"""
+    cfg = cfg or SetupFilterConfig()
+    sig_map = {s.symbol: s.quote_vol for s in (signals or [])}
+
+    def _q(r: ChecklistResult) -> float:
+        return quality_rank(r, sig_map.get(r.symbol, 0.0), cfg)
+
+    yes_s = sorted(yes, key=_q, reverse=True)
+    near_s = sorted(near, key=_q, reverse=True)
+    budget = max(0, max_n)
+    take_yes = yes_s[:budget]
+    budget -= len(take_yes)
+    take_near = near_s[:budget]
+    return take_yes, take_near
 
 
 def load_alert_cooldown(path: str = COOLDOWN_PATH) -> dict[str, float]:
@@ -1281,8 +1316,10 @@ def print_setup_table(
         print()
     print("-" * 148)
     print(
-        f"過濾: 低量/新幣/狂振幅/RR>{DEFAULT_MAX_RR:.0f}/停損<{DEFAULT_MIN_RISK_PCT}%/"
-        f"逆高週期｜同向名額 大幣{DEFAULT_TOP_MAJOR_PER_SIDE}/山寨{DEFAULT_TOP_ALT_PER_SIDE}"
+        f"過濾: 低量/新幣/狂振幅/RR {DEFAULT_MIN_RR}~{DEFAULT_MAX_RR}/"
+        f"風險{DEFAULT_MIN_RISK_PCT}~{DEFAULT_MAX_RISK_PCT}%/逆高週期｜"
+        f"同向 大幣{DEFAULT_TOP_MAJOR_PER_SIDE}/山寨{DEFAULT_TOP_ALT_PER_SIDE}｜"
+        f"同波推≤{DEFAULT_MAX_ALERTS_PER_WAVE}"
     )
     print(
         f"排序: 品質分（RR {DEFAULT_IDEAL_RR_LO}~{DEFAULT_IDEAL_RR_HI}、流程步數、成交量優先）"
@@ -1321,7 +1358,11 @@ def run_filtered_setup(
     if AUTO_RECORD_YES:
         yes = [x for x in filtered if x.trigger_ready]
         if yes:
-            record_yes_signals(yes, interval=interval)
+            # 日記也只記同波品質前 N，避免一次灌爆拉低統計
+            yes_take, _ = pick_wave_alerts(
+                yes, [], max_n=cfg.max_alerts_per_wave, signals=signals, cfg=cfg
+            )
+            record_yes_signals(yes_take, interval=interval)
     return filtered
 
 
@@ -1421,7 +1462,9 @@ def watch_once(
     cfg = SetupFilterConfig()
     print(
         color(
-            f"單次掃描｜冷卻 {cooldown_min:.0f} 分｜靠近區≤{DEFAULT_NEAR_ZONE_PCT}%",
+            f"單次掃描｜冷卻 {cooldown_min:.0f} 分｜"
+            f"風險{DEFAULT_MIN_RISK_PCT}~{DEFAULT_MAX_RISK_PCT}%｜"
+            f"RR{DEFAULT_MIN_RR}~{DEFAULT_MAX_RR}｜同波≤{DEFAULT_MAX_ALERTS_PER_WAVE}",
             "1;36",
         )
     )
@@ -1440,10 +1483,25 @@ def watch_once(
     ]
     far_now = [r for r in wait_list if r not in near_now]
 
-    new_yes, cooldown = filter_cooldown(yes_now, cooldown, minutes=cooldown_min)
-    new_near: list[ChecklistResult] = []
+    cand_yes, cooldown = filter_cooldown(yes_now, cooldown, minutes=cooldown_min)
+    cand_near: list[ChecklistResult] = []
     if alert_retest:
-        new_near, cooldown = filter_cooldown(near_now, cooldown, minutes=cooldown_min)
+        cand_near, cooldown = filter_cooldown(near_now, cooldown, minutes=cooldown_min)
+
+    # 同波最多 N 檔（先 YES 再靠近）
+    new_yes, new_near = pick_wave_alerts(
+        cand_yes,
+        cand_near,
+        max_n=cfg.max_alerts_per_wave,
+        signals=signals,
+        cfg=cfg,
+    )
+    # 沒被選上的不寫進冷卻時間戳（允許下一波再競爭）— 需把未選的從 cooldown 撤回
+    sent_syms = {r.symbol for r in new_yes} | {r.symbol for r in new_near}
+    for r in cand_yes + cand_near:
+        if r.symbol not in sent_syms and r.symbol in cooldown:
+            # 剛寫入的冷卻撤回，避免「沒推卻冷卻」
+            del cooldown[r.symbol]
 
     if new_yes:
         notify_alert(
@@ -1459,7 +1517,7 @@ def watch_once(
     if new_near:
         notify_alert(
             "靠近區・等回測",
-            setups=new_near[:6],
+            setups=new_near,
             kind="retest",
             sound=False,
             desktop=desktop,
@@ -1485,7 +1543,8 @@ def watch_once(
     print(
         f"[{now_tw().strftime('%H:%M:%S')}] 完成｜"
         f"YES={len(yes_now)}(推{len(new_yes)}) "
-        f"靠近={len(near_now)}(推{len(new_near)}) 遠處等={len(far_now)}"
+        f"靠近={len(near_now)}(推{len(new_near)}) "
+        f"同波上限{cfg.max_alerts_per_wave} 遠處等={len(far_now)}"
     )
     return {
         "yes": len(yes_now),
@@ -1512,8 +1571,8 @@ def watch_loop(
     cooldown = load_alert_cooldown()
     print(color(f"警報監看中：每 {seconds}s 掃一次（Ctrl+C 停止）", "1;36"))
     print(
-        f"冷卻 {cooldown_min:.0f} 分｜等回測僅推距區≤{DEFAULT_NEAR_ZONE_PCT}%｜"
-        f"停損<{DEFAULT_MIN_RISK_PCT}% 不推"
+        f"冷卻 {cooldown_min:.0f} 分｜風險 {DEFAULT_MIN_RISK_PCT}~{DEFAULT_MAX_RISK_PCT}%｜"
+        f"RR {DEFAULT_MIN_RR}~{DEFAULT_MAX_RR}｜同波≤{DEFAULT_MAX_ALERTS_PER_WAVE}"
     )
     print("Telegram: telegram.local.env 或環境變數 TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID")
     cfg = SetupFilterConfig()
@@ -1531,16 +1590,27 @@ def watch_loop(
             }
             far_now = {r.symbol: r for r in wait_list if r.symbol not in near_now}
 
-            new_yes = [yes_now[s] for s in yes_now if s not in seen_yes]
-            new_near = (
+            cand_yes = [yes_now[s] for s in yes_now if s not in seen_yes]
+            cand_near = (
                 [near_now[s] for s in near_now if s not in seen_near] if alert_retest else []
             )
             new_far = (
                 [far_now[s] for s in far_now if s not in seen_far] if alert_retest else []
             )
 
-            new_yes, cooldown = filter_cooldown(new_yes, cooldown, minutes=cooldown_min)
-            new_near, cooldown = filter_cooldown(new_near, cooldown, minutes=cooldown_min)
+            cand_yes, cooldown = filter_cooldown(cand_yes, cooldown, minutes=cooldown_min)
+            cand_near, cooldown = filter_cooldown(cand_near, cooldown, minutes=cooldown_min)
+            new_yes, new_near = pick_wave_alerts(
+                cand_yes,
+                cand_near,
+                max_n=cfg.max_alerts_per_wave,
+                signals=signals,
+                cfg=cfg,
+            )
+            sent_syms = {r.symbol for r in new_yes} | {r.symbol for r in new_near}
+            for r in cand_yes + cand_near:
+                if r.symbol not in sent_syms and r.symbol in cooldown:
+                    del cooldown[r.symbol]
 
             if new_yes:
                 notify_alert(
@@ -1556,7 +1626,7 @@ def watch_loop(
             if new_near:
                 notify_alert(
                     "靠近區・等回測",
-                    setups=new_near[:6],
+                    setups=new_near,
                     kind="retest",
                     sound=False,
                     desktop=desktop,
@@ -1723,10 +1793,18 @@ def main() -> None:
     u.add_argument("--n", type=int, default=50, help="掃描池大小")
     u.add_argument("--interval", default="15m")
     u.add_argument("--min-vol", type=float, default=DEFAULT_MIN_SETUP_VOL)
-    u.add_argument("--max-rr", type=float, default=DEFAULT_MAX_RR)
+    u.add_argument("--max-rr", type=float, default=DEFAULT_MAX_RR, help="RR 上限（預設 2.5）")
+    u.add_argument("--min-rr", type=float, default=DEFAULT_MIN_RR, help="RR 下限（預設 1.5）")
     u.add_argument("--top-major", type=int, default=DEFAULT_TOP_MAJOR_PER_SIDE, help="大幣同向名額")
     u.add_argument("--top-alt", type=int, default=DEFAULT_TOP_ALT_PER_SIDE, help="山寨同向名額")
     u.add_argument("--min-risk", type=float, default=DEFAULT_MIN_RISK_PCT, help="最低風險幅度(%%)")
+    u.add_argument("--max-risk", type=float, default=DEFAULT_MAX_RISK_PCT, help="最高風險幅度(%%)")
+    u.add_argument(
+        "--max-wave",
+        type=int,
+        default=DEFAULT_MAX_ALERTS_PER_WAVE,
+        help="同波最多推播檔數",
+    )
     u.add_argument("--trigger-only", action="store_true", help="只顯示可扣板機")
     u.add_argument("--export", type=str, default="", help="匯出 setup CSV")
 
@@ -1792,9 +1870,14 @@ def main() -> None:
         cfg = SetupFilterConfig(
             min_quote_vol=args.min_vol,
             max_rr=args.max_rr,
+            min_rr=args.min_rr,
+            ideal_rr_lo=args.min_rr,
+            ideal_rr_hi=args.max_rr,
             top_major_per_side=args.top_major,
             top_alt_per_side=args.top_alt,
             min_risk_pct=args.min_risk,
+            max_risk_pct=args.max_risk,
+            max_alerts_per_wave=args.max_wave,
         )
         signals = scan(min_vol=min(args.min_vol, 50_000))
         setups = run_filtered_setup(
