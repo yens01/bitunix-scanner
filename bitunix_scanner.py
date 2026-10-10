@@ -1471,31 +1471,73 @@ def print_detail(info: dict[str, Any], meta: CoinSignal | None = None) -> None:
         print()
 
 
+def _split_reject(item: str) -> tuple[str, str]:
+    if "(" in item and item.endswith(")"):
+        i = item.index("(")
+        return item[:i], item[i + 1 : -1]
+    return item, ""
+
+
+def _print_reject_block(rejected: list[str], *, limit: int = 10) -> None:
+    if not rejected:
+        return
+    print(color(f"剔除 {len(rejected)}", "33"))
+    for item in rejected[:limit]:
+        sym, reason = _split_reject(item)
+        short = sym.replace("USDT", "")
+        print(f"  {short:<10} {reason}")
+    if len(rejected) > limit:
+        print(f"  …另 {len(rejected) - limit} 檔")
+
+
 def print_setup_table(
     rows: list[ChecklistResult],
     top: int = 20,
     rejected: list[str] | None = None,
 ) -> None:
     rows = rows[:top]
-    now = now_tw().strftime("%Y-%m-%d %H:%M:%S")
+    now = now_tw().strftime("%m-%d %H:%M")
+    yes_n = sum(1 for r in rows if r.trigger_ready)
+    wait_n = sum(1 for r in rows if r.waiting_retest and not r.trigger_ready)
     print()
-    print(color("══ 實戰做單流程 · Setup（已過濾噪音）══", "1;35"))
-    print(f"時間 {now} ｜ 顯示 {len(rows)} ｜ 入場／停損／止盈｜YES=可扣板機｜MTF")
-    print("-" * 148)
+    print(color("══ Setup ══", "1;35") + f"  {now}  · 顯示 {len(rows)}  · YES {yes_n}  · 等回測 {wait_n}")
+
+    if not rows:
+        print(color("（目前沒有通過過濾的 Setup）", "2"))
+        _print_reject_block(rejected or [])
+        print(
+            color(
+                f"規則 RR{DEFAULT_MIN_RR:g}~{DEFAULT_MAX_RR:g} · "
+                f"風險{DEFAULT_MIN_RISK_PCT:g}~{DEFAULT_MAX_RISK_PCT:g}% · "
+                f"同向大幣{DEFAULT_TOP_MAJOR_PER_SIDE}/山寨{DEFAULT_TOP_ALT_PER_SIDE}",
+                "2",
+            )
+        )
+        print(color("詳情  detail 幣種", "2"))
+        print()
+        return
+
+    w = 96
+    print("-" * w)
     header = (
-        f"{'#':>3}  {'幣種':<12} {'方向':<6} {'邊':<4} {'可進':<4} "
-        f"{'入場':>12} {'停損':>12} {'止盈':>12} {'RR':>5} {'11步':>5} {'分':>4}"
+        f"{'#':>2} {'幣種':<11} {'方向':<4} {'邊':<3} {'狀態':<4} "
+        f"{'入場':>11} {'停損':>11} {'止盈':>11} {'RR':>4} {'步':>4} {'分':>3}"
     )
     print(color(header, "1"))
-    print("-" * 148)
+    print("-" * w)
     for i, r in enumerate(rows, 1):
-        trig = color("YES", "32") if r.trigger_ready else "no"
+        # 狀態欄不用 ANSI（避免對齊跑掉）；YES 整列再上色
+        if r.trigger_ready:
+            status = "YES"
+        elif r.waiting_retest:
+            status = "等"
+        else:
+            status = "·"
         side = {"long": "多", "short": "空", "none": "-"}.get(r.side, "-")
         if side == "-" and r.structure == "偏多":
             side = "多*"
         elif side == "-" and r.structure == "偏空":
             side = "空*"
-        # 非 YES：價位欄留空白，避免誤以為可下單
         if r.trigger_ready:
             e_s, s_s, t_s = _px_or_dash(r.entry), _px_or_dash(r.stop), _px_or_dash(r.tp)
             rr = f"{r.rr:.1f}" if r.rr else "-"
@@ -1505,51 +1547,39 @@ def print_setup_table(
         else:
             e_s, s_s, t_s, rr = "-", "-", "-", "-"
         wf = f"{r.workflow_passed}/11"
-        mtf_mark = "" if r.mtf_aligned else "!"
-        print(
-            f"{i:>3}  {r.symbol:<12} {r.structure:<6} {side:<4} {trig:<4} "
-            f"{e_s:>12} {s_s:>12} {t_s:>12} "
-            f"{rr:>5} {wf:>5}{mtf_mark} {r.setup_score:>4.0f}"
+        mtf_bang = "!" if not r.mtf_aligned else " "
+        row = (
+            f"{i:>2} {r.symbol:<11} {r.structure:<4} {side:<3} {status:<4} "
+            f"{e_s:>11} {s_s:>11} {t_s:>11} "
+            f"{rr:>4} {wf:>4}{mtf_bang}{r.setup_score:>3.0f}"
         )
+        print(color(row, "32") if r.trigger_ready else row)
+        # 一行備註就好，避免每檔三行刷屏
+        bits: list[str] = []
         if r.trigger_ready:
-            st = "可扣板機"
-            if r.stop and r.entry:
-                st += f"｜風險約{abs(r.entry - r.stop) / r.entry * 100:.2f}%"
-            if r.tp and r.entry:
-                st += f"｜目標約{abs(r.tp - r.entry) / r.entry * 100:.2f}%"
+            bits.append(color("可扣板機", "32"))
+            if r.entry and r.stop:
+                bits.append(f"風險{abs(r.entry - r.stop) / r.entry * 100:.2f}%")
         elif r.waiting_retest:
-            st = "等回測・計畫價參考（非可進）"
-        elif r.at_zone and r.reaction:
-            st = "區上有反應・條件未齊"
-        elif r.at_zone:
-            st = "已回區，等K棒反應"
+            bits.append("等回測（價僅參考）")
+        elif r.missing_steps:
+            bits.append(r.missing_steps.replace("缺：", "缺 ").replace("、", " "))
         else:
-            st = "、".join(r.candle_signals[:2]) or "觀望"
-        print(f"     {st}")
-        if r.trigger_ready:
-            status_line = color("可扣板機", "32")
-        else:
-            miss = r.missing_steps or "條件未齊"
-            status_line = color(miss, "33")
-        mtf_s = r.mtf_note or ("MTF對齊" if r.mtf_aligned else "MTF未對齊")
-        grp = "大幣" if _is_major(r.symbol) else "山寨"
-        print(f"     {status_line}｜{mtf_s}｜{grp}")
-        print()
-    print("-" * 148)
+            bits.append("觀望")
+        bits.append("大幣" if _is_major(r.symbol) else "山寨")
+        if r.mtf_note:
+            bits.append(r.mtf_note.split("｜")[0][:28])
+        print("   " + " · ".join(bits))
+    print("-" * w)
+    _print_reject_block(rejected or [], limit=8)
     print(
-        f"過濾: 低量/新幣/狂振幅/RR {DEFAULT_MIN_RR}~{DEFAULT_MAX_RR}/"
-        f"風險{DEFAULT_MIN_RISK_PCT}~{DEFAULT_MAX_RISK_PCT}%/逆高週期｜"
-        f"同向 大幣{DEFAULT_TOP_MAJOR_PER_SIDE}/山寨{DEFAULT_TOP_ALT_PER_SIDE}｜"
-        f"同波推≤{DEFAULT_MAX_ALERTS_PER_WAVE}"
+        color(
+            f"規則 RR{DEFAULT_MIN_RR:g}~{DEFAULT_MAX_RR:g} · "
+            f"風險{DEFAULT_MIN_RISK_PCT:g}~{DEFAULT_MAX_RISK_PCT:g}% · "
+            f"多*/空*=計畫向 · detail 幣種",
+            "2",
+        )
     )
-    print(
-        f"排序: 品質分（RR {DEFAULT_IDEAL_RR_LO}~{DEFAULT_IDEAL_RR_HI}、流程步數、成交量優先）"
-    )
-    print("多*/空* = 計畫方向；偏多禁空／偏空禁多／盤整禁方向單；YES 缺步見 detail")
-    if rejected:
-        show = rejected[:12]
-        print(f"本輪剔除 {len(rejected)} 檔，例: {', '.join(show)}" + ("…" if len(rejected) > 12 else ""))
-    print("詳情: python bitunix_scanner.py detail 幣種")
     print()
 
 
@@ -2084,10 +2114,9 @@ def interactive() -> None:
     setups: list[ChecklistResult] = []
 
     while True:
-        print(
-            "指令: [h]熱度 [s]Setup [t]可扣板機 [w]等回測 [a]警報 "
-            "[j]日記 [jr]結算 [js]統計 [d 幣種] [r]重掃 [c]匯出 [q]離開"
-        )
+        print(color("── 指令 ──", "2"))
+        print("  h 熱度   s Setup   t 可進   w 等回測   a 警報")
+        print("  j 日記   jr 結算   js 統計  d 幣種   r 重掃   c 匯出   q 離開")
         try:
             cmd = input("> ").strip()
         except (EOFError, KeyboardInterrupt):
@@ -2116,8 +2145,6 @@ def interactive() -> None:
             setups = run_filtered_setup(signals, n=50, top=20)
         elif low in {"t", "trigger"}:
             setups = run_filtered_setup(signals, n=50, top=20, only_trigger=True)
-            if not setups:
-                print("過濾後目前沒有可扣板機幣。")
         elif low in {"w", "wait", "retest"}:
             all_s = run_filtered_setup(signals, n=50, top=40, show=False)
             setups = all_s
