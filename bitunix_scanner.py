@@ -1174,16 +1174,31 @@ def format_console_plan_card(r: ChecklistResult) -> str:
     return "\n".join(lines)
 
 
+def _side_short_label(r: ChecklistResult) -> str:
+    """摘要用方向：多／空／多*／空*／整。"""
+    if r.side == "long":
+        return "多"
+    if r.side == "short":
+        return "空"
+    if r.structure == "偏多":
+        return "多*"
+    if r.structure == "偏空":
+        return "空*"
+    return "整"
+
+
 def build_telegram_message(title: str, setups: list[ChecklistResult], *, kind: str) -> str:
     now = now_tw().strftime("%m-%d %H:%M")
     if kind == "retest_summary":
-        names = ", ".join(r.symbol.replace("USDT", "") for r in setups[:12])
+        names = ", ".join(
+            f"{r.symbol.replace('USDT', '')}{_side_short_label(r)}" for r in setups[:12]
+        )
         return (
             f"👀 <b>{_esc(title)}</b>\n🕐 {now}\n"
             f"遠處等回測 <b>{len(setups)}</b> 檔（距區 &gt; {DEFAULT_NEAR_ZONE_PCT}% 不逐檔推播）\n"
             f"<code>{_esc(names)}</code>"
             + (f" …+{len(setups)-12}" if len(setups) > 12 else "")
-            + "\n\n靠近區時會再推完整卡片"
+            + "\n多*/空*=計畫方向（尚未可進）｜靠近區時會再推完整卡片"
         )
 
     head = {
@@ -1225,9 +1240,11 @@ def notify_alert(
             print(format_console_card(r, kind=card_kind))
             print()
     elif setups and kind == "retest_summary":
-        names = ", ".join(r.symbol for r in setups[:15])
+        names = ", ".join(
+            f"{r.symbol.replace('USDT', '')}{_side_short_label(r)}" for r in setups[:15]
+        )
         print(f"  遠處等回測 {len(setups)} 檔: {names}")
-        print(f"  （距區 >{DEFAULT_NEAR_ZONE_PCT}% 僅摘要，不逐檔推播）")
+        print(f"  （距區 >{DEFAULT_NEAR_ZONE_PCT}% 僅摘要｜多*/空*=計畫向）")
         print()
     else:
         body = "\n".join(lines or [])
