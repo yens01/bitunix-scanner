@@ -47,6 +47,7 @@ from risk_manager import (
 from signal_tracker import (
     print_journal,
     print_stats_by_ruleset,
+    record_plan_signals,
     record_yes_signals,
     resolve_all,
 )
@@ -1961,6 +1962,7 @@ def send_session_major_plans(
             telegram=telegram,
         )
         print(f"日內規劃：「{label}」無變化（短訊）｜{brief}")
+        note_extra = "無變化"
     else:
         notify_alert(
             title,
@@ -1971,6 +1973,15 @@ def send_session_major_plans(
             telegram=telegram,
         )
         print(f"日內規劃：已推「{label}」{', '.join(r.symbol for r in plans)}")
+        note_extra = ""
+
+    # 規劃一律入日記，事後可檢驗箱體／方向準否（與 YES 分開統計）
+    record_plan_signals(
+        plans,
+        interval=SESSION_PLAN_INTERVAL,
+        plan_label=label,
+        note_extra=note_extra,
+    )
 
     cooldown[_session_plan_slot_key(day, hour, minute)] = time.time()
     save_session_plan_state(
