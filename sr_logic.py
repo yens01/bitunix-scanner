@@ -1190,13 +1190,31 @@ def build_workflow11(
     return [step01, step02, step03, step04, step05, step06, step07, step08, step09, step10, step11]
 
 
+def build_range_box(candles: list[Candle], lookback: int = 30) -> Zone | None:
+    """
+    盤整用的真實箱體：近 N 根高低，不是最近一條微支撐/壓力。
+    （舊邏輯會把 ETH 收成 8U 寬的假箱體）
+    """
+    n = min(lookback, len(candles))
+    if n < 10:
+        return None
+    window = candles[-n:]
+    hi = max(c.high for c in window)
+    lo = min(c.low for c in window)
+    if hi <= lo:
+        return None
+    return Zone(kind="range", lo=lo, hi=hi, strength=n, touches=0)
+
+
 def nearest_priority_zone(
     structure: str,
     supports: list[Zone],
     resists: list[Zone],
     px: float,
+    *,
+    range_box: Zone | None = None,
 ) -> Zone | None:
-    """看哪裡：偏多看支撐、偏空看壓力、盤整標出箱體上下緣但不鼓勵追突破。"""
+    """看哪裡：偏多看支撐、偏空看壓力、盤整用近段箱體上下緣。"""
     if structure == "偏多" and supports:
         below = [z for z in supports if z.mid <= px * 1.005]
         pool = below or supports
@@ -1205,7 +1223,9 @@ def nearest_priority_zone(
         above = [z for z in resists if z.mid >= px * 0.995]
         pool = above or resists
         return min(pool, key=lambda z: abs(z.mid - px))
-    # 盤整：最近的區
+    # 盤整：用近段高低箱體（避免微區當成箱體）
+    if range_box is not None:
+        return range_box
     cands = list(supports) + list(resists)
     if not cands:
         return None
@@ -1312,13 +1332,20 @@ def evaluate_setup(
                 structure = "偏空"
                 struct_detail += "｜高週期偏空"
 
-    # ② 看哪裡：優先結構區
-    priority_zone = nearest_priority_zone(structure, supports, resists, px)
+    # ② 看哪裡：優先結構區；盤整用近段高低箱體
+    range_box = build_range_box(candles, 30) if structure == "盤整" else None
+    priority_zone = nearest_priority_zone(
+        structure, supports, resists, px, range_box=range_box
+    )
     active_zone: Zone | None = None
     if priority_zone and (
         priority_zone.near(px, atr_v)
         or priority_zone.near(last.low, atr_v)
         or priority_zone.near(last.high, atr_v)
+        or (
+            structure == "盤整"
+            and priority_zone.contains(px, pad=atr_v * 0.1)
+        )
     ):
         active_zone = priority_zone
 
@@ -1338,11 +1365,9 @@ def evaluate_setup(
         chasing = True  # 遠離支撐追多
     if structure == "偏空" and not at_zone and priority_zone and px < priority_zone.lo - atr_v:
         chasing = True
-    if structure == "盤整":
-        # 盤整不追突破
-        box_hi = max((z.hi for z in resists), default=px)
-        box_lo = min((z.lo for z in supports), default=px)
-        if px > box_hi or px < box_lo:
+    if structure == "盤整" and priority_zone:
+        # 突破近段箱體上下緣才算追價
+        if px > priority_zone.hi or px < priority_zone.lo:
             chasing = True
 
     # ④ 看反應
