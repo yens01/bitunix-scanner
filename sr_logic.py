@@ -1345,14 +1345,17 @@ def evaluate_setup(
         x in s for s in candle_signals for x in ("上影收針", "空頭吞噬", "假突破收回(上)")
     ) or ("十字K" in candle_signals and at_zone and zone_kind == "resistance")
 
+    # 多空反應同時出現 = 方向衝突，不算有效反應
+    react_conflict = bull_react and bear_react
+
     reaction_ok = False
-    if at_zone and active_zone and candle_signals:
+    if at_zone and active_zone and candle_signals and not react_conflict:
         touched = (
             active_zone.near(last.low, atr_v)
             or active_zone.near(last.high, atr_v)
-            or active_zone.near(last.close, atr_v)
             or active_zone.near(prev.low, atr_v)
             or active_zone.near(prev.high, atr_v)
+            or active_zone.near(last.close, atr_v)
         )
         if touched:
             if structure == "偏多" and bull_react and zone_kind == "support":
@@ -1361,19 +1364,42 @@ def evaluate_setup(
                 reaction_ok = True
             # 盤整：有反應也不鼓勵扣板機（等方向）
 
+    # 結構細節與標籤衝突時（如標偏空卻 CHOCH轉多／MA多頭）→ 不給方向單
+    struct_conflict = False
+    if structure == "偏空" and (
+        "CHOCH轉多" in struct_detail or "MA多頭" in struct_detail or "多頭排列" in struct_detail
+    ):
+        struct_conflict = True
+    if structure == "偏多" and (
+        "CHOCH轉空" in struct_detail or "MA空頭" in struct_detail or "空頭排列" in struct_detail
+    ):
+        struct_conflict = True
+
     # 方向 → side（第四章：用來決定優先做多/做空，不是猜未來）
-    # 硬規則：偏多只允許多、偏空只允許空；絕無逆勢單
+    # 硬規則：偏多只允許多、偏空只允許空；衝突則不下單
     side = "none"
-    if structure == "偏多" and zone_kind == "support" and reaction_ok and not chasing:
+    if (
+        structure == "偏多"
+        and zone_kind == "support"
+        and reaction_ok
+        and not chasing
+        and not struct_conflict
+    ):
         side = "long"
-    elif structure == "偏空" and zone_kind == "resistance" and reaction_ok and not chasing:
+    elif (
+        structure == "偏空"
+        and zone_kind == "resistance"
+        and reaction_ok
+        and not chasing
+        and not struct_conflict
+    ):
         side = "short"
     if structure == "偏多" and side == "short":
         side = "none"
     if structure == "偏空" and side == "long":
         side = "none"
-    if structure == "盤整":
-        side = "none"  # 盤整不給方向單
+    if structure == "盤整" or struct_conflict or react_conflict:
+        side = "none"
 
     # 扣板機匯合
     confluence: list[str] = []
@@ -1468,9 +1494,9 @@ def evaluate_setup(
     ]
 
     # ⑤⑥ 止損 / 止盈位置（有方向就先算計畫價；真正進場仍看 side）
-    # 計畫方向也鎖死：偏多只計畫多、偏空只計畫空
+    # 計畫方向也鎖死：偏多只計畫多、偏空只計畫空；衝突則不算計畫單
     plan_side = side
-    if plan_side == "none":
+    if plan_side == "none" and not struct_conflict and not react_conflict:
         if structure == "偏多":
             plan_side = "long"
         elif structure == "偏空":
@@ -1479,7 +1505,7 @@ def evaluate_setup(
         plan_side = "long"
     if structure == "偏空" and plan_side == "long":
         plan_side = "short"
-    if structure == "盤整":
+    if structure == "盤整" or struct_conflict or react_conflict:
         plan_side = "none"
 
     # 入場：已回測用現價；等回測用區中軸作計畫入場
@@ -1661,7 +1687,11 @@ def evaluate_setup(
     ]
 
     note = ""
-    if structure == "偏多":
+    if struct_conflict:
+        note = "結構訊號衝突（如 LH/LL 與 MA多頭／CHOCH轉多同時出現）→ 暫不下手，等方向一致。"
+    elif react_conflict:
+        note = "K棒多空反應衝突（同時有多頭與空頭訊號）→ 不扣板機。"
+    elif structure == "偏多":
         note = "偏多：回檔到支撐再找多單；【硬規則】禁止做空。"
         if waiting_retest:
             note += " 目前尚未回測到區 → 等待。"
