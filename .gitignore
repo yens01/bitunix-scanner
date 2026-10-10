@@ -6,6 +6,7 @@ telegram.local.env
 # 執行狀態／日記
 alert_cooldown.json
 yes_journal.jsonl
+session_plan_state.json
 *.csv
 
 # Python

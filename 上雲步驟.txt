@@ -43,6 +43,11 @@ Bitunix 掃描器 → GitHub Actions 上雲步驟
   → 全部／新規則 v2／舊規則 legacy 分開勝率
 - 雲端會 cache yes_journal.jsonl（與冷卻一齊），同向倉才跨次生效
 
+【4H 大盤規劃】
+- 盤整：短卡（箱體＋日／週／月偏向），不給假進出場
+- 有方向且等回測：才展開完整計畫
+- 同日內容不變：只推「無變化」短訊（cache session_plan_state.json）
+
 
 【注意】
 - 不要上傳 telegram.local.env

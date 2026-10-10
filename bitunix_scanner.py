@@ -100,6 +100,9 @@ SESSION_PLAN_INTERVAL = "4h"         # 日內規劃用 4H K 線
 SESSION_PLAN_MTF = ("1d", "1w", "1M")
 SESSION_PLAN_SYMBOLS = ("BTCUSDT", "ETHUSDT")
 SESSION_PLAN_COOLDOWN_PREFIX = "__session_btc_eth_plan__"
+SESSION_PLAN_STATE_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "session_plan_state.json"
+)
 # 相容舊常數名稱
 EVENING_PLAN_HOUR = 16
 EVENING_PLAN_INTERVAL = SESSION_PLAN_INTERVAL
@@ -899,11 +902,57 @@ def format_alert_line(r: ChecklistResult) -> str:
     )
 
 
+def _plan_htf_bias_line(r: ChecklistResult) -> str:
+    """規劃用：即使 4H 盤整也顯示日／週／月偏向。"""
+    mtf = r.mtf or {}
+    parts: list[str] = []
+    for key, lab in (("1D", "日"), ("1W", "週"), ("1M", "月")):
+        if key in mtf:
+            parts.append(f"{lab}:{mtf[key]}")
+    if not parts:
+        for key, lab in (("4H", "4H"), ("1H", "1H")):
+            if key in mtf:
+                parts.append(f"{lab}:{mtf[key]}")
+    return "｜".join(parts) if parts else "高週期無資料"
+
+
+def _plan_show_full_levels(r: ChecklistResult) -> bool:
+    """有明確方向且靠近／等回測／可進，才展開完整進出場。"""
+    if r.structure == "盤整":
+        return False
+    directed = r.structure in ("偏多", "偏空") or r.side in ("long", "short")
+    if not directed:
+        return False
+    if not (r.entry > 0 and r.stop > 0 and r.tp > 0 and abs(r.entry - r.stop) > 0):
+        return False
+    return bool(r.trigger_ready or r.waiting_retest or r.at_zone)
+
+
+def _plan_zone_line(r: ChecklistResult, *, html: bool = True) -> str:
+    if not (r.zone_lo and r.zone_hi):
+        return ""
+    lo, hi = _px(r.zone_lo), _px(r.zone_hi)
+    if r.structure == "盤整":
+        label = "箱體"
+    elif r.structure == "偏多" or r.side == "long":
+        label = "下方支撐區"
+    elif r.structure == "偏空" or r.side == "short":
+        label = "上方壓力區"
+    else:
+        label = "優先區"
+    if html:
+        return f"{label} <code>{_esc(lo)}</code>–<code>{_esc(hi)}</code>"
+    return f"{label} {lo}–{hi}"
+
+
 def format_telegram_card(r: ChecklistResult, *, kind: str) -> str:
     """
     Telegram HTML 卡片。
     kind: yes | retest | retest_summary | plan
     """
+    if kind == "plan":
+        return format_telegram_plan_card(r)
+
     if r.side == "long":
         side_emoji, side_txt = "🟢", "做多"
     elif r.side == "short":
@@ -922,14 +971,6 @@ def format_telegram_card(r: ChecklistResult, *, kind: str) -> str:
     if kind == "yes":
         status = "✅ 可扣板機"
         note = "可扣板機（仍非投資建議）"
-    elif kind == "plan":
-        if r.trigger_ready:
-            status = "✅ 可扣板機"
-        elif r.waiting_retest:
-            status = "📋 晚盤規劃・等回測"
-        else:
-            status = "📋 晚盤規劃・觀望"
-        note = _esc(r.missing_steps or r.note or "規劃參考，條件齊再進")
     else:
         status = "⏳ 靠近區・等回測"
         note = _esc(r.missing_steps or "等價格確認反應後再進")
@@ -942,24 +983,16 @@ def format_telegram_card(r: ChecklistResult, *, kind: str) -> str:
     elif r.structure == "盤整":
         ban = "🚫 盤整・禁止方向單"
 
-    zone = ""
-    if r.zone_lo and r.zone_hi:
-        zone = f"優先區 <code>{_esc(_px(r.zone_lo))}</code>–<code>{_esc(_px(r.zone_hi))}</code>"
-
+    zone = _plan_zone_line(r, html=True)
     mtf = _esc(r.mtf_note) if r.mtf_note else ("高週期對齊" if r.mtf_aligned else "高週期未對齊")
     lines = [
         f"{side_emoji} <b>{_esc(r.symbol)}</b>  {side_txt} ｜ {status} ｜ {group}",
     ]
     if zone:
         lines.append(zone)
-    if kind == "plan" and not r.trigger_ready:
-        lines.append(f"計畫入場 <code>{_esc(_px(r.entry))}</code>（參考）")
-        lines.append(f"計畫停損 <code>{_esc(_px(r.stop))}</code>  （約 {risk_pct:.2f}%）")
-        lines.append(f"計畫止盈 <code>{_esc(_px(r.tp))}</code>  （約 {reward_pct:.2f}%）")
-    else:
-        lines.append(f"入場 <code>{_esc(_px(r.entry))}</code>")
-        lines.append(f"停損 <code>{_esc(_px(r.stop))}</code>  （約 {risk_pct:.2f}%）")
-        lines.append(f"止盈 <code>{_esc(_px(r.tp))}</code>  （約 {reward_pct:.2f}%）")
+    lines.append(f"入場 <code>{_esc(_px(r.entry))}</code>")
+    lines.append(f"停損 <code>{_esc(_px(r.stop))}</code>  （約 {risk_pct:.2f}%）")
+    lines.append(f"止盈 <code>{_esc(_px(r.tp))}</code>  （約 {reward_pct:.2f}%）")
     lines.extend(
         [
             f"RR <b>{r.rr:.1f}</b> ｜ 流程 {r.workflow_passed}/11 ｜ 分 {r.setup_score:.0f}",
@@ -976,8 +1009,71 @@ def format_telegram_card(r: ChecklistResult, *, kind: str) -> str:
     return "\n".join(lines)
 
 
+def format_telegram_plan_card(r: ChecklistResult) -> str:
+    """4H 日內規劃卡：盤整短卡；有方向＋回測區才展開進出場。"""
+    group = "大幣" if _is_major(r.symbol) else "山寨"
+    htf = _esc(_plan_htf_bias_line(r))
+    zone = _plan_zone_line(r, html=True)
+    full = _plan_show_full_levels(r)
+
+    if r.structure == "盤整":
+        lines = [
+            f"⚪ <b>{_esc(r.symbol)}</b>  盤整 ｜ 📋 規劃・等選邊 ｜ {group}",
+        ]
+        if zone:
+            lines.append(zone)
+        lines.append(f"高週期 {htf}")
+        lines.append("🚫 盤整・禁止方向單")
+        lines.append("備註: 等市場選邊後再給進出場")
+        return "\n".join(lines)
+
+    if r.side == "long" or r.structure == "偏多":
+        side_emoji, side_txt = "🟢", "偏多" if r.side != "long" else "做多"
+        ban = "🚫 結構偏多・禁止做空"
+    elif r.side == "short" or r.structure == "偏空":
+        side_emoji, side_txt = "🔴", "偏空" if r.side != "short" else "做空"
+        ban = "🚫 結構偏空・禁止做多"
+    else:
+        side_emoji, side_txt = "⚪", r.structure
+        ban = ""
+
+    if r.trigger_ready:
+        status = "✅ 可扣板機"
+    elif r.waiting_retest or r.at_zone:
+        status = "📋 規劃・等回測"
+    else:
+        status = "📋 規劃・有方向"
+
+    lines = [
+        f"{side_emoji} <b>{_esc(r.symbol)}</b>  {side_txt} ｜ {status} ｜ {group}",
+    ]
+    if zone:
+        lines.append(zone)
+    lines.append(f"高週期 {htf}")
+
+    if full:
+        risk_pct = abs(r.entry - r.stop) / r.entry * 100
+        reward_pct = abs(r.tp - r.entry) / r.entry * 100 if r.tp else 0
+        lines.append(f"計畫入場 <code>{_esc(_px(r.entry))}</code>")
+        lines.append(f"計畫停損 <code>{_esc(_px(r.stop))}</code>  （約 {risk_pct:.2f}%）")
+        lines.append(f"計畫止盈 <code>{_esc(_px(r.tp))}</code>  （約 {reward_pct:.2f}%）")
+        lines.append(f"RR <b>{r.rr:.1f}</b> ｜ 流程 {r.workflow_passed}/11 ｜ 分 {r.setup_score:.0f}")
+        note = _esc(r.missing_steps or r.note or "條件齊再進")
+    else:
+        lines.append("進出場: 等回測到區後再給完整計畫")
+        note = "有方向但尚未到回測區，先看上下沿"
+
+    if ban:
+        lines.append(ban)
+    lines.append(f"備註: {note}")
+    return "\n".join(lines)
+
+
 def format_console_card(r: ChecklistResult, *, kind: str) -> str:
     """終端機卡片（與 Telegram 對齊）。"""
+    if kind == "plan":
+        return format_console_plan_card(r)
+
     if r.side == "long":
         side_txt = "做多"
     elif r.side == "short":
@@ -988,8 +1084,6 @@ def format_console_card(r: ChecklistResult, *, kind: str) -> str:
     reward_pct = abs(r.tp - r.entry) / r.entry * 100 if r.entry and r.tp else 0
     if kind == "yes":
         status = "可扣板機"
-    elif kind == "plan":
-        status = "晚盤規劃"
     else:
         status = "靠近區・等回測"
     group = "大幣" if _is_major(r.symbol) else "山寨"
@@ -1013,6 +1107,48 @@ def format_console_card(r: ChecklistResult, *, kind: str) -> str:
         if rl:
             lines.append(f"  │ {rl}")
     lines[-1] = "  └" + lines[-1][3:] if lines[-1].startswith("  │") else lines[-1]
+    return "\n".join(lines)
+
+
+def format_console_plan_card(r: ChecklistResult) -> str:
+    htf = _plan_htf_bias_line(r)
+    zone = _plan_zone_line(r, html=False)
+    full = _plan_show_full_levels(r)
+    group = "大幣" if _is_major(r.symbol) else "山寨"
+    if r.structure == "盤整":
+        lines = [
+            f"  ┌ {r.symbol}  盤整 ｜ 規劃・等選邊 ｜ {group}",
+        ]
+        if zone:
+            lines.append(f"  │ {zone}")
+        lines.append(f"  │ 高週期 {htf}")
+        lines.append("  └ 禁方向・等選邊")
+        return "\n".join(lines)
+
+    side_txt = (
+        "做多" if r.side == "long" else
+        "做空" if r.side == "short" else
+        r.structure
+    )
+    status = (
+        "可扣板機" if r.trigger_ready else
+        "等回測" if (r.waiting_retest or r.at_zone) else
+        "有方向"
+    )
+    lines = [
+        f"  ┌ {r.symbol}  {side_txt} ｜ 規劃・{status} ｜ {group}",
+    ]
+    if zone:
+        lines.append(f"  │ {zone}")
+    lines.append(f"  │ 高週期 {htf}")
+    if full:
+        risk_pct = abs(r.entry - r.stop) / r.entry * 100
+        lines.append(f"  │ 入場 {_px(r.entry)}")
+        lines.append(f"  │ 停損 {_px(r.stop)}  （約 {risk_pct:.2f}%）")
+        lines.append(f"  │ 止盈 {_px(r.tp)} ｜ RR {r.rr:.1f}")
+        lines.append(f"  └ 流程 {r.workflow_passed}/11")
+    else:
+        lines.append("  └ 等回測到區再給進出場")
     return "\n".join(lines)
 
 
@@ -1564,6 +1700,60 @@ def _build_btc_eth_plans() -> list[ChecklistResult]:
     return plans
 
 
+def _plan_fingerprint(plans: list[ChecklistResult]) -> str:
+    """結構／區間／方向指紋，用於同日無變化判斷。"""
+    bits: list[str] = []
+    for r in sorted(plans, key=lambda x: x.symbol):
+        bits.append(
+            "|".join(
+                [
+                    r.symbol,
+                    r.structure,
+                    r.side,
+                    "1" if r.waiting_retest else "0",
+                    "1" if r.trigger_ready else "0",
+                    "1" if r.at_zone else "0",
+                    f"{r.zone_lo:.4f}",
+                    f"{r.zone_hi:.4f}",
+                    f"{r.entry:.4f}",
+                    f"{r.stop:.4f}",
+                    f"{r.tp:.4f}",
+                    _plan_htf_bias_line(r),
+                ]
+            )
+        )
+    return ";".join(bits)
+
+
+def load_session_plan_state(path: str = SESSION_PLAN_STATE_PATH) -> dict[str, str]:
+    if not os.path.isfile(path):
+        return {}
+    try:
+        with open(path, encoding="utf-8") as fp:
+            data = json.load(fp)
+        return {str(k): str(v) for k, v in data.items()} if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def save_session_plan_state(state: dict[str, str], path: str = SESSION_PLAN_STATE_PATH) -> None:
+    try:
+        with open(path, "w", encoding="utf-8") as fp:
+            json.dump(state, fp, ensure_ascii=False, indent=0)
+    except OSError:
+        pass
+
+
+def _plan_brief_summary(plans: list[ChecklistResult]) -> str:
+    parts: list[str] = []
+    for r in plans:
+        z = ""
+        if r.zone_lo and r.zone_hi:
+            z = f" {_px(r.zone_lo)}–{_px(r.zone_hi)}"
+        parts.append(f"{r.symbol.replace('USDT', '')} {r.structure}{z}")
+    return "｜".join(parts)
+
+
 def send_session_major_plans(
     cooldown: dict[str, float],
     *,
@@ -1572,6 +1762,7 @@ def send_session_major_plans(
     """
     到點推播 BTC／ETH 日內規劃：
     16:00 下午／20:00 晚盤／21:30 美股開盤（各一次／天）。
+    同日內容指紋相同 → 只推「無變化」短訊，不重貼完整卡。
     """
     due = _due_session_plan_slots(cooldown)
     if not due:
@@ -1588,17 +1779,43 @@ def send_session_major_plans(
     for hour, minute, _label in due[:-1]:
         cooldown[_session_plan_slot_key(day, hour, minute)] = time.time()
     hour, minute, label = due[-1]
-    notify_alert(
-        f"BTC／ETH {label}（{SESSION_PLAN_INTERVAL.upper()}）",
-        setups=plans,
-        kind="plan",
-        sound=False,
-        desktop=False,
-        telegram=telegram,
-    )
+    title = f"BTC／ETH {label}（{SESSION_PLAN_INTERVAL.upper()}）"
+    fp = _plan_fingerprint(plans)
+    state = load_session_plan_state()
+    unchanged = state.get("date") == day and state.get("fingerprint") == fp
+
+    if unchanged:
+        brief = _plan_brief_summary(plans)
+        notify_alert(
+            title,
+            lines=[f"與上一時段相同，無變化｜{brief}"],
+            kind="plan",
+            sound=False,
+            desktop=False,
+            telegram=telegram,
+        )
+        print(f"日內規劃：「{label}」無變化（短訊）｜{brief}")
+    else:
+        notify_alert(
+            title,
+            setups=plans,
+            kind="plan",
+            sound=False,
+            desktop=False,
+            telegram=telegram,
+        )
+        print(f"日內規劃：已推「{label}」{', '.join(r.symbol for r in plans)}")
+
     cooldown[_session_plan_slot_key(day, hour, minute)] = time.time()
+    save_session_plan_state(
+        {
+            "date": day,
+            "fingerprint": fp,
+            "last_label": label,
+            "summary": _plan_brief_summary(plans),
+        }
+    )
     sent = 1
-    print(f"日內規劃：已推「{label}」{', '.join(r.symbol for r in plans)}")
 
     cutoff = time.time() - 3 * 86400
     cleaned = {

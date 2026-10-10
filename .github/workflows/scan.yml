@@ -25,8 +25,10 @@ jobs:
           path: |
             alert_cooldown.json
             yes_journal.jsonl
-          key: state-v3-${{ github.run_id }}
+            session_plan_state.json
+          key: state-v4-${{ github.run_id }}
           restore-keys: |
+            state-v4-
             state-v3-
             cooldown-v2-
 
@@ -37,6 +39,9 @@ jobs:
           fi
           if [ ! -f yes_journal.jsonl ]; then
             touch yes_journal.jsonl
+          fi
+          if [ ! -f session_plan_state.json ]; then
+            echo '{}' > session_plan_state.json
           fi
 
       - name: Run one scan
@@ -57,4 +62,5 @@ jobs:
           path: |
             alert_cooldown.json
             yes_journal.jsonl
-          key: state-v3-${{ github.run_id }}
+            session_plan_state.json
+          key: state-v4-${{ github.run_id }}
