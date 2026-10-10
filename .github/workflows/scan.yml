@@ -1,0 +1,43 @@
+# 每 5 分鐘掃一轮，有 YES／靠近區才推 Telegram
+name: Bitunix Scan
+
+on:
+  schedule:
+    # UTC；台灣時間 = UTC+8 → 約每小時的 :00/:05/... 都會跑
+    - cron: "*/5 * * * *"
+  workflow_dispatch: # 可在 Actions 頁按「Run workflow」手動測
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore cooldown cache
+        uses: actions/cache@v4
+        with:
+          path: alert_cooldown.json
+          key: alert-cooldown-${{ github.run_id }}
+          restore-keys: |
+            alert-cooldown-
+
+      - name: Run one scan
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PYTHONIOENCODING: utf-8
+        run: python bitunix_scanner.py watch-once --n 40
+
+      - name: Keep cooldown for next run
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: alert_cooldown.json
+          key: alert-cooldown-${{ github.run_id }}

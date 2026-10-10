@@ -1,0 +1,23 @@
+# 密鑰與本機設定（絕對不要上傳）
+telegram.local.env
+.env
+.env.*
+
+# 執行狀態／日記
+alert_cooldown.json
+yes_journal.jsonl
+*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+~$*
