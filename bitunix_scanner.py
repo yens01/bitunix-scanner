@@ -488,13 +488,19 @@ def analyze_klines(symbol: str, interval: str = "15m", with_mtf: bool = True) ->
     }
 
 
-def evaluate_symbol(symbol: str, interval: str = "15m", with_mtf: bool = True) -> ChecklistResult | None:
+def evaluate_symbol(
+    symbol: str,
+    interval: str = "15m",
+    with_mtf: bool = True,
+    mtf_tfs: list[str] | None = None,
+) -> ChecklistResult | None:
     try:
         raw = fetch_klines(symbol, interval=interval, limit=120)
         candles = parse_klines(raw)
         if len(candles) < 40:
             return None
-        mtf = fetch_mtf_bias(symbol, ["1h", "4h", "1d"]) if with_mtf else {}
+        tfs = mtf_tfs if mtf_tfs is not None else ["1h", "4h", "1d"]
+        mtf = fetch_mtf_bias(symbol, tfs) if with_mtf else {}
         opens = fetch_session_opens(symbol) if with_mtf else {}
         return evaluate_setup(symbol, candles, interval, mtf=mtf, opens=opens)
     except RuntimeError:
