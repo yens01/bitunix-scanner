@@ -26,7 +26,7 @@ Headers:
 1. 拿掉 GitHub 內建 schedule（你帳號不穩，且會跟 cron-job 重複）
 2. 加 concurrency：上一輪沒跑完會取消，避免疊兩次掃描
 3. 冷卻 cache 改穩：先還原再確保檔案存在再存回
-4. 掃描池 n=30：省時間／額度，過濾已夠嚴
+4. 掃描池 n=100：擴大山寨覆蓋（Actions timeout 8 分）
 5. timeout 縮到 8 分鐘
 
 

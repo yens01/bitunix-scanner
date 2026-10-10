@@ -54,8 +54,8 @@ jobs:
           RISK_MAX_SAME_SIDE: ${{ secrets.RISK_MAX_SAME_SIDE }}
           RISK_MAX_TOTAL_OPEN: ${{ secrets.RISK_MAX_TOTAL_OPEN }}
           PYTHONIOENCODING: utf-8
-        # n=30：省 Actions 分鐘數；品質過濾已夠嚴
-        run: python bitunix_scanner.py watch-once --n 30
+        # n=100：擴大山寨覆蓋；逾時已設 8 分鐘
+        run: python bitunix_scanner.py watch-once --n 100
 
       - name: Save cooldown + journal
         if: always()

@@ -53,7 +53,7 @@ jobs:
           RISK_MAX_SAME_SIDE: ${{ secrets.RISK_MAX_SAME_SIDE }}
           RISK_MAX_TOTAL_OPEN: ${{ secrets.RISK_MAX_TOTAL_OPEN }}
           PYTHONIOENCODING: utf-8
-        run: python bitunix_scanner.py watch-once --n 30
+        run: python bitunix_scanner.py watch-once --n 100
 
       - name: Save cooldown + journal
         if: always()
