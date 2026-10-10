@@ -50,6 +50,13 @@ Bitunix 掃描器 → GitHub Actions 上雲步驟
 - 同日內容不變：只推「無變化」短訊（cache session_plan_state.json）
 
 
+【手機查幣】
+- 對你的 Telegram Bot 傳：BTC / MAGIC / AVAXUSDT
+- 會回類似 CMD detail 的摘要（只回覆你的 CHAT_ID）
+- 雲端：每次排程掃描會順便處理未讀訊息（最多約等一個排程週期）
+- 本機即時：python bitunix_scanner.py bot
+
+
 【注意】
 - 不要上傳 telegram.local.env
 - Public：程式碼看得到，Secrets 仍保密

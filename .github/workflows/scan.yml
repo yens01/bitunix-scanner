@@ -26,8 +26,10 @@ jobs:
             alert_cooldown.json
             yes_journal.jsonl
             session_plan_state.json
-          key: state-v4-${{ github.run_id }}
+            telegram_offset.json
+          key: state-v5-${{ github.run_id }}
           restore-keys: |
+            state-v5-
             state-v4-
             state-v3-
             cooldown-v2-
@@ -42,6 +44,9 @@ jobs:
           fi
           if [ ! -f session_plan_state.json ]; then
             echo '{}' > session_plan_state.json
+          fi
+          if [ ! -f telegram_offset.json ]; then
+            echo '{"offset":0}' > telegram_offset.json
           fi
 
       - name: Run one scan
@@ -63,4 +68,5 @@ jobs:
             alert_cooldown.json
             yes_journal.jsonl
             session_plan_state.json
-          key: state-v4-${{ github.run_id }}
+            telegram_offset.json
+          key: state-v5-${{ github.run_id }}

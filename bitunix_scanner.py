@@ -112,6 +112,9 @@ SESSION_PLAN_STATE_PATH = os.path.join(
 EVENING_PLAN_HOUR = 16
 EVENING_PLAN_INTERVAL = SESSION_PLAN_INTERVAL
 COOLDOWN_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "alert_cooldown.json")
+TELEGRAM_OFFSET_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "telegram_offset.json"
+)
 
 # 大幣組（同向名額獨立，避免被山寨擠掉）
 MAJOR_SYMBOLS = {
@@ -870,12 +873,34 @@ def _desktop_toast(title: str, body: str) -> None:
         pass
 
 
-def _telegram_send(text: str, *, html: bool = True) -> bool:
+def _telegram_token_chat() -> tuple[str, str]:
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+    return token, chat
+
+
+def _telegram_api(method: str, payload: dict[str, Any] | None = None, *, timeout: int = 35) -> Any:
+    token, _ = _telegram_token_chat()
+    if not token:
+        return None
+    url = f"https://api.telegram.org/bot{token}/{method}"
+    data = urllib.parse.urlencode(payload or {}).encode()
+    req = urllib.request.Request(url, data=data, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            body = json.loads(resp.read().decode("utf-8"))
+        if not body.get("ok"):
+            return None
+        return body.get("result")
+    except Exception:
+        return None
+
+
+def _telegram_send(text: str, *, html: bool = True, chat_id: str | None = None) -> bool:
+    token, default_chat = _telegram_token_chat()
+    chat = (chat_id or default_chat).strip()
     if not token or not chat:
         return False
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload: dict[str, Any] = {
         "chat_id": chat,
         "text": text[:3900],
@@ -883,16 +908,277 @@ def _telegram_send(text: str, *, html: bool = True) -> bool:
     }
     if html:
         payload["parse_mode"] = "HTML"
-    data = urllib.parse.urlencode(payload).encode()
-    req = urllib.request.Request(url, data=data, method="POST")
+    result = _telegram_api("sendMessage", payload, timeout=20)
+    if result is not None:
+        return True
+    # HTML 失敗時改純文字再試一次
+    if html:
+        return _telegram_send(
+            text.replace("<", "").replace(">", ""), html=False, chat_id=chat
+        )
+    return False
+
+
+def load_telegram_offset(path: str = TELEGRAM_OFFSET_PATH) -> int:
+    if not os.path.isfile(path):
+        return 0
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            return resp.status == 200
+        with open(path, encoding="utf-8") as fp:
+            data = json.load(fp)
+        return int(data.get("offset", 0))
     except Exception:
-        # HTML 失敗時改純文字再試一次
-        if html:
-            return _telegram_send(text.replace("<", "").replace(">", ""), html=False)
-        return False
+        return 0
+
+
+def save_telegram_offset(offset: int, path: str = TELEGRAM_OFFSET_PATH) -> None:
+    try:
+        with open(path, "w", encoding="utf-8") as fp:
+            json.dump({"offset": int(offset)}, fp)
+    except OSError:
+        pass
+
+
+def normalize_query_symbol(text: str) -> str | None:
+    """把手機輸入轉成 XXXUSDT；無法辨識則 None。"""
+    raw = (text or "").strip().upper()
+    if not raw or raw.startswith("/"):
+        # 允許 /btc /detail btc
+        raw = raw.lstrip("/").strip().upper()
+        if raw.startswith("DETAIL "):
+            raw = raw[7:].strip()
+        elif raw.startswith("D "):
+            raw = raw[2:].strip()
+        elif raw in {"START", "HELP", "STATS", "JOURNAL", "JS"}:
+            return raw
+    raw = raw.replace("-", "").replace("/", "").replace(" ", "")
+    if not raw or not raw.replace("USDT", "").isalnum():
+        return None
+    if raw in {"START", "HELP", "STATS", "JOURNAL", "JS"}:
+        return raw
+    if not raw.endswith("USDT"):
+        raw += "USDT"
+    if len(raw) < 6 or len(raw) > 20:
+        return None
+    return raw
+
+
+def format_telegram_detail(info: dict[str, Any], meta: CoinSignal | None = None) -> str:
+    """手機回覆用：濃縮版 detail（對齊 CMD 重點）。"""
+    if info.get("error"):
+        return f"❌ {_esc(str(info['error']))}"
+    setup: ChecklistResult | None = info.get("setup")
+    live = info.get("ticker_last") or (meta.last if meta else 0) or info.get("last") or 0
+    k_close = info.get("k_close") or info.get("last") or 0
+    lines = [
+        f"🔎 <b>{_esc(info['symbol'])}</b> · {_esc(info['interval'])}",
+        f"現價 <code>{_esc(_px(live))}</code>",
+    ]
+    if k_close > 0 and live > 0 and abs(live - k_close) / live >= 0.001:
+        lines.append(f"{_esc(info['interval'])} K收 <code>{_esc(_px(k_close))}</code>")
+    if meta:
+        chg = f"{meta.change_pct:+.2f}%"
+        lines.append(
+            f"24h {chg} · 振幅 {meta.range_pct:.1f}% · 額 {fmt_num(meta.quote_vol)}"
+        )
+    mtf = info.get("mtf") or {}
+    if mtf:
+        lines.append("多週期 " + " ".join(f"{k}:{v}" for k, v in mtf.items()))
+
+    if setup:
+        side = _side_short_label(setup)
+        if setup.trigger_ready:
+            status = "✅ 可扣板機"
+        elif setup.waiting_retest:
+            status = "⏳ 等回測"
+        elif setup.structure == "盤整":
+            status = "📋 盤整觀望"
+        else:
+            status = "📋 條件未齊"
+        lines.append(f"{side} ｜ {status} ｜ 流程 {setup.workflow_passed}/11 ｜ 分 {setup.setup_score:.0f}")
+        if setup.zone_lo and setup.zone_hi:
+            zlab = "箱體" if setup.structure == "盤整" else "優先區"
+            lines.append(
+                f"{zlab} <code>{_esc(_px(setup.zone_lo))}</code>–"
+                f"<code>{_esc(_px(setup.zone_hi))}</code>"
+            )
+        if setup.trigger_ready or (
+            setup.side in ("long", "short")
+            and setup.entry
+            and setup.stop
+            and setup.tp
+            and setup.rr > 0
+            and (setup.waiting_retest or setup.at_zone)
+        ):
+            risk_pct = abs(setup.entry - setup.stop) / setup.entry * 100 if setup.entry else 0
+            lines.append(f"入場 <code>{_esc(_px(setup.entry))}</code>")
+            lines.append(
+                f"停損 <code>{_esc(_px(setup.stop))}</code>（{risk_pct:.2f}%）"
+            )
+            lines.append(
+                f"止盈 <code>{_esc(_px(setup.tp))}</code> · RR <b>{setup.rr:.1f}</b>"
+            )
+            if setup.trigger_ready and setup.entry and setup.stop:
+                rl = format_risk_line(setup.entry, setup.stop)
+                if rl:
+                    lines.append(_esc(rl))
+        if setup.structure == "偏多":
+            lines.append("🚫 偏多・禁空")
+        elif setup.structure == "偏空":
+            lines.append("🚫 偏空・禁多")
+        elif setup.structure == "盤整":
+            lines.append("🚫 盤整・禁方向單")
+        if setup.mtf_note:
+            lines.append(f"MTF {_esc(setup.mtf_note.split('｜')[0][:48])}")
+        if setup.missing_steps:
+            lines.append(f"缺 {_esc(setup.missing_steps.replace('缺：', ''))}")
+        if setup.note:
+            lines.append(f"備註 {_esc(setup.note[:120])}")
+    else:
+        lines.append(f"偏向 {_esc(str(info.get('bias', '-')))}")
+
+    lines.append("⚠️ 僅供參考，非投資建議")
+    return "\n".join(lines)
+
+
+def answer_telegram_symbol(symbol: str, *, interval: str = "15m") -> str:
+    try:
+        info = analyze_klines(symbol, interval, with_mtf=True)
+    except RuntimeError as e:
+        return f"❌ {_esc(symbol)} 查詢失敗：{_esc(str(e))}"
+    meta = None
+    try:
+        # 輕量：只從 ticker 補 24h，避免整市 scan
+        for t in fetch_tickers():
+            if (t.get("symbol") or "") == symbol:
+                last = f(t.get("lastPrice") or t.get("last"))
+                open_ = f(t.get("open"))
+                high = f(t.get("high"))
+                low = f(t.get("low"))
+                qv = f(t.get("quoteVol"))
+                chg = pct_change(last, open_) if open_ else 0.0
+                rng = ((high - low) / open_ * 100) if open_ > 0 else 0.0
+                meta = CoinSignal(
+                    symbol=symbol,
+                    last=last,
+                    open_24h=open_,
+                    high=high,
+                    low=low,
+                    quote_vol=qv,
+                    base_vol=0.0,
+                    change_pct=chg,
+                    range_pct=rng,
+                    funding=None,
+                    max_leverage=None,
+                    status="",
+                    score=0.0,
+                    tags=[],
+                )
+                break
+    except RuntimeError:
+        pass
+    return format_telegram_detail(info, meta)
+
+
+def poll_telegram_queries(
+    *,
+    timeout: int = 0,
+    interval: str = "15m",
+    max_msgs: int = 8,
+) -> int:
+    """
+    處理手機傳給 Bot 的幣種查詢（只回覆 TELEGRAM_CHAT_ID）。
+    timeout=0：立刻取佇列（給 watch-once）；>0：長輪詢秒數（給 bot 模式）。
+    """
+    token, chat = _telegram_token_chat()
+    if not token or not chat:
+        return 0
+    offset = load_telegram_offset()
+    payload: dict[str, Any] = {"timeout": str(max(0, int(timeout)))}
+    if offset > 0:
+        payload["offset"] = str(offset)
+    updates = _telegram_api("getUpdates", payload, timeout=max(20, timeout + 10))
+    if not isinstance(updates, list):
+        return 0
+
+    handled = 0
+    next_offset = offset
+    for upd in updates:
+        uid = int(upd.get("update_id", 0) or 0)
+        next_offset = max(next_offset, uid + 1)
+        msg = upd.get("message") or {}
+        from_chat = str((msg.get("chat") or {}).get("id", ""))
+        if from_chat != str(chat):
+            continue
+        text = (msg.get("text") or "").strip()
+        if not text:
+            continue
+        key = normalize_query_symbol(text)
+        if key is None:
+            _telegram_send(
+                "用法：直接傳幣種，例如 <code>BTC</code> / <code>ETHUSDT</code>\n"
+                "或 <code>/help</code>",
+                chat_id=from_chat,
+            )
+            handled += 1
+            continue
+        if key in {"START", "HELP"}:
+            _telegram_send(
+                "📱 <b>幣種查詢</b>\n"
+                "傳 <code>BTC</code>、<code>MAGIC</code>、<code>AVAXUSDT</code>\n"
+                "會回傳類似 CMD <code>detail</code> 的摘要\n"
+                "統計：傳 <code>stats</code>",
+                chat_id=from_chat,
+            )
+            handled += 1
+            continue
+        if key in {"STATS", "JOURNAL", "JS"}:
+            # 簡短統計文字
+            from signal_tracker import compute_stats, load_journal, CURRENT_RULESET
+
+            rows = load_journal()
+            yes = [r for r in rows if (r.ruleset or "") == CURRENT_RULESET and (r.kind or "yes") == "yes"]
+            plan = [r for r in rows if (r.ruleset or "") == CURRENT_RULESET and (r.kind or "yes") == "plan"]
+            sy, sp = compute_stats(yes), compute_stats(plan)
+            _telegram_send(
+                f"📊 <b>日記統計</b>\n"
+                f"YES {sy.total}｜勝{sy.win_n} 負{sy.loss_n} 未結{sy.open_n}"
+                + (f"｜勝率{sy.win_rate:.1f}%" if sy.win_n + sy.loss_n else "")
+                + f"\n規劃 {sp.total}｜勝{sp.win_n} 負{sp.loss_n} 未結{sp.open_n}"
+                + (f"｜勝率{sp.win_rate:.1f}%" if sp.win_n + sp.loss_n else ""),
+                chat_id=from_chat,
+            )
+            handled += 1
+            continue
+
+        print(f"Telegram 查詢: {key}")
+        reply = answer_telegram_symbol(key, interval=interval)
+        ok = _telegram_send(reply, chat_id=from_chat)
+        print(f"  → {'已回覆' if ok else '回覆失敗'} {key}")
+        handled += 1
+        if handled >= max_msgs:
+            break
+
+    if next_offset > offset:
+        save_telegram_offset(next_offset)
+    return handled
+
+
+def telegram_bot_loop(*, interval: str = "15m") -> None:
+    """本機長駐：手機傳幣種立即回 detail 摘要。"""
+    enable_ansi()
+    token, chat = _telegram_token_chat()
+    if not token or not chat:
+        print("請先設定 TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID（telegram.local.env）")
+        return
+    print(color("Telegram 查詢 Bot 已啟動（Ctrl+C 停止）", "1;36"))
+    print("手機對 Bot 傳幣種，例如 BTC / ETHUSDT；回覆僅限你的 CHAT_ID")
+    try:
+        while True:
+            n = poll_telegram_queries(timeout=25, interval=interval, max_msgs=10)
+            if n == 0:
+                time.sleep(0.2)
+    except KeyboardInterrupt:
+        print("\n已停止 Bot")
 
 
 def _esc(s: str) -> str:
@@ -2150,6 +2436,14 @@ def watch_once(
     # 16:00／20:00／美股開盤：BTC／ETH 日內規劃（各時段每天一次）
     _, cooldown = send_session_major_plans(cooldown, telegram=True)
 
+    # 處理手機傳給 Bot 的幣種查詢（對齊 CMD detail）
+    try:
+        n_q = poll_telegram_queries(timeout=0, interval="15m")
+        if n_q:
+            print(f"Telegram 查詢已處理 {n_q} 則")
+    except Exception as ex:
+        print(f"Telegram 查詢略過: {ex}")
+
     save_alert_cooldown(cooldown)
     print(
         f"[{now_tw().strftime('%H:%M:%S')}] 完成｜"
@@ -2263,6 +2557,10 @@ def watch_loop(
             seen_yes = (seen_yes | set(yes_now)) & set(yes_now)
             seen_near = (seen_near | set(near_now)) & set(near_now)
             seen_far = (seen_far | set(far_now)) & set(far_now)
+            try:
+                poll_telegram_queries(timeout=0, interval="15m")
+            except Exception:
+                pass
             save_alert_cooldown(cooldown)
 
             time.sleep(max(seconds, 30))
@@ -2445,6 +2743,9 @@ def main() -> None:
     d.add_argument("--interval", default="15m", help="K線週期 如 5m 15m 1h")
     d.add_argument("--no-mtf", action="store_true", help="不快取 1H/4H/D 多週期")
 
+    b = sub.add_parser("bot", help="Telegram 手機查幣（傳 BTC／MAGIC 回 detail 摘要）")
+    b.add_argument("--interval", default="15m", help="分析週期")
+
     j = sub.add_parser("journal", help="YES 訊號日記／結算／統計")
     j.add_argument(
         "action",
@@ -2528,6 +2829,10 @@ def main() -> None:
         meta = next((x for x in signals if x.symbol == sym), None)
         info = analyze_klines(sym, args.interval, with_mtf=not args.no_mtf)
         print_detail(info, meta)
+        return
+
+    if args.cmd == "bot":
+        telegram_bot_loop(interval=args.interval)
         return
 
     if args.cmd == "journal":
