@@ -1707,7 +1707,7 @@ def print_setup_table(
         if r.mtf_note:
             bits.append(r.mtf_note.split("｜")[0][:28])
         print("   " + " · ".join(bits))
-    print("-" * w)
+    print("-" * total_w)
     _print_reject_block(rejected or [], limit=8)
     print(
         color(
