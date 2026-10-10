@@ -1,11 +1,12 @@
-# 每 5 分鐘掃一轮，有 YES／靠近區才推 Telegram
+# 自動掃描推 Telegram（schedule + 可手動）
 name: Bitunix Scan
 
 on:
   schedule:
-    # UTC；台灣時間 = UTC+8 → 約每小時的 :00/:05/... 都會跑
-    - cron: "*/5 * * * *"
-  workflow_dispatch: # 可在 Actions 頁按「Run workflow」手動測
+    # 每 15 分鐘（UTC）。避開整點 :00，較不易被 GitHub 排隊丟掉
+    # 台灣時間約 :07/:22/:37/:52
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch: # Actions 頁可手動「Run workflow」
 
 jobs:
   scan:
