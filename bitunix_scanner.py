@@ -22,11 +22,11 @@ import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
-from zoneinfo import ZoneInfo
 
-TZ_TW = ZoneInfo("Asia/Taipei")
+# 固定 UTC+8（不依賴系統 tzdata；Windows／Ubuntu Actions 都可用）
+TZ_TW = timezone(timedelta(hours=8))
 
 
 def now_tw() -> datetime:

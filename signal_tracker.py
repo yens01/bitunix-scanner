@@ -12,13 +12,12 @@ from __future__ import annotations
 import json
 import uuid
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
-from zoneinfo import ZoneInfo
 
 JOURNAL_PATH = Path(__file__).resolve().parent / "yes_journal.jsonl"
-TZ_TW = ZoneInfo("Asia/Taipei")
+TZ_TW = timezone(timedelta(hours=8))
 
 # 同一幣種同方向去重冷卻（秒）
 DEDUP_SECONDS = 4 * 3600
