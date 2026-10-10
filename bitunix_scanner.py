@@ -1175,25 +1175,34 @@ def print_checklist(setup: ChecklistResult) -> None:
     side_txt = {"long": "做多 LONG", "short": "做空 SHORT", "none": "暫不下手"}.get(setup.side, setup.side)
     plan = ""
     if setup.side == "none" and setup.structure == "偏多":
-        plan = "（計畫做多）"
+        plan = "（傾向做多，條件未齊）"
     elif setup.side == "none" and setup.structure == "偏空":
-        plan = "（計畫做空）"
+        plan = "（傾向做空，條件未齊）"
     print(f"  方向: {side_txt}{plan}")
-    print(f"  入場: {_px_or_dash(setup.entry)}" + ("  ← 等回測時為區中軸計畫價" if setup.waiting_retest else ""))
-    print(f"  停損: {_px_or_dash(setup.stop)}" + (f"  ← {setup.invalidation_reason}" if setup.invalidation_reason else ""))
-    print(f"  止盈: {_px_or_dash(setup.tp)}" + (
-        f"  ← 力道返還 {fib.force_return_tag}" if fib and fib.force_return_price and setup.tp == fib.force_return_price else ""
-    ))
-    if setup.entry and setup.stop and setup.entry > 0:
-        risk_pct = abs(setup.entry - setup.stop) / setup.entry * 100
-        print(f"  風險幅度: {risk_pct:.2f}%（入場→停損）")
-    if setup.entry and setup.tp and setup.entry > 0:
-        reward_pct = abs(setup.tp - setup.entry) / setup.entry * 100
-        print(f"  目標幅度: {reward_pct:.2f}%（入場→止盈）")
-    if setup.rr:
-        print(f"  盈虧比 RR: {setup.rr:.2f}" + (" ✓" if setup.rr >= 1.5 else f" （建議≥1.5）"))
+
+    # 僅 YES 顯示完整進出場；等回測只給計畫摘要；其餘不顯示價位避免誤以為可進
+    if setup.trigger_ready:
+        print(f"  入場: {_px_or_dash(setup.entry)}")
+        print(f"  停損: {_px_or_dash(setup.stop)}" + (f"  ← {setup.invalidation_reason}" if setup.invalidation_reason else ""))
+        print(f"  止盈: {_px_or_dash(setup.tp)}" + (
+            f"  ← 力道返還 {fib.force_return_tag}" if fib and fib.force_return_price and setup.tp == fib.force_return_price else ""
+        ))
+        if setup.entry and setup.stop and setup.entry > 0:
+            risk_pct = abs(setup.entry - setup.stop) / setup.entry * 100
+            print(f"  風險幅度: {risk_pct:.2f}%（入場→停損）")
+        if setup.entry and setup.tp and setup.entry > 0:
+            reward_pct = abs(setup.tp - setup.entry) / setup.entry * 100
+            print(f"  目標幅度: {reward_pct:.2f}%（入場→止盈）")
+        if setup.rr:
+            print(f"  盈虧比 RR: {setup.rr:.2f}" + (" ✓" if setup.rr >= 1.5 else f" （建議≥1.5）"))
+    elif setup.waiting_retest:
+        print(color("  （等回測・僅計畫參考，非可進場）", "33"))
+        print(f"  計畫區中軸: {_px_or_dash(setup.entry)}")
+        print(f"  計畫停損: {_px_or_dash(setup.stop)}")
+        print(f"  計畫止盈: {_px_or_dash(setup.tp)}" + (f" ｜計畫RR {setup.rr:.1f}" if setup.rr else ""))
     else:
-        print("  盈虧比 RR: - （方向或價位未齊）")
+        print(color("  條件未齊 → 暫不顯示進場／停損／止盈（避免誤當可下單）", "33"))
+        print(f"  原因: {setup.missing_steps or setup.note or '觀望'}")
 
     print()
     if setup.structure == "偏多":
@@ -1204,8 +1213,11 @@ def print_checklist(setup: ChecklistResult) -> None:
         print(color("【硬規則】盤整 → 不給方向單，等選邊", "1;31"))
     trig = color("可扣板機", "1;32") if setup.trigger_ready else color("尚未扣板機", "1;33")
     wait = color("等回測", "33") if setup.waiting_retest else ""
+    conclude_side = side_txt if setup.trigger_ready else (
+        "暫不下手" if setup.side == "none" else f"{side_txt}（未齊）"
+    )
     print(
-        f"結論: {color(side_txt, '1;33')} ｜ {trig} ｜ 邏輯分 {setup.setup_score:.0f}/100"
+        f"結論: {color(conclude_side, '1;33')} ｜ {trig} ｜ 邏輯分 {setup.setup_score:.0f}/100"
         + (f" ｜ {wait}" if wait else "")
     )
     print(f"提醒: {setup.note}")
@@ -1281,35 +1293,42 @@ def print_setup_table(
             side = "多*"
         elif side == "-" and r.structure == "偏空":
             side = "空*"
-        rr = f"{r.rr:.1f}" if r.rr else "-"
+        # 非 YES：價位欄留空白，避免誤以為可下單
+        if r.trigger_ready:
+            e_s, s_s, t_s = _px_or_dash(r.entry), _px_or_dash(r.stop), _px_or_dash(r.tp)
+            rr = f"{r.rr:.1f}" if r.rr else "-"
+        elif r.waiting_retest:
+            e_s, s_s, t_s = _px_or_dash(r.entry), "-", "-"
+            rr = f"{r.rr:.1f}" if r.rr else "-"
+        else:
+            e_s, s_s, t_s, rr = "-", "-", "-", "-"
         wf = f"{r.workflow_passed}/11"
         mtf_mark = "" if r.mtf_aligned else "!"
         print(
             f"{i:>3}  {r.symbol:<12} {r.structure:<6} {side:<4} {trig:<4} "
-            f"{_px_or_dash(r.entry):>12} {_px_or_dash(r.stop):>12} {_px_or_dash(r.tp):>12} "
+            f"{e_s:>12} {s_s:>12} {t_s:>12} "
             f"{rr:>5} {wf:>5}{mtf_mark} {r.setup_score:>4.0f}"
         )
-        if r.waiting_retest:
-            st = "等回測→入場為區中軸計畫價"
+        if r.trigger_ready:
+            st = "可扣板機"
+            if r.stop and r.entry:
+                st += f"｜風險約{abs(r.entry - r.stop) / r.entry * 100:.2f}%"
+            if r.tp and r.entry:
+                st += f"｜目標約{abs(r.tp - r.entry) / r.entry * 100:.2f}%"
+        elif r.waiting_retest:
+            st = "等回測・計畫價參考（非可進）"
         elif r.at_zone and r.reaction:
-            st = "區上有反應"
+            st = "區上有反應・條件未齊"
         elif r.at_zone:
             st = "已回區，等K棒反應"
         else:
             st = "、".join(r.candle_signals[:2]) or "觀望"
-        if r.stop and r.entry:
-            risk_pct = abs(r.entry - r.stop) / r.entry * 100
-            st += f"｜風險約{risk_pct:.2f}%"
-        if r.tp and r.entry:
-            reward_pct = abs(r.tp - r.entry) / r.entry * 100
-            st += f"｜目標約{reward_pct:.2f}%"
         print(f"     {st}")
-        # YES 已標可進：摘要寫「可扣板機」，缺步留給 detail
         if r.trigger_ready:
             status_line = color("可扣板機", "32")
         else:
-            miss = r.missing_steps or "齊全"
-            status_line = color(miss, "33" if miss != "齊全" else "32")
+            miss = r.missing_steps or "條件未齊"
+            status_line = color(miss, "33")
         mtf_s = r.mtf_note or ("MTF對齊" if r.mtf_aligned else "MTF未對齊")
         grp = "大幣" if _is_major(r.symbol) else "山寨"
         print(f"     {status_line}｜{mtf_s}｜{grp}")

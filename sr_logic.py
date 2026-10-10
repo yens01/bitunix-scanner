@@ -1560,10 +1560,15 @@ def evaluate_setup(
     # 多週期一致性：逆 4H/日 不可進
     mtf_aligned, mtf_note = check_mtf_alignment(structure, mtf)
 
-    # 可扣板機：六問過關 + 匯合 + RR + 高週期不逆向 + 禁止逆結構
+    # 可扣板機：六問過關 + 匯合 + RR + 高週期不逆向 + 禁止逆結構 + 需 BOS/CHOCH
     struct_side_ok = (
         (structure == "偏多" and side == "long")
         or (structure == "偏空" and side == "short")
+    )
+    # YES 必須有同向結構突破／轉換（避免無 BOS 亂扣）
+    bos_ok = bool(
+        (side == "long" and bos_tag in ("BOS向上", "CHOCH轉多"))
+        or (side == "short" and bos_tag in ("BOS向下", "CHOCH轉空"))
     )
     trigger_ready = bool(
         side != "none"
@@ -1575,6 +1580,7 @@ def evaluate_setup(
         and not waiting_retest
         and not struct_conflict
         and not react_conflict
+        and bos_ok
         and bool(hard_conf)  # 軟匯合不夠，至少一個硬匯合
         and rr_ok
         and mtf_aligned
@@ -1724,6 +1730,8 @@ def evaluate_setup(
 
     if chasing:
         note += " 偵測到追價/追突破，略過。"
+    if side != "none" and not bos_ok:
+        note += f" 缺同向BOS/CHOCH（目前:{bos_tag or '無'}）→ 不扣板機。"
     if side != "none" and not rr_ok:
         note += f" 盈虧比 {rr:.2f} < {MIN_RR}，不建議扣板機。"
     if not mtf_aligned:
