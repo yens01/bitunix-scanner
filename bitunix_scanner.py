@@ -24,6 +24,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
+from zoneinfo import ZoneInfo
+
+TZ_TW = ZoneInfo("Asia/Taipei")
+
+
+def now_tw() -> datetime:
+    """顯示用：一律台灣時間（UTC+8），避免雲端 runner 用 UTC。"""
+    return datetime.now(TZ_TW)
 
 from sr_logic import ChecklistResult, evaluate_setup, parse_klines
 from signal_tracker import (
@@ -914,7 +922,7 @@ def format_console_card(r: ChecklistResult, *, kind: str) -> str:
 
 
 def build_telegram_message(title: str, setups: list[ChecklistResult], *, kind: str) -> str:
-    now = datetime.now().strftime("%m-%d %H:%M")
+    now = now_tw().strftime("%m-%d %H:%M")
     if kind == "retest_summary":
         names = ", ".join(r.symbol.replace("USDT", "") for r in setups[:12])
         return (
@@ -1036,7 +1044,7 @@ def print_table(signals: list[CoinSignal], top: int = 30, mode: str = "hot") -> 
         )
 
     rows = rows[:top]
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now = now_tw().strftime("%Y-%m-%d %H:%M:%S")
     title = {
         "hot": "綜合熱度排行",
         "gainers": "24h 漲幅榜",
@@ -1220,7 +1228,7 @@ def print_setup_table(
     rejected: list[str] | None = None,
 ) -> None:
     rows = rows[:top]
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now = now_tw().strftime("%Y-%m-%d %H:%M:%S")
     print()
     print(color("══ 實戰做單流程 · Setup（已過濾噪音）══", "1;35"))
     print(f"時間 {now} ｜ 顯示 {len(rows)} ｜ 入場／停損／止盈｜YES=可扣板機｜MTF")
@@ -1475,7 +1483,7 @@ def watch_once(
 
     save_alert_cooldown(cooldown)
     print(
-        f"[{datetime.now().strftime('%H:%M:%S')}] 完成｜"
+        f"[{now_tw().strftime('%H:%M:%S')}] 完成｜"
         f"YES={len(yes_now)}(推{len(new_yes)}) "
         f"靠近={len(near_now)}(推{len(new_near)}) 遠處等={len(far_now)}"
     )
@@ -1566,7 +1574,7 @@ def watch_loop(
 
             if not new_yes and not new_near and not new_far:
                 print(
-                    f"[{datetime.now().strftime('%H:%M:%S')}] 無新警報｜"
+                    f"[{now_tw().strftime('%H:%M:%S')}] 無新警報｜"
                     f"YES={len(yes_now)} 靠近={len(near_now)} 遠處等={len(far_now)}"
                 )
 

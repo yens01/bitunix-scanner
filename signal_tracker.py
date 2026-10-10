@@ -15,8 +15,10 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
+from zoneinfo import ZoneInfo
 
 JOURNAL_PATH = Path(__file__).resolve().parent / "yes_journal.jsonl"
+TZ_TW = ZoneInfo("Asia/Taipei")
 
 # 同一幣種同方向去重冷卻（秒）
 DEDUP_SECONDS = 4 * 3600
@@ -55,7 +57,7 @@ class JournalEntry:
 
 
 def _now_iso() -> str:
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.now(TZ_TW).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _now_ms() -> int:
