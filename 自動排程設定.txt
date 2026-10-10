@@ -1,0 +1,84 @@
+為什麼不會自動跑？你要設定什麼？
+====================================
+
+【先講結論】
+程式裡的 schedule 已經寫好了，但你這個帳號／repo 的 GitHub
+「定時觸發」從早到晚一次都沒出現過。
+你截圖裡的 #1、Latest #9，全部都是「手動重跑同一筆」，不是排程。
+
+所以要真正自動，請用下面「外部鬧鐘」方案（免費、最穩）。
+
+
+════════════════════════════════════
+方案：cron-job.org 每 15 分鐘自動按一次
+════════════════════════════════════
+
+步驟 1）做 GitHub Token
+-----------------------
+1. 瀏覽器打開：https://github.com/settings/tokens
+2. Generate new token (classic)
+3. Note 隨便寫：bitunix-cron
+4. 勾選：
+   ☑ repo
+   ☑ workflow
+5. Generate token → 複製一串 ghp_...（只顯示一次，先貼記事本）
+
+
+步驟 2）註冊免費定時服務
+-----------------------
+1. 打開：https://cron-job.org 註冊／登入
+2. 按 Create cronjob
+
+
+步驟 3）填這些（照抄）
+-----------------------
+Title:
+  bitunix-auto-scan
+
+URL:（整行複製）
+  https://api.github.com/repos/yens01/bitunix-scanner/actions/workflows/auto-scan.yml/dispatches
+
+Schedule:
+  每 15 分鐘（Every 15 minutes）
+
+Request method:
+  POST
+
+請打開「進階／Custom request」之類選項，加上：
+
+Request headers（兩個）：
+  Authorization
+  Bearer 這裡貼你的ghp_TOKEN
+
+  Accept
+  application/vnd.github+json
+
+  Content-Type
+  application/json
+
+Request body:
+  {"ref":"main"}
+
+
+步驟 4）存檔 → 等一輪
+-----------------------
+15 分鐘內到 GitHub：
+  Actions → 左邊應出現「Auto Scan」新的 run
+那就是自動了，以後不用再按。
+
+
+════════════════════════════════════
+GitHub 裡面請你順便檢查（30 秒）
+════════════════════════════════════
+1. Actions → 左邊 Auto Scan / Bitunix Scan
+2. 若看到「Enable workflow」→ 按啟用
+3. 不要再點舊的 #1「Re-run all jobs」
+   （那只會重跑舊程式，時間也會變 +0）
+4. 要手動測：點「Run workflow」開「新的一輪」
+
+
+════════════════════════════════════
+成功長什麼樣子
+════════════════════════════════════
+Actions 列表會一直增加 #2 #3 #4…
+不是同一筆 #1 變成 Latest #9。

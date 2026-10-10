@@ -1,0 +1,37 @@
+# 獨立排程檔（只負責自動跑；手動請用 Bitunix Scan）
+name: Auto Scan
+
+on:
+  schedule:
+    # 每 15 分鐘一次（UTC）→ 台灣約每小時 :08/:23/:38/:53
+    - cron: "8,23,38,53 * * * *"
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Restore cooldown
+        uses: actions/cache@v4
+        with:
+          path: alert_cooldown.json
+          key: alert-cooldown-${{ github.run_id }}
+          restore-keys: |
+            alert-cooldown-
+      - name: Run scan
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PYTHONIOENCODING: utf-8
+        run: python bitunix_scanner.py watch-once --n 40
+      - name: Save cooldown
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: alert_cooldown.json
+          key: alert-cooldown-${{ github.run_id }}
