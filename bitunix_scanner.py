@@ -85,6 +85,11 @@ DEFAULT_MAX_RISK_PCT = 0.8           # 風險幅度上限（過寬風險失控�
 DEFAULT_NEAR_ZONE_PCT = 0.5          # 等回測：距區 ≤0.5% 才推卡片
 DEFAULT_ALERT_COOLDOWN_MIN = 45      # 同一幣冷卻分鐘
 DEFAULT_MAX_ALERTS_PER_WAVE = 3      # 同波最多推播檔數（YES+靠近合計）
+EVENING_PLAN_HOUR = 16               # 台灣時間 ≥16:00 推 BTC/ETH 規劃
+EVENING_PLAN_INTERVAL = "4h"         # 晚盤規劃用 4H K 線
+EVENING_PLAN_MTF = ("1d", "1w", "1M")  # 4H 操作時看更高週期
+EVENING_PLAN_SYMBOLS = ("BTCUSDT", "ETHUSDT")
+EVENING_PLAN_COOLDOWN_KEY = "__evening_btc_eth_plan__"
 COOLDOWN_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "alert_cooldown.json")
 
 # 大幣組（同向名額獨立，避免被山寨擠掉）
@@ -878,7 +883,7 @@ def format_alert_line(r: ChecklistResult) -> str:
 def format_telegram_card(r: ChecklistResult, *, kind: str) -> str:
     """
     Telegram HTML 卡片。
-    kind: yes | retest | retest_summary
+    kind: yes | retest | retest_summary | plan
     """
     if r.side == "long":
         side_emoji, side_txt = "🟢", "做多"
@@ -898,6 +903,14 @@ def format_telegram_card(r: ChecklistResult, *, kind: str) -> str:
     if kind == "yes":
         status = "✅ 可扣板機"
         note = "可扣板機（仍非投資建議）"
+    elif kind == "plan":
+        if r.trigger_ready:
+            status = "✅ 可扣板機"
+        elif r.waiting_retest:
+            status = "📋 晚盤規劃・等回測"
+        else:
+            status = "📋 晚盤規劃・觀望"
+        note = _esc(r.missing_steps or r.note or "規劃參考，條件齊再進")
     else:
         status = "⏳ 靠近區・等回測"
         note = _esc(r.missing_steps or "等價格確認反應後再進")
@@ -910,15 +923,30 @@ def format_telegram_card(r: ChecklistResult, *, kind: str) -> str:
     elif r.structure == "盤整":
         ban = "🚫 盤整・禁止方向單"
 
+    zone = ""
+    if r.zone_lo and r.zone_hi:
+        zone = f"優先區 <code>{_esc(_px(r.zone_lo))}</code>–<code>{_esc(_px(r.zone_hi))}</code>"
+
     mtf = _esc(r.mtf_note) if r.mtf_note else ("高週期對齊" if r.mtf_aligned else "高週期未對齊")
     lines = [
         f"{side_emoji} <b>{_esc(r.symbol)}</b>  {side_txt} ｜ {status} ｜ {group}",
-        f"入場 <code>{_esc(_px(r.entry))}</code>",
-        f"停損 <code>{_esc(_px(r.stop))}</code>  （約 {risk_pct:.2f}%）",
-        f"止盈 <code>{_esc(_px(r.tp))}</code>  （約 {reward_pct:.2f}%）",
-        f"RR <b>{r.rr:.1f}</b> ｜ 流程 {r.workflow_passed}/11 ｜ 分 {r.setup_score:.0f}",
-        f"MTF: {mtf}",
     ]
+    if zone:
+        lines.append(zone)
+    if kind == "plan" and not r.trigger_ready:
+        lines.append(f"計畫入場 <code>{_esc(_px(r.entry))}</code>（參考）")
+        lines.append(f"計畫停損 <code>{_esc(_px(r.stop))}</code>  （約 {risk_pct:.2f}%）")
+        lines.append(f"計畫止盈 <code>{_esc(_px(r.tp))}</code>  （約 {reward_pct:.2f}%）")
+    else:
+        lines.append(f"入場 <code>{_esc(_px(r.entry))}</code>")
+        lines.append(f"停損 <code>{_esc(_px(r.stop))}</code>  （約 {risk_pct:.2f}%）")
+        lines.append(f"止盈 <code>{_esc(_px(r.tp))}</code>  （約 {reward_pct:.2f}%）")
+    lines.extend(
+        [
+            f"RR <b>{r.rr:.1f}</b> ｜ 流程 {r.workflow_passed}/11 ｜ 分 {r.setup_score:.0f}",
+            f"MTF: {mtf}",
+        ]
+    )
     if ban:
         lines.append(ban)
     lines.append(f"備註: {note}")
@@ -935,7 +963,12 @@ def format_console_card(r: ChecklistResult, *, kind: str) -> str:
         side_txt = r.structure
     risk_pct = abs(r.entry - r.stop) / r.entry * 100 if r.entry and r.stop else 0
     reward_pct = abs(r.tp - r.entry) / r.entry * 100 if r.entry and r.tp else 0
-    status = "可扣板機" if kind == "yes" else "靠近區・等回測"
+    if kind == "yes":
+        status = "可扣板機"
+    elif kind == "plan":
+        status = "晚盤規劃"
+    else:
+        status = "靠近區・等回測"
     group = "大幣" if _is_major(r.symbol) else "山寨"
     mtf = (r.mtf_note or ("對齊" if r.mtf_aligned else "未對齊"))[:60]
     if r.structure == "偏多":
@@ -974,9 +1007,15 @@ def build_telegram_message(title: str, setups: list[ChecklistResult], *, kind: s
             f"👀 <b>{_esc(title)}</b>\n🕐 {now} ｜ 共 {len(setups)} 檔\n"
             f"僅推距區 ≤{DEFAULT_NEAR_ZONE_PCT}% 的靠近訊號"
         ),
+        "plan": (
+            f"📘 <b>{_esc(title)}</b>\n🕐 {now}\n"
+            f"台灣 {EVENING_PLAN_HOUR}:00 後・BTC／ETH・"
+            f"<b>{EVENING_PLAN_INTERVAL.upper()}</b> 分析（規劃參考，非必進）"
+        ),
     }.get(kind, f"<b>{_esc(title)}</b>\n🕐 {now}")
 
-    cards = [format_telegram_card(r, kind=kind if kind != "retest_summary" else "retest") for r in setups[:6]]
+    card_kind = "retest" if kind == "retest_summary" else kind
+    cards = [format_telegram_card(r, kind=card_kind) for r in setups[:6]]
     body = "\n\n————\n\n".join(cards)
     if len(setups) > 6:
         body += f"\n\n…另有 {len(setups) - 6} 檔未列出"
@@ -997,8 +1036,9 @@ def notify_alert(
     print()
     print(color(f"══ {title} ══", "1;33"))
     if setups and kind != "retest_summary":
+        card_kind = "yes" if kind == "yes" else ("plan" if kind == "plan" else "retest")
         for r in setups:
-            print(format_console_card(r, kind="yes" if kind == "yes" else "retest"))
+            print(format_console_card(r, kind=card_kind))
             print()
     elif setups and kind == "retest_summary":
         names = ", ".join(r.symbol for r in setups[:15])
@@ -1464,6 +1504,59 @@ def _pick_symbols(signals: list[CoinSignal], n: int = 60) -> list[str]:
     return [s.symbol for s in by_vol[:n]]
 
 
+def _evening_plan_due(cooldown: dict[str, float]) -> bool:
+    """台灣時間 ≥16:00，且今天尚未推過 BTC/ETH 晚盤規劃。"""
+    tw = now_tw()
+    if tw.hour < EVENING_PLAN_HOUR:
+        return False
+    day_key = f"{EVENING_PLAN_COOLDOWN_KEY}:{tw.strftime('%Y-%m-%d')}"
+    return day_key not in cooldown
+
+
+def send_evening_major_plans(
+    cooldown: dict[str, float],
+    *,
+    telegram: bool = True,
+) -> tuple[bool, dict[str, float]]:
+    """下午四點後推播 BTC／ETH 規劃（每天一次）。"""
+    if not _evening_plan_due(cooldown):
+        return False, cooldown
+
+    plans: list[ChecklistResult] = []
+    for sym in EVENING_PLAN_SYMBOLS:
+        r = evaluate_symbol(
+            sym,
+            EVENING_PLAN_INTERVAL,
+            with_mtf=True,
+            mtf_tfs=list(EVENING_PLAN_MTF),
+        )
+        if r:
+            plans.append(r)
+    if not plans:
+        print("晚盤規劃：BTC/ETH 無法取得 4H Setup，略過")
+        return False, cooldown
+
+    notify_alert(
+        f"BTC／ETH 晚盤規劃（{EVENING_PLAN_INTERVAL.upper()}）",
+        setups=plans,
+        kind="plan",
+        sound=False,
+        desktop=False,
+        telegram=telegram,
+    )
+    tw = now_tw()
+    day_key = f"{EVENING_PLAN_COOLDOWN_KEY}:{tw.strftime('%Y-%m-%d')}"
+    cooldown[day_key] = time.time()
+    cutoff = time.time() - 3 * 86400
+    cleaned = {
+        k: v
+        for k, v in cooldown.items()
+        if not (k.startswith(EVENING_PLAN_COOLDOWN_KEY + ":") and v < cutoff)
+    }
+    print(f"晚盤規劃：已推 {', '.join(r.symbol for r in plans)}（今日僅一次）")
+    return True, cleaned
+
+
 def watch_once(
     *,
     n: int = 40,
@@ -1557,6 +1650,9 @@ def watch_once(
                 telegram=True,
             )
             cooldown[far_key] = now
+
+    # 台灣時間 16:00 後：BTC／ETH 晚盤規劃（每天一次）
+    _, cooldown = send_evening_major_plans(cooldown, telegram=True)
 
     save_alert_cooldown(cooldown)
     print(
