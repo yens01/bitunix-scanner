@@ -15,8 +15,10 @@ import csv
 import json
 import math
 import os
+import re
 import sys
 import time
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -24,6 +26,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
+
+_ANSI_RE = re.compile(r"\033\[[0-9;]*m")
 
 # 固定 UTC+8（不依賴系統 tzdata；Windows／Ubuntu Actions 都可用）
 TZ_TW = timezone(timedelta(hours=8))
@@ -173,6 +177,18 @@ def fetch_klines(symbol: str, interval: str = "15m", limit: int = 100) -> list[d
         {"symbol": symbol, "interval": interval, "limit": limit},
     )
     return data or []
+
+
+def fetch_ticker_last(symbol: str) -> float:
+    """交易所最新成交價（比 K 線收盤更接近盤面現價）。"""
+    sym = symbol.upper()
+    try:
+        for t in fetch_tickers():
+            if (t.get("symbol") or "").upper() == sym:
+                return f(t.get("lastPrice") or t.get("last"))
+    except RuntimeError:
+        pass
+    return 0.0
 
 
 # ── 數值工具 ─────────────────────────────────────────────────────────────────
@@ -465,8 +481,11 @@ def analyze_klines(symbol: str, interval: str = "15m", with_mtf: bool = True) ->
 
     ma5, ma10, ma30 = _sma_last(5), _sma_last(10), _sma_last(30)
     r = rsi(closes, 14)
-    last = closes[-1]
+    k_close = closes[-1]
     prev = closes[-2]
+    ticker_last = fetch_ticker_last(symbol)
+    # 分析／進場參考用最新成交；沒 ticker 才退回 K 收
+    last = ticker_last if ticker_last > 0 else k_close
     support = min(lows[-20:])
     resist = max(highs[-20:])
     avg_vol = sum(vols[-20:]) / 20 if vols else 0
@@ -481,7 +500,9 @@ def analyze_klines(symbol: str, interval: str = "15m", with_mtf: bool = True) ->
         "symbol": symbol,
         "interval": interval,
         "last": last,
-        "change_bar": pct_change(last, prev),
+        "k_close": k_close,
+        "ticker_last": ticker_last,
+        "change_bar": pct_change(k_close, prev),
         "ema9": e9[-1],
         "ema21": e21[-1],
         "ma5": ma5,
@@ -1256,6 +1277,24 @@ def color(text: str, code: str) -> str:
     return f"\033[{code}m{text}\033[0m"
 
 
+def _disp_width(text: str) -> int:
+    """終端顯示寬度（中文 2、ANSI 不计）。"""
+    n = 0
+    for ch in _ANSI_RE.sub("", text):
+        n += 2 if unicodedata.east_asian_width(ch) in ("F", "W") else 1
+    return n
+
+
+def pad_l(text: str, width: int) -> str:
+    """左對齊（右側補空白）。"""
+    return text + " " * max(0, width - _disp_width(text))
+
+
+def pad_r(text: str, width: int) -> str:
+    """右對齊（左側補空白）。"""
+    return " " * max(0, width - _disp_width(text)) + text
+
+
 def c_chg(pct: float) -> str:
     s = f"{pct:+.2f}%"
     if pct > 0:
@@ -1263,6 +1302,16 @@ def c_chg(pct: float) -> str:
     if pct < 0:
         return color(s, "31")
     return s
+
+
+def c_chg_cell(pct: float, width: int) -> str:
+    """先對齊再上色，避免 ANSI 把欄位撐歪。"""
+    plain = pad_r(f"{pct:+.2f}%", width)
+    if pct > 0:
+        return color(plain, "32")
+    if pct < 0:
+        return color(plain, "31")
+    return plain
 
 
 def print_table(signals: list[CoinSignal], top: int = 30, mode: str = "hot") -> None:
@@ -1281,7 +1330,7 @@ def print_table(signals: list[CoinSignal], top: int = 30, mode: str = "hot") -> 
         )
 
     rows = rows[:top]
-    now = now_tw().strftime("%Y-%m-%d %H:%M:%S")
+    now = now_tw().strftime("%m-%d %H:%M")
     title = {
         "hot": "綜合熱度排行",
         "gainers": "24h 漲幅榜",
@@ -1290,29 +1339,65 @@ def print_table(signals: list[CoinSignal], top: int = 30, mode: str = "hot") -> 
         "funding": "資金費率極端",
     }.get(mode, mode)
 
+    # 欄寬以「顯示寬度」計（中文佔 2）
+    w_i, w_sym, w_px, w_chg = 3, 14, 12, 9
+    w_rng, w_vol, w_fr, w_lev = 8, 9, 10, 4
+    gap = "  "
+    total_w = (
+        w_i + w_sym + w_px + w_chg + w_rng + w_vol + w_fr + w_lev + 7 * 2 + 16
+    )
+
     print()
-    print(color(f"══ Bitunix 合約掃描 · {title} ══", "1;36"))
-    print(f"時間 {now}  |  樣本 {len(signals)} 幣  |  顯示 Top {len(rows)}")
-    print("-" * 108)
+    print(color(f"══ Bitunix · {title} ══", "1;36") + f"  {now}  · Top {len(rows)}/{len(signals)}")
+    print("-" * total_w)
     header = (
-        f"{'#':>3}  {'幣種':<14} {'價格':>12} {'24h漲跌':>10} "
-        f"{'振幅':>8} {'成交額':>10} {'費率':>10} {'槓桿':>5}  {'標籤 / 分數'}"
+        pad_r("#", w_i)
+        + gap
+        + pad_l("幣種", w_sym)
+        + gap
+        + pad_r("價格", w_px)
+        + gap
+        + pad_r("24h", w_chg)
+        + gap
+        + pad_r("振幅", w_rng)
+        + gap
+        + pad_r("成交額", w_vol)
+        + gap
+        + pad_r("費率", w_fr)
+        + gap
+        + pad_r("槓桿", w_lev)
+        + gap
+        + "標籤"
     )
     print(color(header, "1"))
-    print("-" * 108)
+    print("-" * total_w)
 
     for i, s in enumerate(rows, 1):
         fr = f"{s.funding * 100:+.4f}%" if s.funding is not None else "-"
         lev = str(s.max_leverage) if s.max_leverage else "-"
-        tags = ",".join(s.tags[:3])
-        print(
-            f"{i:>3}  {s.symbol:<14} {fmt_price(s.last):>12} {c_chg(s.change_pct):>10} "
-            f"{s.range_pct:>7.2f}% {fmt_num(s.quote_vol):>10} {fr:>10} {lev:>5}  "
-            f"{tags} ({s.score:.0f})"
+        tags = ",".join(s.tags[:3]) if s.tags else "-"
+        line = (
+            pad_r(str(i), w_i)
+            + gap
+            + pad_l(s.symbol, w_sym)
+            + gap
+            + pad_r(fmt_price(s.last), w_px)
+            + gap
+            + c_chg_cell(s.change_pct, w_chg)
+            + gap
+            + pad_r(f"{s.range_pct:.2f}%", w_rng)
+            + gap
+            + pad_r(fmt_num(s.quote_vol), w_vol)
+            + gap
+            + pad_r(fr, w_fr)
+            + gap
+            + pad_r(lev, w_lev)
+            + gap
+            + f"{tags} ({s.score:.0f})"
         )
-    print("-" * 108)
-    print("提示: 分數越高代表「流動性 + 動能 + 波動 + 費率極端」越值得關注；非買賣建議。")
-    print("下單前請自行確認槓桿、保證金與強平價。詳情: python bitunix_scanner.py detail BTCUSDT")
+        print(line)
+    print("-" * total_w)
+    print(color("分數＝流動性+動能+波動+費率；非買賣建議。detail 幣種 看詳情。", "2"))
     print()
 
 
@@ -1450,7 +1535,17 @@ def print_detail(info: dict[str, Any], meta: CoinSignal | None = None) -> None:
         )
         if meta.max_leverage:
             print(f"最大槓桿: {meta.max_leverage}x  標籤: {', '.join(meta.tags)}")
-    print(f"現價: {fmt_price(info['last'])}  (上一根 {c_chg(info['change_bar'])})")
+    live = info.get("ticker_last") or (meta.last if meta else 0) or info["last"]
+    k_close = info.get("k_close") or info["last"]
+    print(f"現價: {fmt_price(live)}  （交易所最新成交，非限價單）")
+    # 急漲急跌時 K 收常落後 ticker，分開標示避免誤會
+    if k_close > 0 and abs(live - k_close) / max(live, 1e-12) >= 0.001:
+        print(
+            f"{info['interval']} K收: {fmt_price(k_close)}  "
+            f"（上一根 {c_chg(info['change_bar'])}｜與現價不同屬正常）"
+        )
+    else:
+        print(f"上一根K: {c_chg(info['change_bar'])}")
     print(
         f"MA5: {fmt_price(info.get('ma5', 0))}  MA10: {fmt_price(info.get('ma10', 0))}  "
         f"MA30: {fmt_price(info.get('ma30', 0))}"
@@ -1517,14 +1612,36 @@ def print_setup_table(
         print()
         return
 
-    w = 96
-    print("-" * w)
+    w_i, w_sym, w_dir, w_side, w_st = 2, 12, 4, 3, 4
+    w_e, w_s, w_t, w_rr, w_wf, w_sc = 11, 11, 11, 4, 5, 3
+    gap = " "
+    total_w = w_i + w_sym + w_dir + w_side + w_st + w_e + w_s + w_t + w_rr + w_wf + w_sc + 10
+    print("-" * total_w)
     header = (
-        f"{'#':>2} {'幣種':<11} {'方向':<4} {'邊':<3} {'狀態':<4} "
-        f"{'入場':>11} {'停損':>11} {'止盈':>11} {'RR':>4} {'步':>4} {'分':>3}"
+        pad_r("#", w_i)
+        + gap
+        + pad_l("幣種", w_sym)
+        + gap
+        + pad_l("方向", w_dir)
+        + gap
+        + pad_l("邊", w_side)
+        + gap
+        + pad_l("狀態", w_st)
+        + gap
+        + pad_r("入場", w_e)
+        + gap
+        + pad_r("停損", w_s)
+        + gap
+        + pad_r("止盈", w_t)
+        + gap
+        + pad_r("RR", w_rr)
+        + gap
+        + pad_r("步", w_wf)
+        + gap
+        + pad_r("分", w_sc)
     )
     print(color(header, "1"))
-    print("-" * w)
+    print("-" * total_w)
     for i, r in enumerate(rows, 1):
         # 狀態欄不用 ANSI（避免對齊跑掉）；YES 整列再上色
         if r.trigger_ready:
@@ -1547,11 +1664,30 @@ def print_setup_table(
         else:
             e_s, s_s, t_s, rr = "-", "-", "-", "-"
         wf = f"{r.workflow_passed}/11"
-        mtf_bang = "!" if not r.mtf_aligned else " "
+        if not r.mtf_aligned:
+            wf += "!"
         row = (
-            f"{i:>2} {r.symbol:<11} {r.structure:<4} {side:<3} {status:<4} "
-            f"{e_s:>11} {s_s:>11} {t_s:>11} "
-            f"{rr:>4} {wf:>4}{mtf_bang}{r.setup_score:>3.0f}"
+            pad_r(str(i), w_i)
+            + gap
+            + pad_l(r.symbol, w_sym)
+            + gap
+            + pad_l(r.structure, w_dir)
+            + gap
+            + pad_l(side, w_side)
+            + gap
+            + pad_l(status, w_st)
+            + gap
+            + pad_r(e_s, w_e)
+            + gap
+            + pad_r(s_s, w_s)
+            + gap
+            + pad_r(t_s, w_t)
+            + gap
+            + pad_r(rr, w_rr)
+            + gap
+            + pad_r(wf, w_wf)
+            + gap
+            + pad_r(f"{r.setup_score:.0f}", w_sc)
         )
         print(color(row, "32") if r.trigger_ready else row)
         # 一行備註就好，避免每檔三行刷屏
