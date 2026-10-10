@@ -85,11 +85,20 @@ DEFAULT_MAX_RISK_PCT = 0.8           # 風險幅度上限（過寬風險失控�
 DEFAULT_NEAR_ZONE_PCT = 0.5          # 等回測：距區 ≤0.5% 才推卡片
 DEFAULT_ALERT_COOLDOWN_MIN = 45      # 同一幣冷卻分鐘
 DEFAULT_MAX_ALERTS_PER_WAVE = 3      # 同波最多推播檔數（YES+靠近合計）
-EVENING_PLAN_HOUR = 16               # 台灣時間 ≥16:00 推 BTC/ETH 規劃
-EVENING_PLAN_INTERVAL = "4h"         # 晚盤規劃用 4H K 線
-EVENING_PLAN_MTF = ("1d", "1w", "1M")  # 4H 操作時看更高週期
-EVENING_PLAN_SYMBOLS = ("BTCUSDT", "ETHUSDT")
-EVENING_PLAN_COOLDOWN_KEY = "__evening_btc_eth_plan__"
+# BTC/ETH 日內規劃時段（台灣時間）：下午四點／晚上八點／美股開盤
+# 美股開盤：夏令約 21:30、冬令約 22:30；預設用 21:30（夏令），冬令可改 22:30
+SESSION_PLAN_SLOTS: tuple[tuple[int, int, str], ...] = (
+    (16, 0, "下午規劃"),
+    (20, 0, "晚盤規劃"),
+    (21, 30, "美股開盤規劃"),
+)
+SESSION_PLAN_INTERVAL = "4h"         # 日內規劃用 4H K 線
+SESSION_PLAN_MTF = ("1d", "1w", "1M")
+SESSION_PLAN_SYMBOLS = ("BTCUSDT", "ETHUSDT")
+SESSION_PLAN_COOLDOWN_PREFIX = "__session_btc_eth_plan__"
+# 相容舊常數名稱
+EVENING_PLAN_HOUR = 16
+EVENING_PLAN_INTERVAL = SESSION_PLAN_INTERVAL
 COOLDOWN_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "alert_cooldown.json")
 
 # 大幣組（同向名額獨立，避免被山寨擠掉）
@@ -1015,8 +1024,7 @@ def build_telegram_message(title: str, setups: list[ChecklistResult], *, kind: s
         ),
         "plan": (
             f"📘 <b>{_esc(title)}</b>\n🕐 {now}\n"
-            f"台灣 {EVENING_PLAN_HOUR}:00 後・BTC／ETH・"
-            f"<b>{EVENING_PLAN_INTERVAL.upper()}</b> 分析（規劃參考，非必進）"
+            f"BTC／ETH・<b>{SESSION_PLAN_INTERVAL.upper()}</b> 日內規劃（參考，非必進）"
         ),
     }.get(kind, f"<b>{_esc(title)}</b>\n🕐 {now}")
 
@@ -1510,57 +1518,82 @@ def _pick_symbols(signals: list[CoinSignal], n: int = 60) -> list[str]:
     return [s.symbol for s in by_vol[:n]]
 
 
-def _evening_plan_due(cooldown: dict[str, float]) -> bool:
-    """台灣時間 ≥16:00，且今天尚未推過 BTC/ETH 晚盤規劃。"""
+def _session_plan_slot_key(day: str, hour: int, minute: int) -> str:
+    return f"{SESSION_PLAN_COOLDOWN_PREFIX}:{day}:{hour:02d}{minute:02d}"
+
+
+def _due_session_plan_slots(cooldown: dict[str, float]) -> list[tuple[int, int, str]]:
+    """回傳目前已到點、且今日該時段尚未推過的規劃槽。"""
     tw = now_tw()
-    if tw.hour < EVENING_PLAN_HOUR:
-        return False
-    day_key = f"{EVENING_PLAN_COOLDOWN_KEY}:{tw.strftime('%Y-%m-%d')}"
-    return day_key not in cooldown
+    mins_now = tw.hour * 60 + tw.minute
+    day = tw.strftime("%Y-%m-%d")
+    due: list[tuple[int, int, str]] = []
+    for hour, minute, label in SESSION_PLAN_SLOTS:
+        if mins_now < hour * 60 + minute:
+            continue
+        key = _session_plan_slot_key(day, hour, minute)
+        if key not in cooldown:
+            due.append((hour, minute, label))
+    return due
 
 
-def send_evening_major_plans(
-    cooldown: dict[str, float],
-    *,
-    telegram: bool = True,
-) -> tuple[bool, dict[str, float]]:
-    """下午四點後推播 BTC／ETH 規劃（每天一次）。"""
-    if not _evening_plan_due(cooldown):
-        return False, cooldown
-
+def _build_btc_eth_plans() -> list[ChecklistResult]:
     plans: list[ChecklistResult] = []
-    for sym in EVENING_PLAN_SYMBOLS:
+    for sym in SESSION_PLAN_SYMBOLS:
         r = evaluate_symbol(
             sym,
-            EVENING_PLAN_INTERVAL,
+            SESSION_PLAN_INTERVAL,
             with_mtf=True,
-            mtf_tfs=list(EVENING_PLAN_MTF),
+            mtf_tfs=list(SESSION_PLAN_MTF),
         )
         if r:
             plans.append(r)
-    if not plans:
-        print("晚盤規劃：BTC/ETH 無法取得 4H Setup，略過")
-        return False, cooldown
+    return plans
 
+
+def send_session_major_plans(
+    cooldown: dict[str, float],
+    *,
+    telegram: bool = True,
+) -> tuple[int, dict[str, float]]:
+    """
+    到點推播 BTC／ETH 日內規劃：
+    16:00 下午／20:00 晚盤／21:30 美股開盤（各一次／天）。
+    """
+    due = _due_session_plan_slots(cooldown)
+    if not due:
+        return 0, cooldown
+
+    plans = _build_btc_eth_plans()
+    if not plans:
+        print("日內規劃：BTC/ETH 無法取得 4H Setup，略過")
+        return 0, cooldown
+
+    tw = now_tw()
+    day = tw.strftime("%Y-%m-%d")
+    # 一次只推「最新已到點」時段；更早未推的時段標記略過，避免補發刷屏
+    for hour, minute, _label in due[:-1]:
+        cooldown[_session_plan_slot_key(day, hour, minute)] = time.time()
+    hour, minute, label = due[-1]
     notify_alert(
-        f"BTC／ETH 晚盤規劃（{EVENING_PLAN_INTERVAL.upper()}）",
+        f"BTC／ETH {label}（{SESSION_PLAN_INTERVAL.upper()}）",
         setups=plans,
         kind="plan",
         sound=False,
         desktop=False,
         telegram=telegram,
     )
-    tw = now_tw()
-    day_key = f"{EVENING_PLAN_COOLDOWN_KEY}:{tw.strftime('%Y-%m-%d')}"
-    cooldown[day_key] = time.time()
+    cooldown[_session_plan_slot_key(day, hour, minute)] = time.time()
+    sent = 1
+    print(f"日內規劃：已推「{label}」{', '.join(r.symbol for r in plans)}")
+
     cutoff = time.time() - 3 * 86400
     cleaned = {
         k: v
         for k, v in cooldown.items()
-        if not (k.startswith(EVENING_PLAN_COOLDOWN_KEY + ":") and v < cutoff)
+        if not (k.startswith(SESSION_PLAN_COOLDOWN_PREFIX + ":") and v < cutoff)
     }
-    print(f"晚盤規劃：已推 {', '.join(r.symbol for r in plans)}（今日僅一次）")
-    return True, cleaned
+    return sent, cleaned
 
 
 def watch_once(
@@ -1657,8 +1690,8 @@ def watch_once(
             )
             cooldown[far_key] = now
 
-    # 台灣時間 16:00 後：BTC／ETH 晚盤規劃（每天一次）
-    _, cooldown = send_evening_major_plans(cooldown, telegram=True)
+    # 16:00／20:00／美股開盤：BTC／ETH 日內規劃（各時段每天一次）
+    _, cooldown = send_session_major_plans(cooldown, telegram=True)
 
     save_alert_cooldown(cooldown)
     print(
