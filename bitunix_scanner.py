@@ -1042,8 +1042,12 @@ def normalize_query_symbol(text: str) -> str | None:
     raw = raw.replace("-", "").replace("/", "").replace(" ", "")
     if not raw:
         return None
-    if raw in {"START", "HELP", "STATS", "JOURNAL", "JS", "統計"}:
-        return "HELP" if raw == "統計" else raw
+    if raw in {"START", "HELP", "STATS", "JOURNAL", "JS", "統計", "PLAN", "規劃", "日內"}:
+        if raw == "統計":
+            return "HELP"
+        if raw in {"PLAN", "規劃", "日內"}:
+            return "PLAN"
+        return raw
     # 只接受英數幣種，避免中文被誤加成 XXXUSDT
     base = raw[:-4] if raw.endswith("USDT") else raw
     if not base.isascii() or not base.isalnum() or not (2 <= len(base) <= 15):
@@ -1276,9 +1280,25 @@ def poll_telegram_queries(
                 "📱 <b>幣種查詢</b>\n"
                 "傳 <code>BTC</code>、<code>MAGIC</code>、<code>AVAXUSDT</code>\n"
                 "會回傳類似 CMD <code>detail</code> 的摘要\n"
+                "日內規劃：傳 <code>plan</code>／<code>規劃</code>\n"
                 "統計：傳 <code>stats</code>",
                 chat_id=from_chat,
             )
+            handled += 1
+            continue
+        if key == "PLAN":
+            plans = _build_btc_eth_plans()
+            if not plans:
+                _telegram_send("❌ 無法取得 BTC／ETH 日內規劃", chat_id=from_chat)
+            else:
+                tw = now_tw().strftime("%m-%d %H:%M")
+                body = (
+                    f"📋 <b>BTC／ETH 日內規劃</b>\n🕐 {tw}\n"
+                    f"BTC／ETH・今日高低（參考，非必進）\n\n"
+                    + "\n\n".join(format_telegram_plan_card(r) for r in plans)
+                    + "\n\n⚠️ 破今日高低勿追｜自行確認槓桿與風險"
+                )
+                _telegram_send(body, chat_id=from_chat)
             handled += 1
             continue
         if key in {"STATS", "JOURNAL", "JS"}:
@@ -2451,6 +2471,46 @@ def _build_btc_eth_plans() -> list[ChecklistResult]:
     return plans
 
 
+def print_btc_eth_daily_plan(*, telegram: bool = False) -> list[ChecklistResult]:
+    """
+    手動／指令用：BTC／ETH 日內規劃（今日高低＋高拋低吸參考）。
+    與排程推播同一套邏輯；預設只印畫面，可選同步 Telegram。
+    """
+    enable_ansi()
+    tw = now_tw()
+    print()
+    print(
+        color(
+            f"══ BTC／ETH 日內規劃 ══  {tw.strftime('%Y-%m-%d %H:%M')}（台灣）",
+            "1;36",
+        )
+    )
+    print(
+        f"結構用 {SESSION_PLAN_INTERVAL.upper()}｜日內箱用今日高低（{SESSION_BOX_INTERVAL}）｜參考非必進"
+    )
+    plans = _build_btc_eth_plans()
+    if not plans:
+        print(color("無法取得 BTC／ETH 規劃資料", "1;31"))
+        return []
+    for r in plans:
+        print(format_console_plan_card(r))
+        print()
+    print(color("破今日高低勿追｜區間內高拋低吸｜自行確認槓桿與風險", "2"))
+    print()
+    if telegram:
+        title = f"BTC／ETH 日內規劃（手動 {tw.strftime('%H:%M')}）"
+        notify_alert(
+            title,
+            setups=plans,
+            kind="plan",
+            sound=False,
+            desktop=False,
+            telegram=True,
+        )
+        print(color("已推送到 Telegram", "1;32"))
+    return plans
+
+
 def _plan_fingerprint(plans: list[ChecklistResult]) -> str:
     """結構／區間／方向指紋，用於同日無變化判斷。"""
     bits: list[str] = []
@@ -2866,8 +2926,9 @@ def interactive() -> None:
 
     while True:
         print(color("── 指令 ──", "2"))
-        print("  h 熱度   s Setup   t 可進   w 等回測   a 警報")
+        print("  h 熱度   s Setup   t 可進   w 等回測   a 警報   p 日內規劃(BTC/ETH)")
         print("  j 日記   jr 結算   js 統計  d 幣種   r 重掃   c 匯出   q 離開")
+        print(color("  （p tg = 日內規劃並推 Telegram）", "2"))
         try:
             cmd = input("> ").strip()
         except (EOFError, KeyboardInterrupt):
@@ -2926,6 +2987,12 @@ def interactive() -> None:
         elif low in {"a", "alert", "watch"}:
             print("進入警報監看（預設 120 秒）。可用: python bitunix_scanner.py watch")
             watch_loop(seconds=120, n=DEFAULT_SCAN_POOL, desktop=False)
+        elif low in {"p", "plan", "be", "btceth"} or low.startswith("p "):
+            # p / plan / be；p tg 一併推 Telegram
+            want_tg = low in {"p tg", "plan tg", "be tg"} or (
+                low.startswith("p ") and "tg" in low.split()
+            )
+            print_btc_eth_daily_plan(telegram=want_tg)
         elif low.startswith("d ") or low.startswith("detail "):
             parts = cmd.split(maxsplit=1)
             if len(parts) < 2:
@@ -2973,6 +3040,8 @@ def main() -> None:
   python bitunix_scanner.py journal resolve
   python bitunix_scanner.py journal stats
   python bitunix_scanner.py detail ETHUSDT
+  python bitunix_scanner.py plan
+  python bitunix_scanner.py plan --telegram
         """,
     )
     sub = p.add_subparsers(dest="cmd")
@@ -3031,6 +3100,9 @@ def main() -> None:
     d.add_argument("symbol", type=str)
     d.add_argument("--interval", default="15m", help="K線週期 如 5m 15m 1h")
     d.add_argument("--no-mtf", action="store_true", help="不快取 1H/4H/D 多週期")
+
+    pl = sub.add_parser("plan", help="BTC／ETH 日內規劃（今日高低・高拋低吸）")
+    pl.add_argument("--telegram", action="store_true", help="同時推送到 Telegram")
 
     b = sub.add_parser("bot", help="Telegram 手機查幣（傳 BTC／MAGIC 回 detail 摘要）")
     b.add_argument("--interval", default="15m", help="分析週期")
@@ -3118,6 +3190,10 @@ def main() -> None:
         meta = next((x for x in signals if x.symbol == sym), None)
         info = analyze_klines(sym, args.interval, with_mtf=not args.no_mtf)
         print_detail(info, meta)
+        return
+
+    if args.cmd == "plan":
+        print_btc_eth_daily_plan(telegram=bool(args.telegram))
         return
 
     if args.cmd == "bot":
