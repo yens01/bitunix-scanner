@@ -8,6 +8,9 @@ concurrency:
   group: bitunix-manual-scan
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
   scan:
     runs-on: ubuntu-latest
@@ -60,6 +63,14 @@ jobs:
           PYTHONIOENCODING: utf-8
         run: python bitunix_scanner.py watch-once --n 100
 
+      - name: Show journal stats
+        if: always()
+        run: |
+          echo "===== journal lines ====="
+          wc -l yes_journal.jsonl || true
+          python bitunix_scanner.py journal stats || true
+          python bitunix_scanner.py journal list --limit 40 || true
+
       - name: Save cooldown + journal
         if: always()
         uses: actions/cache/save@v4
@@ -70,3 +81,24 @@ jobs:
             session_plan_state.json
             telegram_offset.json
           key: state-v5-${{ github.run_id }}
+
+      - name: Publish journal snapshot branch
+        if: always()
+        run: |
+          mkdir -p /tmp/journal-pub
+          cp -f yes_journal.jsonl /tmp/journal-pub/yes_journal.jsonl
+          python bitunix_scanner.py journal stats > /tmp/journal-pub/journal_stats.txt 2>&1 || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin cloud-journal 2>/dev/null || true
+          git checkout -B cloud-journal
+          mkdir -p cloud
+          cp -f /tmp/journal-pub/yes_journal.jsonl cloud/yes_journal.jsonl
+          cp -f /tmp/journal-pub/journal_stats.txt cloud/journal_stats.txt
+          git add cloud/yes_journal.jsonl cloud/journal_stats.txt
+          if git diff --staged --quiet; then
+            echo "journal snapshot unchanged"
+          else
+            git commit -m "chore: sync cloud journal $(date -u +%Y-%m-%dT%H:%MZ)"
+            git push -f origin cloud-journal
+          fi
