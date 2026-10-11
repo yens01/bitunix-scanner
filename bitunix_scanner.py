@@ -1463,17 +1463,31 @@ def _plan_show_full_levels(r: ChecklistResult) -> bool:
     return bool(r.trigger_ready or r.waiting_retest or r.at_zone)
 
 
+def _width_txt(width: float) -> str:
+    return f"{width:.0f}點" if width >= 20 else f"{width:.2f}點"
+
+
+def _plan_day_hl_line(r: ChecklistResult, *, html: bool = True) -> str:
+    """真實台灣日今日高低（裁近端前）。"""
+    if not (r.plan_day_lo > 0 and r.plan_day_hi > r.plan_day_lo):
+        return ""
+    w = _width_txt(r.plan_day_hi - r.plan_day_lo)
+    lo, hi = _px(r.plan_day_lo), _px(r.plan_day_hi)
+    if html:
+        return f"今日高低（約{_esc(w)}） <code>{_esc(lo)}</code>–<code>{_esc(hi)}</code>"
+    return f"今日高低（約{w}） {lo}–{hi}"
+
+
 def _plan_zone_line(r: ChecklistResult, *, html: bool = True) -> str:
     if not (r.zone_lo and r.zone_hi):
         return ""
     lo, hi = _px(r.zone_lo), _px(r.zone_hi)
     width = r.zone_hi - r.zone_lo
     if r.structure == "盤整":
-        label = (
-            f"今日高低（約{width:.0f}點）"
-            if width >= 20
-            else f"今日高低（約{width:.2f}點）"
-        )
+        if r.plan_box_clipped:
+            label = f"操作箱・近端（約{_width_txt(width)}）"
+        else:
+            label = f"今日高低（約{_width_txt(width)}）"
     elif r.structure == "偏多" or r.side == "long":
         label = "下方支撐區"
     elif r.structure == "偏空" or r.side == "short":
@@ -1566,21 +1580,28 @@ def _apply_session_intraday_box(r: ChecklistResult) -> ChecklistResult:
     if day_box is None:
         return r
 
+    # 保留真實今日高低（給卡片對照；進出場箱可另裁近端）
+    r.plan_day_lo = day_box.lo
+    r.plan_day_hi = day_box.hi
+    r.plan_box_clipped = False
+
     width = day_box.hi - day_box.lo
     tag = f"今日高低{tw_day}·實寬{width:.2f}"
-    # 今日高低過寬（>2.2×目標）→ 再用近端目標箱，避免又變成六千點大箱
+    trade_box = day_box
+    # 今日高低過寬（>2.2×目標）→ 進出場改近端目標箱，避免又變成六千點大箱
     if width > target * 2.2:
         near = build_adaptive_range_box(candles, target_width=target)
         if near is not None:
-            day_box = near
-            width = day_box.hi - day_box.lo
+            trade_box = near
+            r.plan_box_clipped = True
+            width = trade_box.hi - trade_box.lo
             tag = (
                 f"今日高低過寬｜改近端{SESSION_BOX_INTERVAL}"
                 f"·目標{target:g}·實寬{width:.2f}"
             )
 
-    r.zone_lo = day_box.lo
-    r.zone_hi = day_box.hi
+    r.zone_lo = trade_box.lo
+    r.zone_hi = trade_box.hi
     r.zone_kind = "range"
     r.note = f"{r.note}｜{tag}" if r.note else tag
     if r.structure == "盤整":
@@ -1667,9 +1688,13 @@ def format_telegram_plan_card(r: ChecklistResult) -> str:
     full = _plan_show_full_levels(r)
 
     if r.structure == "盤整":
+        box_tag = "近端箱・日內" if r.plan_box_clipped else "今日高低・日內"
         lines = [
-            f"⚪ <b>{_esc(r.symbol)}</b>  盤整 ｜ 📋 今日高低・日內 ｜ {group}",
+            f"⚪ <b>{_esc(r.symbol)}</b>  盤整 ｜ 📋 {_esc(box_tag)} ｜ {group}",
         ]
+        day_line = _plan_day_hl_line(r, html=True)
+        if r.plan_box_clipped and day_line:
+            lines.append(day_line)
         if zone:
             lines.append(zone)
         sess = _format_session_hl_lines(r, html=True)
@@ -1787,9 +1812,13 @@ def format_console_plan_card(r: ChecklistResult) -> str:
     full = _plan_show_full_levels(r)
     group = "大幣" if _is_major(r.symbol) else "山寨"
     if r.structure == "盤整":
+        box_tag = "近端箱・日內" if r.plan_box_clipped else "今日高低・日內"
         lines = [
-            f"  ┌ {r.symbol}  盤整 ｜ 今日高低・日內 ｜ {group}",
+            f"  ┌ {r.symbol}  盤整 ｜ {box_tag} ｜ {group}",
         ]
+        day_line = _plan_day_hl_line(r, html=False)
+        if r.plan_box_clipped and day_line:
+            lines.append(f"  │ {day_line}")
         if zone:
             lines.append(f"  │ {zone}")
         for sline in _format_session_hl_lines(r, html=False):

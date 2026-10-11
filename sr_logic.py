@@ -149,6 +149,10 @@ class ChecklistResult:
     mtf_note: str = ""
     # 日內規劃：各交易時段高低 [(名稱, lo, hi, 是否進行中), ...]
     plan_session_hl: list[tuple[str, float, float, bool]] = field(default_factory=list)
+    # 台灣日真實今日高低；操作箱過寬裁近端時仍保留供對照
+    plan_day_lo: float = 0.0
+    plan_day_hi: float = 0.0
+    plan_box_clipped: bool = False
 
 
 def parse_klines(raw: list[dict]) -> list[Candle]:
