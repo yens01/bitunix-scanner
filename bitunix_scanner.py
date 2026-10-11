@@ -1340,19 +1340,33 @@ def poll_telegram_queries(
             handled += 1
             continue
         if key == "STATS":
-            # 簡短統計文字
+            # 簡短統計文字（雲端 Reply 會載入 cloud-journal 快照）
             from signal_tracker import compute_stats, load_journal, CURRENT_RULESET
 
             rows = load_journal()
             yes = [r for r in rows if (r.ruleset or "") == CURRENT_RULESET and (r.kind or "yes") == "yes"]
             plan = [r for r in rows if (r.ruleset or "") == CURRENT_RULESET and (r.kind or "yes") == "plan"]
             sy, sp = compute_stats(yes), compute_stats(plan)
+            # 最近規劃時段（避免以為沒記錄）
+            plan_hint = ""
+            if plan:
+                latest = sorted(plan, key=lambda r: r.ts or "", reverse=True)
+                seen: list[str] = []
+                for r in latest:
+                    lab = (r.plan_label or "").strip() or "規劃"
+                    tag = f"{(r.ts or '')[5:16]} {lab}".strip()
+                    if tag not in seen:
+                        seen.append(tag)
+                    if len(seen) >= 3:
+                        break
+                plan_hint = "\n最近：" + "｜".join(seen)
             _telegram_send(
-                f"📊 <b>日記統計</b>\n"
+                f"📊 <b>日記統計</b>（雲端）\n"
                 f"YES {sy.total}｜勝{sy.win_n} 負{sy.loss_n} 未結{sy.open_n}"
                 + (f"｜勝率{sy.win_rate:.1f}%" if sy.win_n + sy.loss_n else "")
                 + f"\n規劃 {sp.total}｜勝{sp.win_n} 負{sp.loss_n} 未結{sp.open_n}"
-                + (f"｜勝率{sp.win_rate:.1f}%" if sp.win_n + sp.loss_n else ""),
+                + (f"｜勝率{sp.win_rate:.1f}%" if sp.win_n + sp.loss_n else "")
+                + plan_hint,
                 chat_id=from_chat,
             )
             handled += 1

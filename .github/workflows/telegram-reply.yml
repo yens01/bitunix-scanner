@@ -38,6 +38,18 @@ jobs:
             echo '{"offset":0}' > telegram_offset.json
           fi
 
+      # stats／規劃筆數要讀雲端日記；Reply 本身不掃盤、不改日記
+      - name: Load journal from cloud-journal
+        run: |
+          set -e
+          git fetch origin cloud-journal --depth=1
+          if git show origin/cloud-journal:cloud/yes_journal.jsonl > yes_journal.jsonl 2>/dev/null; then
+            echo "journal lines: $(wc -l < yes_journal.jsonl)"
+          else
+            echo "cloud-journal missing; empty journal"
+            : > yes_journal.jsonl
+          fi
+
       - name: Poll Telegram (~28s)
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}

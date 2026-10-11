@@ -42,6 +42,8 @@ Bitunix 掃描器 → GitHub Actions 上雲步驟
 - 本機：python bitunix_scanner.py journal stats
   → YES v2 與「規劃 v2」分開勝率（規劃盤整：勝＝箱體成立）
 - 雲端 watch-once：YES 與 BTC／ETH 日內規劃都會寫日記
+  （排程：台 16:00／20:00／21:30 各記一輪；手機手動 plan 只推播、不算新日記）
+- 手機 stats：讀 cloud-journal 快照（與本機 yes_journal.jsonl 不同檔）
 - 雲端會 cache yes_journal.jsonl（與冷卻一齊），同向倉才跨次生效
 
 【4H 大盤規劃】
