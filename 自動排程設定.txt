@@ -3,7 +3,7 @@
 
 【現況架構】
 - cron-job.org 每 15 分鐘 →「Auto Scan」（掃盤＋推 YES）
-- cron-job.org 每 1～2 分鐘 →「Telegram Reply」（只回手機訊息，不掃盤）
+- cron-job.org 每 30 秒 →「Telegram Reply」（只回手機訊息，不掃盤）
 - 「Bitunix Scan」純手動，避免雙排程重複推播
 
 
@@ -20,15 +20,15 @@ Headers:
   Accept: application/vnd.github+json
   Content-Type: application/json
 
-2) 手機即時回覆（新增）每 1～2 分鐘：
+2) 手機即時回覆 每 30 秒：
 URL:
   https://api.github.com/repos/yens01/bitunix-scanner/actions/workflows/telegram-reply.yml/dispatches
 Method / Body / Headers：同上
-說明：每次跑約 55 秒長輪詢；回覆延遲大約 1 分鐘內（不是毫秒級，但遠快過等 15 分掃盤）
+說明：每次跑約 28 秒長輪詢；回覆延遲多半約 30～60 秒（含 Actions 開機；不是毫秒級）
 
 頻率建議：
 - Auto Scan 15 分鐘；想省用量可 20～30 分鐘
-- Telegram Reply 1～2 分鐘（太密會耗 Actions 分鐘數）
+- Telegram Reply 30 秒（會明顯耗 Actions 分鐘數；要更省可改 60 秒）
 
 
 【這次優化了什麼】

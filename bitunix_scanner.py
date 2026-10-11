@@ -3180,7 +3180,7 @@ def main() -> None:
   python bitunix_scanner.py detail ETHUSDT
   python bitunix_scanner.py plan
   python bitunix_scanner.py plan --telegram
-  python bitunix_scanner.py telegram-poll --seconds 55
+  python bitunix_scanner.py telegram-poll --seconds 28
         """,
     )
     sub = p.add_subparsers(dest="cmd")
@@ -3247,7 +3247,7 @@ def main() -> None:
     b.add_argument("--interval", default="15m", help="分析週期")
 
     tp = sub.add_parser("telegram-poll", help="雲端用：短時間輪詢 Telegram 並回覆")
-    tp.add_argument("--seconds", type=float, default=55, help="輪詢秒數（建議 50～55）")
+    tp.add_argument("--seconds", type=float, default=28, help="輪詢秒數（配合 30 秒觸發建議 25～28）")
     tp.add_argument("--interval", default="15m", help="分析週期")
 
     j = sub.add_parser("journal", help="YES 訊號日記／結算／統計")

@@ -1,5 +1,5 @@
 # 輕量 Telegram 回覆（不掃盤）
-# 搭配 cron-job.org 每 1～2 分鐘觸發 → 手機約 1 分鐘內可收到回覆
+# 搭配 cron-job.org 每 30 秒觸發 → 手機多半約 30～60 秒內可收到回覆
 name: Telegram Reply
 
 on:
@@ -15,7 +15,7 @@ permissions:
 jobs:
   reply:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 2
     steps:
       - uses: actions/checkout@v4
 
@@ -38,12 +38,12 @@ jobs:
             echo '{"offset":0}' > telegram_offset.json
           fi
 
-      - name: Poll Telegram (~55s)
+      - name: Poll Telegram (~28s)
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PYTHONIOENCODING: utf-8
-        run: python bitunix_scanner.py telegram-poll --seconds 55
+        run: python bitunix_scanner.py telegram-poll --seconds 28
 
       - name: Save telegram offset
         if: always()
