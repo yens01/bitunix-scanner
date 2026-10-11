@@ -464,7 +464,60 @@ def fetch_session_opens(symbol: str) -> dict[str, float]:
     return opens
 
 
-def analyze_klines(symbol: str, interval: str = "15m", with_mtf: bool = True) -> dict[str, Any]:
+def build_tf_pack(symbol: str) -> dict[str, ChecklistResult | None]:
+    """
+    1H／4H 看結構方向；5m 找進場窗。
+    （detail／Telegram 查幣用，不影響 15m 掃描推播邏輯）
+    """
+    h4 = evaluate_symbol(symbol, "4h", with_mtf=True, mtf_tfs=["1d", "1w"])
+    h1 = evaluate_symbol(symbol, "1h", with_mtf=True, mtf_tfs=["4h", "1d"])
+    m5 = evaluate_symbol(symbol, "5m", with_mtf=True, mtf_tfs=["15m", "1h", "4h"])
+    return {"4h": h4, "1h": h1, "5m": m5}
+
+
+def _tf_status_line(r: ChecklistResult | None, tf: str) -> str:
+    if not r:
+        return f"{tf}: 無資料"
+    side = _side_short_label(r)
+    if r.trigger_ready:
+        st = "可進"
+    elif r.waiting_retest:
+        st = "等回測"
+    elif r.structure == "盤整":
+        st = "盤整"
+    else:
+        st = "觀望"
+    zone = ""
+    if r.zone_lo and r.zone_hi:
+        zone = f" 區{_px(r.zone_lo)}-{_px(r.zone_hi)}"
+    return f"{tf}: {r.structure}/{side}｜{st}｜{r.workflow_passed}/11{zone}"
+
+
+def _htf_bias_ok_for_5m(pack: dict[str, ChecklistResult | None], m5: ChecklistResult) -> tuple[bool, str]:
+    """5m 方向是否得到 1H 或 4H 同向支持。"""
+    h4 = pack.get("4h")
+    h1 = pack.get("1h")
+    want = m5.structure if m5.structure in ("偏多", "偏空") else (
+        "偏多" if m5.side == "long" else "偏空" if m5.side == "short" else ""
+    )
+    if not want:
+        return False, "5m 無明確方向"
+    same: list[str] = []
+    for lab, r in (("4H", h4), ("1H", h1)):
+        if r and r.structure == want:
+            same.append(lab)
+    if same:
+        return True, "同向 " + "/".join(same)
+    return False, "1H/4H 未同向（5m 僅供參考）"
+
+
+def analyze_klines(
+    symbol: str,
+    interval: str = "15m",
+    with_mtf: bool = True,
+    *,
+    with_tf_pack: bool = True,
+) -> dict[str, Any]:
     raw = fetch_klines(symbol, interval=interval, limit=120)
     candles = parse_klines(raw)
     if len(candles) < 40:
@@ -499,6 +552,7 @@ def analyze_klines(symbol: str, interval: str = "15m", with_mtf: bool = True) ->
     mtf = fetch_mtf_bias(symbol) if with_mtf else {}
     opens = fetch_session_opens(symbol) if with_mtf else {}
     setup = evaluate_setup(symbol, candles, interval, mtf=mtf, opens=opens)
+    tf_pack = build_tf_pack(symbol) if with_mtf and with_tf_pack else {}
 
     return {
         "symbol": symbol,
@@ -519,6 +573,7 @@ def analyze_klines(symbol: str, interval: str = "15m", with_mtf: bool = True) ->
         "bias": setup.structure,
         "setup": setup,
         "mtf": mtf,
+        "tf_pack": tf_pack,
         "long_entry": setup.entry if setup.side == "long" else last,
         "long_stop": setup.stop if setup.side == "long" else last * 0.985,
         "long_tp": setup.tp if setup.side == "long" else last * 1.02,
@@ -983,6 +1038,26 @@ def format_telegram_detail(info: dict[str, Any], meta: CoinSignal | None = None)
     if mtf:
         lines.append("多週期 " + " ".join(f"{k}:{v}" for k, v in mtf.items()))
 
+    pack = info.get("tf_pack") or {}
+    if pack:
+        lines.append(_esc(_tf_status_line(pack.get("4h"), "4H")))
+        lines.append(_esc(_tf_status_line(pack.get("1h"), "1H")))
+        m5 = pack.get("5m")
+        if m5:
+            ok, why = _htf_bias_ok_for_5m(pack, m5)
+            lines.append(_esc(_tf_status_line(m5, "5m")))
+            lines.append(f"5m檢查 {_esc(why)}")
+            if m5.entry and m5.stop and m5.tp and m5.rr > 0 and (
+                m5.trigger_ready or m5.waiting_retest or m5.at_zone
+            ):
+                risk_pct = abs(m5.entry - m5.stop) / m5.entry * 100
+                tag = "5m可參考進場" if (ok and m5.trigger_ready) else "5m計畫價"
+                lines.append(
+                    f"{tag} 入<code>{_esc(_px(m5.entry))}</code> "
+                    f"損<code>{_esc(_px(m5.stop))}</code>（{risk_pct:.2f}%） "
+                    f"盈<code>{_esc(_px(m5.tp))}</code> RR{m5.rr:.1f}"
+                )
+
     if setup:
         side = _side_short_label(setup)
         if setup.trigger_ready:
@@ -993,7 +1068,10 @@ def format_telegram_detail(info: dict[str, Any], meta: CoinSignal | None = None)
             status = "📋 盤整觀望"
         else:
             status = "📋 條件未齊"
-        lines.append(f"{side} ｜ {status} ｜ 流程 {setup.workflow_passed}/11 ｜ 分 {setup.setup_score:.0f}")
+        lines.append(
+            f"{info['interval']} {side} ｜ {status} ｜ "
+            f"流程 {setup.workflow_passed}/11 ｜ 分 {setup.setup_score:.0f}"
+        )
         if setup.zone_lo and setup.zone_hi:
             zlab = "箱體" if setup.structure == "盤整" else "優先區"
             lines.append(
@@ -1860,6 +1938,35 @@ def print_detail(info: dict[str, Any], meta: CoinSignal | None = None) -> None:
     mtf = info.get("mtf") or {}
     if mtf:
         print("多週期方向: " + "  ".join(f"{k}={v}" for k, v in mtf.items()))
+
+    pack = info.get("tf_pack") or {}
+    if pack:
+        print()
+        print(color("── 1H／4H 結構（方向）──", "1;36"))
+        print(f"  {_tf_status_line(pack.get('4h'), '4H')}")
+        print(f"  {_tf_status_line(pack.get('1h'), '1H')}")
+        m5 = pack.get("5m")
+        print(color("── 5m 進場窗 ──", "1;36"))
+        if m5:
+            ok, why = _htf_bias_ok_for_5m(pack, m5)
+            print(f"  {_tf_status_line(m5, '5m')}")
+            print(f"  高週期檢查: {why}")
+            if m5.entry and m5.stop and m5.tp and m5.rr > 0 and (
+                m5.trigger_ready or m5.waiting_retest or m5.at_zone
+            ):
+                risk_pct = abs(m5.entry - m5.stop) / m5.entry * 100
+                tag = "可參考進場" if (ok and m5.trigger_ready) else "計畫價（條件未齊或逆高週期）"
+                print(f"  {tag}")
+                print(
+                    f"  入場 {fmt_price(m5.entry)}  停損 {fmt_price(m5.stop)}"
+                    f"（{risk_pct:.2f}%）  止盈 {fmt_price(m5.tp)}  RR {m5.rr:.1f}"
+                )
+            if m5.missing_steps:
+                print(f"  缺: {m5.missing_steps}")
+            if not ok:
+                print(color("  （5m 與 1H/4H 不同向時，優先信高週期，勿追 5m）", "33"))
+        else:
+            print("  5m 無資料")
 
     setup: ChecklistResult | None = info.get("setup")
     if setup:
