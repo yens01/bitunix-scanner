@@ -2822,15 +2822,20 @@ def watch_loop(
                     desktop=desktop,
                     telegram=True,
                 )
+            # 遠處摘要：冷卻內最多一則，避免每輪刷屏
             if new_far:
-                notify_alert(
-                    "遠處等回測（摘要）",
-                    setups=new_far,
-                    kind="retest_summary",
-                    sound=False,
-                    desktop=False,
-                    telegram=True,
-                )
+                far_key = "__far_summary__"
+                now_ts = time.time()
+                if now_ts - cooldown.get(far_key, 0.0) >= max(cooldown_min, 60) * 60:
+                    notify_alert(
+                        "遠處等回測（摘要）",
+                        setups=list(far_now.values()),
+                        kind="retest_summary",
+                        sound=False,
+                        desktop=False,
+                        telegram=True,
+                    )
+                    cooldown[far_key] = now_ts
 
             if not new_yes and not new_near and not new_far:
                 print(

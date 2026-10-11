@@ -965,11 +965,11 @@ def check_mtf_alignment(structure: str, mtf: dict[str, str]) -> tuple[bool, str]
     # 高週期權重：4H/1D/1W/1M
     htf_keys = [k for k in ("4H", "1D", "1W", "1M") if k in mtf]
     if not htf_keys:
-        # 只有 1H 也參考
+        # 只有 1H 也參考；完全抓不到高週期 → 不可當對齊（避免 KORU 類無 MTF 仍 YES）
         if "1H" in mtf:
             htf_keys = ["1H"]
         else:
-            return True, "無高週期資料"
+            return False, "無高週期資料"
 
     opposite = "偏空" if structure == "偏多" else "偏多"
     same = structure
