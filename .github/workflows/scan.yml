@@ -85,20 +85,18 @@ jobs:
       - name: Publish journal snapshot branch
         if: always()
         run: |
-          mkdir -p /tmp/journal-pub
-          cp -f yes_journal.jsonl /tmp/journal-pub/yes_journal.jsonl
-          python bitunix_scanner.py journal stats > /tmp/journal-pub/journal_stats.txt 2>&1 || true
+          set -e
+          mkdir -p /tmp/journal-pub/cloud
+          cp -f yes_journal.jsonl /tmp/journal-pub/cloud/yes_journal.jsonl
+          python bitunix_scanner.py journal stats > /tmp/journal-pub/cloud/journal_stats.txt 2>&1 || true
+          cd /tmp/journal-pub
+          git init
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin cloud-journal 2>/dev/null || true
-          git checkout -B cloud-journal
-          mkdir -p cloud
-          cp -f /tmp/journal-pub/yes_journal.jsonl cloud/yes_journal.jsonl
-          cp -f /tmp/journal-pub/journal_stats.txt cloud/journal_stats.txt
+          git checkout --orphan cloud-journal
           git add cloud/yes_journal.jsonl cloud/journal_stats.txt
-          if git diff --staged --quiet; then
-            echo "journal snapshot unchanged"
-          else
-            git commit -m "chore: sync cloud journal $(date -u +%Y-%m-%dT%H:%MZ)"
-            git push -f origin cloud-journal
-          fi
+          git commit -m "chore: sync cloud journal $(date -u +%Y-%m-%dT%H:%MZ)"
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push -f origin cloud-journal
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
