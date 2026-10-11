@@ -1682,6 +1682,61 @@ def evaluate_setup(
     # 多週期一致性：逆 4H/日 不可進
     mtf_aligned, mtf_note = check_mtf_alignment(structure, mtf)
 
+    # ── YES 品質閘（QNT 類假壓力／急漲摸空）────────────────────────────
+    # 1) 當根必須收在區內正確一側（空：收在壓力下緣內；多：收在支撐上緣內）
+    # 2) 近端不可已收盤突破該區，也不可已掃過計畫停損
+    # 3) 急漲／急跌後立刻摸邊不做（等節奏喘完）
+    level_ok = True
+    level_block_reason = ""
+    z_chk = active_zone or priority_zone
+    prior = candles[-13:-1] if len(candles) >= 14 else candles[:-1]
+    if side in ("long", "short") and z_chk is not None:
+        pad = atr_v * 0.2
+        if side == "short":
+            if last.close > z_chk.hi:
+                level_ok = False
+                level_block_reason = "空單當根收在壓力之上（未收回）"
+            elif any(c.close > z_chk.hi + pad for c in prior):
+                level_ok = False
+                level_block_reason = "近端已收盤突破壓力（假區）"
+            elif stop > 0 and any(c.high >= stop for c in prior):
+                level_ok = False
+                level_block_reason = "近端已掃過停損位"
+        else:  # long
+            if last.close < z_chk.lo:
+                level_ok = False
+                level_block_reason = "多單當根收在支撐之下（未收回）"
+            elif any(c.close < z_chk.lo - pad for c in prior):
+                level_ok = False
+                level_block_reason = "近端已收盤跌破支撐（假區）"
+            elif stop > 0 and any(c.low <= stop for c in prior):
+                level_ok = False
+                level_block_reason = "近端已掃過停損位"
+
+    impulse_fade = False
+    if side in ("long", "short") and len(candles) >= 6 and atr_v > 0:
+        move5 = last.close - candles[-6].close
+        if side == "short" and move5 > atr_v * 1.8:
+            impulse_fade = True
+            if not level_block_reason:
+                level_block_reason = "急漲後摸壓，略過"
+        if side == "long" and move5 < -atr_v * 1.8:
+            impulse_fade = True
+            if not level_block_reason:
+                level_block_reason = "急跌後摸撐，略過"
+
+    # 1H 若明確逆向，即使 4H/日同向也不 YES（減少逆微結構掃損）
+    one_h_conflict = bool(
+        side != "none"
+        and "1H" in mtf
+        and (
+            (side == "short" and mtf["1H"] == "偏多")
+            or (side == "long" and mtf["1H"] == "偏空")
+        )
+    )
+    if one_h_conflict and not level_block_reason:
+        level_block_reason = "1H 逆向"
+
     # 可扣板機：六問過關 + 匯合 + RR + 高週期不逆向 + 禁止逆結構 + 需 BOS/CHOCH
     struct_side_ok = (
         (structure == "偏多" and side == "long")
@@ -1706,6 +1761,9 @@ def evaluate_setup(
         and bool(hard_conf)  # 軟匯合不夠，至少一個硬匯合
         and rr_ok
         and mtf_aligned
+        and level_ok
+        and not impulse_fade
+        and not one_h_conflict
     )
 
     # 評分
@@ -1852,6 +1910,8 @@ def evaluate_setup(
 
     if chasing:
         note += " 偵測到追價/追突破，略過。"
+    if level_block_reason and not trigger_ready:
+        note += f" ｜品質閘:{level_block_reason} → 不扣板機。"
     if side != "none" and not bos_ok:
         note += f" 缺同向BOS/CHOCH（目前:{bos_tag or '無'}）→ 不扣板機。"
     if side != "none" and not rr_ok:
