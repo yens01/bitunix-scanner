@@ -1038,26 +1038,56 @@ def save_telegram_offset(offset: int, path: str = TELEGRAM_OFFSET_PATH) -> None:
         pass
 
 
-def normalize_query_symbol(text: str) -> str | None:
-    """把手機輸入轉成 XXXUSDT；無法辨識則 None。"""
-    raw = (text or "").strip().upper()
+# Telegram 指令別名 → 內部 key（須在加 USDT 之前判斷，避免 Plan→PLANUSDT）
+_TG_CMD_ALIASES: dict[str, str] = {
+    "START": "START",
+    "HELP": "HELP",
+    "STATS": "STATS",
+    "JOURNAL": "STATS",
+    "JS": "STATS",
+    "統計": "STATS",
+    "PLAN": "PLAN",
+    "PLANS": "PLAN",
+    "規劃": "PLAN",
+    "規畫": "PLAN",
+    "日內": "PLAN",
+    "日内": "PLAN",
+    "日內規劃": "PLAN",
+    "日内规划": "PLAN",
+    "P": "PLAN",
+}
+
+
+def _telegram_cmd_token(text: str) -> str:
+    """正規化手機輸入：去 /指令@bot、空白與常見分隔。"""
+    raw = (text or "").strip()
+    if not raw:
+        return ""
+    # /plan@MyBot → plan
     if raw.startswith("/"):
-        raw = raw.lstrip("/").strip().upper()
-        if raw.startswith("DETAIL "):
-            raw = raw[7:].strip()
-        elif raw.startswith("D "):
-            raw = raw[2:].strip()
-    raw = raw.replace("-", "").replace("/", "").replace(" ", "")
+        raw = raw[1:]
+        if "@" in raw:
+            raw = raw.split("@", 1)[0]
+    raw = raw.strip().upper()
+    for prefix in ("DETAIL ", "D "):
+        if raw.startswith(prefix):
+            raw = raw[len(prefix) :].strip()
+            break
+    return raw.replace("-", "").replace("/", "").replace(" ", "")
+
+
+def normalize_query_symbol(text: str) -> str | None:
+    """把手機輸入轉成指令 key 或 XXXUSDT；無法辨識則 None。"""
+    raw = _telegram_cmd_token(text)
     if not raw:
         return None
-    if raw in {"START", "HELP", "STATS", "JOURNAL", "JS", "統計", "PLAN", "規劃", "日內"}:
-        if raw == "統計":
-            return "HELP"
-        if raw in {"PLAN", "規劃", "日內"}:
-            return "PLAN"
-        return raw
+    if raw in _TG_CMD_ALIASES:
+        return _TG_CMD_ALIASES[raw]
     # 只接受英數幣種，避免中文被誤加成 XXXUSDT
     base = raw[:-4] if raw.endswith("USDT") else raw
+    # 指令誤加成幣種（舊版／別名漏網）一律擋下
+    if base in _TG_CMD_ALIASES:
+        return _TG_CMD_ALIASES[base]
     if not base.isascii() or not base.isalnum() or not (2 <= len(base) <= 15):
         return None
     if not raw.endswith("USDT"):
@@ -1288,7 +1318,7 @@ def poll_telegram_queries(
                 "📱 <b>幣種查詢</b>\n"
                 "傳 <code>BTC</code>、<code>MAGIC</code>、<code>AVAXUSDT</code>\n"
                 "會回傳類似 CMD <code>detail</code> 的摘要\n"
-                "日內規劃：傳 <code>plan</code>／<code>規劃</code>\n"
+                "日內規劃：傳 <code>plan</code>／<code>規劃</code>／<code>日內</code>\n"
                 "統計：傳 <code>stats</code>",
                 chat_id=from_chat,
             )
@@ -1302,14 +1332,14 @@ def poll_telegram_queries(
                 tw = now_tw().strftime("%m-%d %H:%M")
                 body = (
                     f"📋 <b>BTC／ETH 日內規劃</b>\n🕐 {tw}\n"
-                    f"BTC／ETH・今日高低（參考，非必進）\n\n"
+                    f"BTC／ETH・今日高低＋亞／倫／紐時段（參考，非必進）\n\n"
                     + "\n\n".join(format_telegram_plan_card(r) for r in plans)
-                    + "\n\n⚠️ 破今日高低勿追｜自行確認槓桿與風險"
+                    + "\n\n⚠️ 破箱勿追｜自行確認槓桿與風險"
                 )
                 _telegram_send(body, chat_id=from_chat)
             handled += 1
             continue
-        if key in {"STATS", "JOURNAL", "JS"}:
+        if key == "STATS":
             # 簡短統計文字
             from signal_tracker import compute_stats, load_journal, CURRENT_RULESET
 
