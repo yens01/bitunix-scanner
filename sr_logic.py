@@ -1606,6 +1606,7 @@ def evaluate_setup(
     if "背離" in rsi_div:
         confluence.append(rsi_div.split("(")[0])
 
+    # 硬匯合：不可只靠「碰到 Fibo／POC」這類位置標籤；要反應或結構性證據
     hard_conf = [
         c
         for c in confluence
@@ -1618,14 +1619,11 @@ def evaluate_setup(
             "空頭排列",
             "Fibo位上有反應",
             "流動性區匯合",
-            "近POC",
-            "近EQH/EQL",
         )
-        or c.startswith("Fibo")
         or c.startswith("力道返還")
         or c.startswith("SMC")
-        or c.startswith("RSI")
-        or "雙" in c
+        or ("背離" in c)
+        or ("雙頂" in c or "雙底" in c)
     ]
     soft_conf = [
         c
@@ -1737,6 +1735,33 @@ def evaluate_setup(
     if one_h_conflict and not level_block_reason:
         level_block_reason = "1H 逆向"
 
+    # 操作週期要有清晰波段結構（不可只靠高週期把盤整「升格」成偏多/偏空就 YES）
+    swing_struct_ok = bool(
+        (side == "long" and "HH" in struct_detail and "HL" in struct_detail)
+        or (side == "short" and "LH" in struct_detail and "LL" in struct_detail)
+    )
+    if side in ("long", "short") and not swing_struct_ok and not level_block_reason:
+        level_block_reason = "操作週期無清晰 HH/HL 或 LH/LL"
+
+    # 停損需蓋過近端噪音：至少約 0.4×ATR，避免山寨一根影線掃損
+    stop_vs_atr_ok = True
+    if side in ("long", "short") and stop > 0 and atr_v > 0:
+        if abs(entry - stop) < atr_v * 0.4:
+            stop_vs_atr_ok = False
+            if not level_block_reason:
+                level_block_reason = "停損小於波動（易掃損）"
+
+    # 當根收盤方向需與邊一致（收針可，但不可陽線空／陰線多）
+    close_dir_ok = True
+    if side == "short" and last.bullish:
+        close_dir_ok = False
+        if not level_block_reason:
+            level_block_reason = "空單當根收陽（方向未確認）"
+    if side == "long" and not last.bullish:
+        close_dir_ok = False
+        if not level_block_reason:
+            level_block_reason = "多單當根收陰（方向未確認）"
+
     # 可扣板機：六問過關 + 匯合 + RR + 高週期不逆向 + 禁止逆結構 + 需 BOS/CHOCH
     struct_side_ok = (
         (structure == "偏多" and side == "long")
@@ -1764,6 +1789,9 @@ def evaluate_setup(
         and level_ok
         and not impulse_fade
         and not one_h_conflict
+        and swing_struct_ok
+        and stop_vs_atr_ok
+        and close_dir_ok
     )
 
     # 評分
