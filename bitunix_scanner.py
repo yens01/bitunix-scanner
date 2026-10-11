@@ -41,6 +41,7 @@ from sr_logic import (
     ChecklistResult,
     build_adaptive_range_box,
     build_day_range_box,
+    build_trading_session_high_low,
     evaluate_setup,
     parse_klines,
 )
@@ -118,6 +119,13 @@ SESSION_BOX_TARGET_WIDTH = {
     "BTCUSDT": 500.0,   # 近端可做波段參考（今日高低過寬時裁用）
     "ETHUSDT": 12.0,
 }
+# 三大盤高低（UTC 小時區間 → 台灣時間參考）
+# 亞洲 00–08 UTC＝台 08:00–16:00｜倫敦 07–16 UTC＝台 15:00–00:00｜紐約 12–21 UTC＝台 20:00–05:00
+TRADING_SESSION_HL: tuple[tuple[str, int, int, str], ...] = (
+    ("亞洲盤", 0, 8, "台08–16"),
+    ("倫敦盤", 7, 16, "台15–00"),
+    ("紐約盤", 12, 21, "台20–05"),
+)
 SESSION_PLAN_STATE_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "session_plan_state.json"
 )
@@ -1461,24 +1469,64 @@ def _session_box_edge_levels(
     return mid, lo, lo - pad, hi, hi, hi + pad, lo
 
 
+def _fill_trading_session_hl(r: ChecklistResult, candles: list) -> None:
+    """填入亞洲／倫敦／紐約盤高低到 r.plan_session_hl。"""
+    rows: list[tuple[str, float, float, bool]] = []
+    for name, sh, eh, _tw in TRADING_SESSION_HL:
+        got = build_trading_session_high_low(
+            candles, start_hour_utc=sh, end_hour_utc=eh, min_bars=2
+        )
+        if got is None:
+            continue
+        lo, hi, active = got
+        rows.append((name, lo, hi, active))
+    r.plan_session_hl = rows
+
+
+def _format_session_hl_lines(r: ChecklistResult, *, html: bool = False) -> list[str]:
+    """規劃卡用：三大盤高低文字列。"""
+    if not r.plan_session_hl:
+        return []
+    out: list[str] = []
+    for name, lo, hi, active in r.plan_session_hl:
+        w = hi - lo
+        wtxt = f"{w:.0f}點" if w >= 20 else f"{w:.2f}點"
+        mark = "◀進行中" if active else ""
+        tw = next((t for n, _, _, t in TRADING_SESSION_HL if n == name), "")
+        if html:
+            out.append(
+                f"{_esc(name)}（{_esc(tw)}）"
+                f" <code>{_esc(_px(lo))}</code>–<code>{_esc(_px(hi))}</code>"
+                f" 約{_esc(wtxt)}{_esc(mark)}"
+            )
+        else:
+            out.append(f"{name}（{tw}） {_px(lo)}–{_px(hi)} 約{wtxt}{mark}")
+    return out
+
+
 def _apply_session_intraday_box(r: ChecklistResult) -> ChecklistResult:
     """
     BTC／ETH 規劃改套「台灣日今日高低」（15m），供日內高拋低吸。
-    若今日振幅遠大於可做波段，另裁近端目標箱（BTC≈500／ETH≈12）並在備註標明。
-    結構／高週期仍用 4H。
+    並附亞洲／倫敦／紐約盤高低；結構／高週期仍用 4H。
     """
     if r.symbol.upper() not in SESSION_BOX_TARGET_WIDTH:
         return r
     target = SESSION_BOX_TARGET_WIDTH[r.symbol.upper()]
-    # 有明確方向且區已合理 → 不覆蓋支撐／壓力
-    if r.structure in ("偏多", "偏空") and r.zone_hi > r.zone_lo:
-        cur_w = r.zone_hi - r.zone_lo
-        if cur_w <= target * 1.6:
-            return r
+    # 有明確方向且區已合理 → 不覆蓋支撐／壓力（仍補三大盤高低）
+    keep_zone = (
+        r.structure in ("偏多", "偏空")
+        and r.zone_hi > r.zone_lo
+        and (r.zone_hi - r.zone_lo) <= target * 1.6
+    )
     try:
-        raw = fetch_klines(r.symbol, SESSION_BOX_INTERVAL, limit=200)
+        raw = fetch_klines(r.symbol, SESSION_BOX_INTERVAL, limit=288)
         candles = parse_klines(raw)
     except Exception:
+        return r
+
+    _fill_trading_session_hl(r, candles)
+
+    if keep_zone:
         return r
 
     tw_day = now_tw().strftime("%Y-%m-%d")
@@ -1594,6 +1642,10 @@ def format_telegram_plan_card(r: ChecklistResult) -> str:
         ]
         if zone:
             lines.append(zone)
+        sess = _format_session_hl_lines(r, html=True)
+        if sess:
+            lines.append("—— 時段高低 ——")
+            lines.extend(sess)
         edges = _session_box_edge_levels(r)
         if edges:
             _mid, le, ls, lt, se, ss, st = edges
@@ -1608,8 +1660,8 @@ def format_telegram_plan_card(r: ChecklistResult) -> str:
                 f"止盈低 <code>{_esc(_px(st))}</code>"
             )
         lines.append(f"高週期 {htf}")
-        lines.append("🚫 破今日高低勿追｜區間內高拋低吸")
-        lines.append("備註: 台灣日今日高低參考，非必進")
+        lines.append("🚫 破箱勿追｜依進行中時段高低操作")
+        lines.append("備註: 今日＋亞/倫/紐時段高低參考，非必進")
         return "\n".join(lines)
 
     if r.side == "long" or r.structure == "偏多":
@@ -1634,6 +1686,10 @@ def format_telegram_plan_card(r: ChecklistResult) -> str:
     ]
     if zone:
         lines.append(zone)
+    sess = _format_session_hl_lines(r, html=True)
+    if sess:
+        lines.append("—— 時段高低 ——")
+        lines.extend(sess)
     lines.append(f"高週期 {htf}")
 
     if full:
@@ -1706,13 +1762,15 @@ def format_console_plan_card(r: ChecklistResult) -> str:
         ]
         if zone:
             lines.append(f"  │ {zone}")
+        for sline in _format_session_hl_lines(r, html=False):
+            lines.append(f"  │ {sline}")
         edges = _session_box_edge_levels(r)
         if edges:
             _mid, le, ls, lt, se, ss, st = edges
             lines.append(f"  │ 低點多 {_px(le)} / 停 {_px(ls)} / 盈高 {_px(lt)}")
             lines.append(f"  │ 高點空 {_px(se)} / 停 {_px(ss)} / 盈低 {_px(st)}")
         lines.append(f"  │ 高週期 {htf}")
-        lines.append("  └ 破今日高低勿追｜區間高拋低吸")
+        lines.append("  └ 破箱勿追｜依進行中時段高低操作")
         return "\n".join(lines)
 
     side_txt = (
@@ -1730,6 +1788,8 @@ def format_console_plan_card(r: ChecklistResult) -> str:
     ]
     if zone:
         lines.append(f"  │ {zone}")
+    for sline in _format_session_hl_lines(r, html=False):
+        lines.append(f"  │ {sline}")
     lines.append(f"  │ 高週期 {htf}")
     if full:
         risk_pct = abs(r.entry - r.stop) / r.entry * 100

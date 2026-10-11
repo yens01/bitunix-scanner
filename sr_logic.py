@@ -147,6 +147,8 @@ class ChecklistResult:
     indicators: str = ""
     mtf_aligned: bool = True
     mtf_note: str = ""
+    # 日內規劃：各交易時段高低 [(名稱, lo, hi, 是否進行中), ...]
+    plan_session_hl: list[tuple[str, float, float, bool]] = field(default_factory=list)
 
 
 def parse_klines(raw: list[dict]) -> list[Candle]:
@@ -1244,6 +1246,53 @@ def build_day_range_box(
     if hi <= lo:
         return None
     return Zone(kind="range", lo=lo, hi=hi, strength=len(day_cs), touches=0)
+
+
+def build_trading_session_high_low(
+    candles: list[Candle],
+    *,
+    start_hour_utc: int,
+    end_hour_utc: int,
+    min_bars: int = 2,
+    now_ms: int | None = None,
+) -> tuple[float, float, bool] | None:
+    """
+    取最近一個交易時段（進行中或剛結束）的高低。
+    時段以 UTC 小時 [start, end) 定義（需 start < end，不跨日）。
+    回傳 (lo, hi, 是否進行中)；K 不足則 None。
+    """
+    if not candles or not (0 <= start_hour_utc < end_hour_utc <= 24):
+        return None
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.fromtimestamp(
+        (now_ms if now_ms is not None else candles[-1].time) / 1000,
+        tz=timezone.utc,
+    )
+    d = now.date()
+    start = datetime(d.year, d.month, d.day, start_hour_utc, 0, tzinfo=timezone.utc)
+    end = datetime(d.year, d.month, d.day, end_hour_utc, 0, tzinfo=timezone.utc)
+    active = False
+    if now < start:
+        start -= timedelta(days=1)
+        end -= timedelta(days=1)
+        win_end = end
+    elif now >= end:
+        win_end = end
+    else:
+        active = True
+        win_end = now
+
+    t0 = int(start.timestamp() * 1000)
+    t1 = int(win_end.timestamp() * 1000)
+    cs = [c for c in candles if t0 <= c.time < t1]
+    if len(cs) < min_bars:
+        return None
+    hi = max(c.high for c in cs)
+    lo = min(c.low for c in cs)
+    if hi <= lo:
+        return None
+    return lo, hi, active
 
 
 def build_adaptive_range_box(
