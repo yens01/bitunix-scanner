@@ -100,6 +100,7 @@ DEFAULT_MAX_RISK_PCT = 1.0           # 風險幅度上限（過寬風險失控�
 DEFAULT_NEAR_ZONE_PCT = 0.8          # 等回測：距區 ≤0.8% 才推卡片
 DEFAULT_ALERT_COOLDOWN_MIN = 45      # 同一幣冷卻分鐘
 DEFAULT_MAX_ALERTS_PER_WAVE = 4      # 同波最多推播檔數（YES+靠近合計；不含日記）
+DEFAULT_SCAN_POOL = 160              # 掃描池（成交額排序取前 N；雲端約可在 8～10 分內跑完）
 # BTC/ETH 日內規劃時段（台灣時間）：下午四點／晚上八點／美股開盤
 # 美股開盤：夏令約 21:30、冬令約 22:30；預設用 21:30（夏令），冬令可改 22:30
 SESSION_PLAN_SLOTS: tuple[tuple[int, int, str], ...] = (
@@ -2610,7 +2611,7 @@ def _apply_yes_risk_gate(
 
 def watch_once(
     *,
-    n: int = 100,
+    n: int = DEFAULT_SCAN_POOL,
     desktop: bool = False,
     alert_retest: bool = True,
     alert_far_summary: bool = False,
@@ -2745,7 +2746,7 @@ def watch_once(
 def watch_loop(
     *,
     seconds: int = 120,
-    n: int = 100,
+    n: int = DEFAULT_SCAN_POOL,
     desktop: bool = False,
     alert_retest: bool = True,
     cooldown_min: float = DEFAULT_ALERT_COOLDOWN_MIN,
@@ -2887,11 +2888,11 @@ def interactive() -> None:
         elif low in {"f", "funding"}:
             print_table(signals, top=25, mode="funding")
         elif low in {"s", "setup", "sr"}:
-            setups = run_filtered_setup(signals, n=100, top=20)
+            setups = run_filtered_setup(signals, n=DEFAULT_SCAN_POOL, top=20)
         elif low in {"t", "trigger"}:
-            setups = run_filtered_setup(signals, n=100, top=20, only_trigger=True)
+            setups = run_filtered_setup(signals, n=DEFAULT_SCAN_POOL, top=20, only_trigger=True)
         elif low in {"w", "wait", "retest"}:
-            all_s = run_filtered_setup(signals, n=100, top=40, show=False)
+            all_s = run_filtered_setup(signals, n=DEFAULT_SCAN_POOL, top=40, show=False)
             setups = all_s
             price_map = {s.symbol: s.last for s in signals}
             waiting = [x for x in all_s if x.waiting_retest]
@@ -2919,7 +2920,7 @@ def interactive() -> None:
                     print()
         elif low in {"a", "alert", "watch"}:
             print("進入警報監看（預設 120 秒）。可用: python bitunix_scanner.py watch")
-            watch_loop(seconds=120, n=100, desktop=False)
+            watch_loop(seconds=120, n=DEFAULT_SCAN_POOL, desktop=False)
         elif low.startswith("d ") or low.startswith("detail "):
             parts = cmd.split(maxsplit=1)
             if len(parts) < 2:
@@ -2980,7 +2981,7 @@ def main() -> None:
 
     u = sub.add_parser("setup", help="Setup 掃描（含過濾／缺步／MTF）")
     u.add_argument("--top", type=int, default=20)
-    u.add_argument("--n", type=int, default=100, help="掃描池大小")
+    u.add_argument("--n", type=int, default=DEFAULT_SCAN_POOL, help="掃描池大小")
     u.add_argument("--interval", default="15m")
     u.add_argument("--min-vol", type=float, default=DEFAULT_MIN_SETUP_VOL)
     u.add_argument("--max-rr", type=float, default=DEFAULT_MAX_RR, help="RR 上限（預設 2.5）")
@@ -3000,7 +3001,7 @@ def main() -> None:
 
     w = sub.add_parser("watch", help="本機定時掃描並警報（可扣板機／靠近區回測）")
     w.add_argument("--seconds", type=int, default=120, help="掃描間隔秒數")
-    w.add_argument("--n", type=int, default=100, help="掃描池大小")
+    w.add_argument("--n", type=int, default=DEFAULT_SCAN_POOL, help="掃描池大小")
     w.add_argument("--desktop", action="store_true", help="同時彈出桌面氣泡")
     w.add_argument("--no-retest", action="store_true", help="不報等回測，只報可扣板機")
     w.add_argument(
@@ -3011,7 +3012,7 @@ def main() -> None:
     )
 
     wo = sub.add_parser("watch-once", help="掃一轮就結束（GitHub Actions／雲端用）")
-    wo.add_argument("--n", type=int, default=100, help="掃描池大小")
+    wo.add_argument("--n", type=int, default=DEFAULT_SCAN_POOL, help="掃描池大小")
     wo.add_argument("--no-retest", action="store_true", help="不報等回測，只報可扣板機")
     wo.add_argument("--far-summary", action="store_true", help="一併推遠處等回測摘要")
     wo.add_argument(
