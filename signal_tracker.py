@@ -308,6 +308,28 @@ def resolve_plan_box(
         return entry
 
     pad = (hi - lo) * 0.02  # 允許 2% 箱寬緩衝，避免假突破
+    # 觀察期未滿：尚未破箱則繼續 open，勿提早算勝
+    if len(after) < max_bars:
+        for i, c in enumerate(after, 1):
+            if _h(c) > hi + pad:
+                entry.status = "loss"
+                entry.exit_price = hi
+                entry.exit_time_ms = _t(c)
+                entry.bars_held = i
+                entry.realized_r = 0.0
+                entry.note = ((entry.note + "｜") if entry.note else "") + "箱體向上突破｜盤整規劃偏離"
+                return entry
+            if _l(c) < lo - pad:
+                entry.status = "loss"
+                entry.exit_price = lo
+                entry.exit_time_ms = _t(c)
+                entry.bars_held = i
+                entry.realized_r = 0.0
+                entry.note = ((entry.note + "｜") if entry.note else "") + "箱體向下突破｜盤整規劃偏離"
+                return entry
+        entry.bars_held = len(after)
+        return entry
+
     window = after[:max_bars]
     for i, c in enumerate(window, 1):
         if _h(c) > hi + pad:
@@ -375,11 +397,12 @@ def resolve_entry(
         entry.note = "風險距離為 0，無法結算"
         return entry
 
-    window = after[:max_bars]
+    # 觀察期未滿且尚未觸及 SL/TP → 保持 open（勿把「目前只有 N 根」當超時）
+    observing = after if len(after) < max_bars else after[:max_bars]
     mfe = 0.0
     mae = 0.0
 
-    for i, c in enumerate(window, 1):
+    for i, c in enumerate(observing, 1):
         hi, lo, cl = _h(c), _l(c), _c(c)
         if entry.side == "long":
             mfe = max(mfe, (hi - entry.entry) / risk)
@@ -458,8 +481,16 @@ def resolve_entry(
                 entry.mae_r = round(mae, 3)
                 return entry
 
-    # 超時：以最後收盤結算
-    last = window[-1]
+    entry.mfe_r = round(mfe, 3)
+    entry.mae_r = round(mae, 3)
+    entry.bars_held = len(observing)
+
+    # 觀察期未滿：維持未結算
+    if len(after) < max_bars:
+        return entry
+
+    # 超時：滿 max_bars 仍未碰 SL/TP，以最後收盤結算
+    last = observing[-1]
     cl = _c(last)
     if entry.side == "long":
         realized = (cl - entry.entry) / risk
@@ -468,11 +499,8 @@ def resolve_entry(
     entry.status = "timeout"
     entry.exit_price = cl
     entry.exit_time_ms = _t(last)
-    entry.bars_held = len(window)
     entry.realized_r = round(realized, 3)
-    entry.mfe_r = round(mfe, 3)
-    entry.mae_r = round(mae, 3)
-    entry.note = f"觀察期满({len(window)}根)按收盤結算"
+    entry.note = f"觀察期满({len(observing)}根)按收盤結算"
     return entry
 
 

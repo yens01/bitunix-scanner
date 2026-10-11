@@ -37,7 +37,13 @@ def now_tw() -> datetime:
     """顯示用：一律台灣時間（UTC+8），避免雲端 runner 用 UTC。"""
     return datetime.now(TZ_TW)
 
-from sr_logic import ChecklistResult, evaluate_setup, parse_klines
+from sr_logic import (
+    ChecklistResult,
+    build_adaptive_range_box,
+    build_day_range_box,
+    evaluate_setup,
+    parse_klines,
+)
 from risk_manager import (
     count_open_by_side,
     filter_yes_by_risk,
@@ -88,12 +94,12 @@ DEFAULT_MIN_RR = 1.5                 # RR 鎖下緣
 DEFAULT_IDEAL_RR_LO = 1.5            # 品質排序：理想 RR 下緣
 DEFAULT_IDEAL_RR_HI = 2.5            # 品質排序：理想 RR 上緣
 DEFAULT_TOP_MAJOR_PER_SIDE = 2       # 大幣同向名額
-DEFAULT_TOP_ALT_PER_SIDE = 3         # 山寨同向名額（略放寬）
+DEFAULT_TOP_ALT_PER_SIDE = 5         # 山寨同向名額（日記／列表可多留；推播另限）
 DEFAULT_MIN_RISK_PCT = 0.4           # 風險幅度下限（停損太近易掃損）
 DEFAULT_MAX_RISK_PCT = 1.0           # 風險幅度上限（過寬風險失控）
 DEFAULT_NEAR_ZONE_PCT = 0.8          # 等回測：距區 ≤0.8% 才推卡片
 DEFAULT_ALERT_COOLDOWN_MIN = 45      # 同一幣冷卻分鐘
-DEFAULT_MAX_ALERTS_PER_WAVE = 4      # 同波最多推播檔數（YES+靠近合計）
+DEFAULT_MAX_ALERTS_PER_WAVE = 4      # 同波最多推播檔數（YES+靠近合計；不含日記）
 # BTC/ETH 日內規劃時段（台灣時間）：下午四點／晚上八點／美股開盤
 # 美股開盤：夏令約 21:30、冬令約 22:30；預設用 21:30（夏令），冬令可改 22:30
 SESSION_PLAN_SLOTS: tuple[tuple[int, int, str], ...] = (
@@ -101,10 +107,16 @@ SESSION_PLAN_SLOTS: tuple[tuple[int, int, str], ...] = (
     (20, 0, "晚盤規劃"),
     (21, 30, "美股開盤規劃"),
 )
-SESSION_PLAN_INTERVAL = "4h"         # 日內規劃用 4H K 線
+SESSION_PLAN_INTERVAL = "4h"         # 日內規劃用 4H K 線（結構／高週期）
 SESSION_PLAN_MTF = ("1d", "1w", "1M")
 SESSION_PLAN_SYMBOLS = ("BTCUSDT", "ETHUSDT")
 SESSION_PLAN_COOLDOWN_PREFIX = "__session_btc_eth_plan__"
+# 日內規劃箱體：台灣日「今日高低」（15m）；過寬時再裁近端目標波段
+SESSION_BOX_INTERVAL = "15m"
+SESSION_BOX_TARGET_WIDTH = {
+    "BTCUSDT": 500.0,   # 近端可做波段參考（今日高低過寬時裁用）
+    "ETHUSDT": 12.0,
+}
 SESSION_PLAN_STATE_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "session_plan_state.json"
 )
@@ -1317,8 +1329,13 @@ def _plan_zone_line(r: ChecklistResult, *, html: bool = True) -> str:
     if not (r.zone_lo and r.zone_hi):
         return ""
     lo, hi = _px(r.zone_lo), _px(r.zone_hi)
+    width = r.zone_hi - r.zone_lo
     if r.structure == "盤整":
-        label = "箱體"
+        label = (
+            f"今日高低（約{width:.0f}點）"
+            if width >= 20
+            else f"今日高低（約{width:.2f}點）"
+        )
     elif r.structure == "偏多" or r.side == "long":
         label = "下方支撐區"
     elif r.structure == "偏空" or r.side == "short":
@@ -1328,6 +1345,76 @@ def _plan_zone_line(r: ChecklistResult, *, html: bool = True) -> str:
     if html:
         return f"{label} <code>{_esc(lo)}</code>–<code>{_esc(hi)}</code>"
     return f"{label} {lo}–{hi}"
+
+
+def _session_box_edge_levels(
+    r: ChecklistResult,
+) -> tuple[float, float, float, float, float, float, float] | None:
+    """盤整日內箱：下緣多／上緣空。回傳 mid, le, ls, lt, se, ss, st。"""
+    if r.structure != "盤整" or not (r.zone_lo and r.zone_hi > r.zone_lo):
+        return None
+    lo, hi = r.zone_lo, r.zone_hi
+    mid = (lo + hi) / 2.0
+    width = hi - lo
+    pad = max(width * 0.08, mid * 0.0006)
+    # 下緣試多 → 止盈今日高；上緣試空 → 止盈今日低（對側高低）
+    return mid, lo, lo - pad, hi, hi, hi + pad, lo
+
+
+def _apply_session_intraday_box(r: ChecklistResult) -> ChecklistResult:
+    """
+    BTC／ETH 規劃改套「台灣日今日高低」（15m），供日內高拋低吸。
+    若今日振幅遠大於可做波段，另裁近端目標箱（BTC≈500／ETH≈12）並在備註標明。
+    結構／高週期仍用 4H。
+    """
+    if r.symbol.upper() not in SESSION_BOX_TARGET_WIDTH:
+        return r
+    target = SESSION_BOX_TARGET_WIDTH[r.symbol.upper()]
+    # 有明確方向且區已合理 → 不覆蓋支撐／壓力
+    if r.structure in ("偏多", "偏空") and r.zone_hi > r.zone_lo:
+        cur_w = r.zone_hi - r.zone_lo
+        if cur_w <= target * 1.6:
+            return r
+    try:
+        raw = fetch_klines(r.symbol, SESSION_BOX_INTERVAL, limit=200)
+        candles = parse_klines(raw)
+    except Exception:
+        return r
+
+    tw_day = now_tw().strftime("%Y-%m-%d")
+    day_box = build_day_range_box(candles, day=tw_day, tz_offset_hours=8)
+    if day_box is None:
+        day_box = build_adaptive_range_box(candles, target_width=target)
+    if day_box is None:
+        return r
+
+    width = day_box.hi - day_box.lo
+    tag = f"今日高低{tw_day}·實寬{width:.2f}"
+    # 今日高低過寬（>2.2×目標）→ 再用近端目標箱，避免又變成六千點大箱
+    if width > target * 2.2:
+        near = build_adaptive_range_box(candles, target_width=target)
+        if near is not None:
+            day_box = near
+            width = day_box.hi - day_box.lo
+            tag = (
+                f"今日高低過寬｜改近端{SESSION_BOX_INTERVAL}"
+                f"·目標{target:g}·實寬{width:.2f}"
+            )
+
+    r.zone_lo = day_box.lo
+    r.zone_hi = day_box.hi
+    r.zone_kind = "range"
+    r.note = f"{r.note}｜{tag}" if r.note else tag
+    if r.structure == "盤整":
+        edges = _session_box_edge_levels(r)
+        if edges:
+            _mid, le, ls, lt, _se, _ss, _st = edges
+            r.entry = le
+            r.stop = ls
+            r.tp = lt
+            risk = abs(r.entry - r.stop)
+            r.rr = abs(r.tp - r.entry) / risk if risk > 0 else 0.0
+    return r
 
 
 def format_telegram_card(r: ChecklistResult, *, kind: str) -> str:
@@ -1403,13 +1490,26 @@ def format_telegram_plan_card(r: ChecklistResult) -> str:
 
     if r.structure == "盤整":
         lines = [
-            f"⚪ <b>{_esc(r.symbol)}</b>  盤整 ｜ 📋 規劃・等選邊 ｜ {group}",
+            f"⚪ <b>{_esc(r.symbol)}</b>  盤整 ｜ 📋 今日高低・日內 ｜ {group}",
         ]
         if zone:
             lines.append(zone)
+        edges = _session_box_edge_levels(r)
+        if edges:
+            _mid, le, ls, lt, se, ss, st = edges
+            lines.append(
+                f"低點試多 入場 <code>{_esc(_px(le))}</code> "
+                f"停損 <code>{_esc(_px(ls))}</code> "
+                f"止盈高 <code>{_esc(_px(lt))}</code>"
+            )
+            lines.append(
+                f"高點試空 入場 <code>{_esc(_px(se))}</code> "
+                f"停損 <code>{_esc(_px(ss))}</code> "
+                f"止盈低 <code>{_esc(_px(st))}</code>"
+            )
         lines.append(f"高週期 {htf}")
-        lines.append("🚫 盤整・禁止方向單")
-        lines.append("備註: 等市場選邊後再給進出場")
+        lines.append("🚫 破今日高低勿追｜區間內高拋低吸")
+        lines.append("備註: 台灣日今日高低參考，非必進")
         return "\n".join(lines)
 
     if r.side == "long" or r.structure == "偏多":
@@ -1502,12 +1602,17 @@ def format_console_plan_card(r: ChecklistResult) -> str:
     group = "大幣" if _is_major(r.symbol) else "山寨"
     if r.structure == "盤整":
         lines = [
-            f"  ┌ {r.symbol}  盤整 ｜ 規劃・等選邊 ｜ {group}",
+            f"  ┌ {r.symbol}  盤整 ｜ 今日高低・日內 ｜ {group}",
         ]
         if zone:
             lines.append(f"  │ {zone}")
+        edges = _session_box_edge_levels(r)
+        if edges:
+            _mid, le, ls, lt, se, ss, st = edges
+            lines.append(f"  │ 低點多 {_px(le)} / 停 {_px(ls)} / 盈高 {_px(lt)}")
+            lines.append(f"  │ 高點空 {_px(se)} / 停 {_px(ss)} / 盈低 {_px(st)}")
         lines.append(f"  │ 高週期 {htf}")
-        lines.append("  └ 禁方向・等選邊")
+        lines.append("  └ 破今日高低勿追｜區間高拋低吸")
         return "\n".join(lines)
 
     side_txt = (
@@ -2153,14 +2258,10 @@ def run_filtered_setup(
     if show:
         print_setup_table(filtered, top=top, rejected=rejected)
     if AUTO_RECORD_YES:
+        # 日記：過篩的全部 YES（不受同波推播上限／倉位風控影響）
         yes = [x for x in filtered if x.trigger_ready]
         if yes:
-            # 日記也只記同波品質前 N，避免一次灌爆拉低統計
-            yes_take, _ = pick_wave_alerts(
-                yes, [], max_n=cfg.max_alerts_per_wave, signals=signals, cfg=cfg
-            )
-            yes_take = _apply_yes_risk_gate(yes_take)
-            record_yes_signals(yes_take, interval=interval)
+            record_yes_signals(yes, interval=interval)
     return filtered
 
 
@@ -2272,7 +2373,7 @@ def _build_btc_eth_plans() -> list[ChecklistResult]:
             mtf_tfs=list(SESSION_PLAN_MTF),
         )
         if r:
-            plans.append(r)
+            plans.append(_apply_session_intraday_box(r))
     return plans
 
 
@@ -2503,6 +2604,10 @@ def watch_once(
             # 剛寫入的冷卻撤回，避免「沒推卻冷卻」
             del cooldown[r.symbol]
 
+    # 日記先記本輪全部 YES（推播仍只推同波前 N）
+    if AUTO_RECORD_YES and yes_now:
+        record_yes_signals(yes_now, interval="15m")
+
     if new_yes:
         notify_alert(
             "可扣板機 YES",
@@ -2512,8 +2617,6 @@ def watch_once(
             desktop=desktop,
             telegram=True,
         )
-        if AUTO_RECORD_YES:
-            record_yes_signals(new_yes, interval="15m")
     if new_near:
         notify_alert(
             "靠近區・等回測",
@@ -2624,6 +2727,9 @@ def watch_loop(
                 if r.symbol not in sent_syms and r.symbol in cooldown:
                     del cooldown[r.symbol]
 
+            if AUTO_RECORD_YES and yes_now:
+                record_yes_signals(list(yes_now.values()), interval="15m")
+
             if new_yes:
                 notify_alert(
                     "可扣板機 YES",
@@ -2633,8 +2739,6 @@ def watch_loop(
                     desktop=desktop,
                     telegram=True,
                 )
-                if AUTO_RECORD_YES:
-                    record_yes_signals(new_yes, interval="15m")
             if new_near:
                 notify_alert(
                     "靠近區・等回測",

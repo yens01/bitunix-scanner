@@ -1206,6 +1206,103 @@ def build_range_box(candles: list[Candle], lookback: int = 30) -> Zone | None:
     return Zone(kind="range", lo=lo, hi=hi, strength=n, touches=0)
 
 
+def build_day_range_box(
+    candles: list[Candle],
+    *,
+    day: str | None = None,
+    tz_offset_hours: int = 8,
+    min_bars: int = 4,
+) -> Zone | None:
+    """
+    取指定曆日（預設：最後一根 K 所在日）的最高／最低，供日內高拋低吸。
+    day 格式 YYYY-MM-DD；時區預設 UTC+8（台灣）。
+    """
+    if len(candles) < min_bars:
+        return None
+    from datetime import datetime, timedelta, timezone
+
+    tz = timezone(timedelta(hours=tz_offset_hours))
+    if day is None:
+        day = datetime.fromtimestamp(candles[-1].time / 1000, tz=timezone.utc).astimezone(tz).strftime(
+            "%Y-%m-%d"
+        )
+
+    day_cs = [
+        c
+        for c in candles
+        if datetime.fromtimestamp(c.time / 1000, tz=timezone.utc).astimezone(tz).strftime("%Y-%m-%d")
+        == day
+    ]
+    if len(day_cs) < min_bars:
+        # 今日 K 太少：退回最近 24h
+        last_t = candles[-1].time
+        day_cs = [c for c in candles if c.time >= last_t - 24 * 3600 * 1000]
+    if len(day_cs) < min_bars:
+        return None
+    hi = max(c.high for c in day_cs)
+    lo = min(c.low for c in day_cs)
+    if hi <= lo:
+        return None
+    return Zone(kind="range", lo=lo, hi=hi, strength=len(day_cs), touches=0)
+
+
+def build_adaptive_range_box(
+    candles: list[Candle],
+    *,
+    target_width: float,
+    min_lookback: int = 6,
+    max_lookback: int = 48,
+) -> Zone | None:
+    """
+    日內可用箱體：在近段 lookback 中找寬度最接近 target_width 的高低區間。
+    若最近波動仍遠大於目標，則以現價為中心裁成約目標寬（仍夾在近段高低內）。
+    """
+    if target_width <= 0 or len(candles) < min_lookback:
+        return None
+    px = candles[-1].close
+    max_n = min(max_lookback, len(candles))
+    best: Zone | None = None
+    best_score = float("inf")
+
+    for n in range(min_lookback, max_n + 1):
+        window = candles[-n:]
+        hi = max(c.high for c in window)
+        lo = min(c.low for c in window)
+        width = hi - lo
+        if width <= 0:
+            continue
+        # 寬度貼近目標；價格最好在箱內；過寬加重罰
+        score = abs(width - target_width) / target_width
+        if width > target_width * 2.2:
+            score += (width / target_width - 2.2) * 0.45
+        if not (lo <= px <= hi):
+            score += 0.35
+        # 略偏好較短 lookback（更像「這一盤」）
+        score += n * 0.004
+        if score < best_score:
+            best_score = score
+            best = Zone(kind="range", lo=lo, hi=hi, strength=n, touches=0)
+
+    if best is None:
+        return None
+
+    width = best.hi - best.lo
+    if width > target_width * 1.85:
+        # 過寬：裁成現價中心的目標帶，並限制在近段真實高低內
+        n = max(min_lookback, min(best.strength, 12))
+        window = candles[-n:]
+        hi = max(c.high for c in window)
+        lo = min(c.low for c in window)
+        half = target_width / 2.0
+        lo2 = max(lo, px - half)
+        hi2 = min(hi, px + half)
+        if hi2 - lo2 < target_width * 0.45:
+            lo2, hi2 = px - half, px + half
+        if hi2 > lo2:
+            best = Zone(kind="range", lo=lo2, hi=hi2, strength=n, touches=0)
+    return best
+
+
 def nearest_priority_zone(
     structure: str,
     supports: list[Zone],
