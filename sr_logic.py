@@ -1606,7 +1606,7 @@ def evaluate_setup(
     if "背離" in rsi_div:
         confluence.append(rsi_div.split("(")[0])
 
-    # 硬匯合：不可只靠「碰到 Fibo／POC」這類位置標籤；要反應或結構性證據
+    # 硬匯合：要反應／結構證據；單純「碰到 Fibo／POC」不算
     hard_conf = [
         c
         for c in confluence
@@ -1619,12 +1619,18 @@ def evaluate_setup(
             "空頭排列",
             "Fibo位上有反應",
             "流動性區匯合",
+            "近EQH/EQL",
         )
         or c.startswith("力道返還")
         or c.startswith("SMC")
         or ("背離" in c)
         or ("雙頂" in c or "雙底" in c)
     ]
+    # 區上已有硬收針／吞噬時，本身就算硬匯合（避免影線0.5區沒對上就整筆作廢）
+    if reaction_ok and (
+        (side == "short" and hard_bear) or (side == "long" and hard_bull)
+    ):
+        hard_conf.append("區上硬反應")
     soft_conf = [
         c
         for c in confluence
@@ -1711,19 +1717,20 @@ def evaluate_setup(
                 level_ok = False
                 level_block_reason = "近端已掃過停損位"
 
+    # 急漲／急跌後立刻摸邊：門檻略放寬（2.2×ATR），避免正常回測也被擋
     impulse_fade = False
     if side in ("long", "short") and len(candles) >= 6 and atr_v > 0:
         move5 = last.close - candles[-6].close
-        if side == "short" and move5 > atr_v * 1.8:
+        if side == "short" and move5 > atr_v * 2.2:
             impulse_fade = True
             if not level_block_reason:
                 level_block_reason = "急漲後摸壓，略過"
-        if side == "long" and move5 < -atr_v * 1.8:
+        if side == "long" and move5 < -atr_v * 2.2:
             impulse_fade = True
             if not level_block_reason:
                 level_block_reason = "急跌後摸撐，略過"
 
-    # 1H 若明確逆向，即使 4H/日同向也不 YES（減少逆微結構掃損）
+    # 1H 明確逆向才擋；1H 盤整不擋
     one_h_conflict = bool(
         side != "none"
         and "1H" in mtf
@@ -1735,42 +1742,47 @@ def evaluate_setup(
     if one_h_conflict and not level_block_reason:
         level_block_reason = "1H 逆向"
 
-    # 操作週期要有清晰波段結構（不可只靠高週期把盤整「升格」成偏多/偏空就 YES）
-    swing_struct_ok = bool(
+    # 結構：清晰 HH/HL／LH/LL，或（BOS/CHOCH + 同向 MA）二擇一
+    # 避免「必須同時有完整擺動＋BOS」疊到幾乎沒單
+    bos_ok = bool(
+        (side == "long" and bos_tag in ("BOS向上", "CHOCH轉多"))
+        or (side == "short" and bos_tag in ("BOS向下", "CHOCH轉空"))
+    )
+    clear_swings = bool(
         (side == "long" and "HH" in struct_detail and "HL" in struct_detail)
         or (side == "short" and "LH" in struct_detail and "LL" in struct_detail)
     )
+    ma_same = bool(
+        (side == "long" and ("MA多頭" in struct_detail or "多頭排列" in confluence))
+        or (side == "short" and ("MA空頭" in struct_detail or "空頭排列" in confluence))
+    )
+    swing_struct_ok = clear_swings or (bos_ok and ma_same)
     if side in ("long", "short") and not swing_struct_ok and not level_block_reason:
-        level_block_reason = "操作週期無清晰 HH/HL 或 LH/LL"
+        level_block_reason = "結構不足（需 HH/HL 或 LH/LL，或 BOS+同向MA）"
 
-    # 停損需蓋過近端噪音：至少約 0.4×ATR，避免山寨一根影線掃損
+    # 停損至少約 0.25×ATR（兼顧可成交與抗掃）
     stop_vs_atr_ok = True
     if side in ("long", "short") and stop > 0 and atr_v > 0:
-        if abs(entry - stop) < atr_v * 0.4:
+        if abs(entry - stop) < atr_v * 0.25:
             stop_vs_atr_ok = False
             if not level_block_reason:
                 level_block_reason = "停損小於波動（易掃損）"
 
-    # 當根收盤方向需與邊一致（收針可，但不可陽線空／陰線多）
+    # 收盤方向：已有硬收針／吞噬時不另擋（收針本身已含方向）
     close_dir_ok = True
-    if side == "short" and last.bullish:
+    if side == "short" and last.bullish and not hard_bear:
         close_dir_ok = False
         if not level_block_reason:
-            level_block_reason = "空單當根收陽（方向未確認）"
-    if side == "long" and not last.bullish:
+            level_block_reason = "空單當根收陽且無空方硬反應"
+    if side == "long" and (not last.bullish) and not hard_bull:
         close_dir_ok = False
         if not level_block_reason:
-            level_block_reason = "多單當根收陰（方向未確認）"
+            level_block_reason = "多單當根收陰且無多方硬反應"
 
-    # 可扣板機：六問過關 + 匯合 + RR + 高週期不逆向 + 禁止逆結構 + 需 BOS/CHOCH
+    # 可扣板機：核心條件 + 防假區閘（已平衡，避免條件疊加到零成交）
     struct_side_ok = (
         (structure == "偏多" and side == "long")
         or (structure == "偏空" and side == "short")
-    )
-    # YES 必須有同向結構突破／轉換（避免無 BOS 亂扣）
-    bos_ok = bool(
-        (side == "long" and bos_tag in ("BOS向上", "CHOCH轉多"))
-        or (side == "short" and bos_tag in ("BOS向下", "CHOCH轉空"))
     )
     trigger_ready = bool(
         side != "none"
@@ -1783,7 +1795,7 @@ def evaluate_setup(
         and not struct_conflict
         and not react_conflict
         and bos_ok
-        and bool(hard_conf)  # 軟匯合不夠，至少一個硬匯合
+        and bool(hard_conf)
         and rr_ok
         and mtf_aligned
         and level_ok
