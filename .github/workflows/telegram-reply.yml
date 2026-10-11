@@ -1,0 +1,53 @@
+# 輕量 Telegram 回覆（不掃盤）
+# 搭配 cron-job.org 每 1～2 分鐘觸發 → 手機約 1 分鐘內可收到回覆
+name: Telegram Reply
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: bitunix-telegram-reply
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  reply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore telegram offset
+        uses: actions/cache@v4
+        with:
+          path: telegram_offset.json
+          key: tg-offset-v1-${{ github.run_id }}
+          restore-keys: |
+            tg-offset-v1-
+            state-v5-
+
+      - name: Ensure offset file
+        run: |
+          if [ ! -f telegram_offset.json ]; then
+            echo '{"offset":0}' > telegram_offset.json
+          fi
+
+      - name: Poll Telegram (~55s)
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PYTHONIOENCODING: utf-8
+        run: python bitunix_scanner.py telegram-poll --seconds 55
+
+      - name: Save telegram offset
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: telegram_offset.json
+          key: tg-offset-v1-${{ github.run_id }}

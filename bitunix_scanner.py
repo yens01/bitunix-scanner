@@ -1333,6 +1333,25 @@ def poll_telegram_queries(
     return handled
 
 
+def telegram_poll_burst(*, interval: str = "15m", seconds: float = 50.0) -> int:
+    """
+    雲端用：短時間長輪詢 Telegram（約 1 分鐘內回覆）。
+    GitHub Actions 無法 24h 掛著 bot，用密集排程呼叫此函式近似即時。
+    """
+    token, chat = _telegram_token_chat()
+    if not token or not chat:
+        print("未設定 TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID，略過輪詢")
+        return 0
+    deadline = time.time() + max(5.0, seconds)
+    total = 0
+    while time.time() < deadline:
+        remain = int(max(1, min(25, deadline - time.time())))
+        n = poll_telegram_queries(timeout=remain, interval=interval, max_msgs=10)
+        total += n
+    print(f"Telegram 輪詢結束：處理 {total} 則")
+    return total
+
+
 def telegram_bot_loop(*, interval: str = "15m") -> None:
     """本機長駐：手機傳幣種立即回 detail 摘要。"""
     enable_ansi()
@@ -3042,6 +3061,7 @@ def main() -> None:
   python bitunix_scanner.py detail ETHUSDT
   python bitunix_scanner.py plan
   python bitunix_scanner.py plan --telegram
+  python bitunix_scanner.py telegram-poll --seconds 55
         """,
     )
     sub = p.add_subparsers(dest="cmd")
@@ -3106,6 +3126,10 @@ def main() -> None:
 
     b = sub.add_parser("bot", help="Telegram 手機查幣（傳 BTC／MAGIC 回 detail 摘要）")
     b.add_argument("--interval", default="15m", help="分析週期")
+
+    tp = sub.add_parser("telegram-poll", help="雲端用：短時間輪詢 Telegram 並回覆")
+    tp.add_argument("--seconds", type=float, default=55, help="輪詢秒數（建議 50～55）")
+    tp.add_argument("--interval", default="15m", help="分析週期")
 
     j = sub.add_parser("journal", help="YES 訊號日記／結算／統計")
     j.add_argument(
@@ -3198,6 +3222,10 @@ def main() -> None:
 
     if args.cmd == "bot":
         telegram_bot_loop(interval=args.interval)
+        return
+
+    if args.cmd == "telegram-poll":
+        telegram_poll_burst(interval=args.interval, seconds=args.seconds)
         return
 
     if args.cmd == "journal":

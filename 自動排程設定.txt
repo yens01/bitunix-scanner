@@ -2,14 +2,17 @@
 ====================
 
 【現況架構】
-- cron-job.org 每 15 分鐘 → 打 GitHub API
-- 只跑「Auto Scan」（workflow_dispatch）
-- 「Bitunix Scan」改為純手動，避免雙排程重複推播
+- cron-job.org 每 15 分鐘 →「Auto Scan」（掃盤＋推 YES）
+- cron-job.org 每 1～2 分鐘 →「Telegram Reply」（只回手機訊息，不掃盤）
+- 「Bitunix Scan」純手動，避免雙排程重複推播
 
 
 【cron-job.org 建議】
-URL（用數字 ID）：
+
+1) 掃盤（維持）每 15 分鐘：
+URL（用數字 ID 或檔名皆可）：
   https://api.github.com/repos/yens01/bitunix-scanner/actions/workflows/380372933/dispatches
+  或 https://api.github.com/repos/yens01/bitunix-scanner/actions/workflows/auto-scan.yml/dispatches
 Method: POST
 Body: {"ref":"main"}
 Headers:
@@ -17,9 +20,15 @@ Headers:
   Accept: application/vnd.github+json
   Content-Type: application/json
 
+2) 手機即時回覆（新增）每 1～2 分鐘：
+URL:
+  https://api.github.com/repos/yens01/bitunix-scanner/actions/workflows/telegram-reply.yml/dispatches
+Method / Body / Headers：同上
+說明：每次跑約 55 秒長輪詢；回覆延遲大約 1 分鐘內（不是毫秒級，但遠快過等 15 分掃盤）
+
 頻率建議：
-- 預設 15 分鐘：訊號較即時，Actions 用量中等
-- 想省用量：改 20～30 分鐘也行（冷卻已是 45 分，不會更密推同幣）
+- Auto Scan 15 分鐘；想省用量可 20～30 分鐘
+- Telegram Reply 1～2 分鐘（太密會耗 Actions 分鐘數）
 
 
 【這次優化了什麼】

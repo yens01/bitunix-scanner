@@ -54,7 +54,8 @@ Bitunix 掃描器 → GitHub Actions 上雲步驟
 - 對你的 Telegram Bot「幣看哨」傳：BTC / MAGIC / AVAXUSDT
 - 會回類似 CMD detail 的摘要（含 4H／1H 結構 + 5m 進場窗）
 - 要「立刻回」：雙擊 啟動Bot.bat（電腦開著跑 bot）
-- 雲端排程：約每 15 分才收一次訊息，沒開 bot 會覺得沒反應
+- 雲端排程：掃盤約每 15 分；若另設 Telegram Reply（每 1～2 分）則手機查詢約 1 分鐘內回
+- 真・立刻回：本機開 啟動Bot.bat
 - 本機：python bitunix_scanner.py detail 幣種
 
 
