@@ -1085,7 +1085,9 @@ def format_telegram_detail(info: dict[str, Any], meta: CoinSignal | None = None)
             status = "📋 盤整觀望"
         else:
             status = "📋 條件未齊"
-        if setup.structure == "偏多":
+        if not setup.mtf_aligned and setup.structure in ("偏多", "偏空"):
+            ban = f"🚫 {setup.interval}本地{setup.structure}，逆高週期 → 觀望"
+        elif setup.structure == "偏多":
             ban = "🚫 偏多・禁空"
         elif setup.structure == "偏空":
             ban = "🚫 偏空・禁多"
@@ -2005,7 +2007,9 @@ def print_checklist(setup: ChecklistResult) -> None:
     print(color("── 入場／停損／止盈位置 ──", "1;32"))
     side_txt = {"long": "做多 LONG", "short": "做空 SHORT", "none": "暫不下手"}.get(setup.side, setup.side)
     plan = ""
-    if setup.side == "none" and setup.structure == "偏多":
+    if setup.side == "none" and not setup.mtf_aligned and setup.structure in ("偏多", "偏空"):
+        plan = f"（{setup.interval}本地{setup.structure}，但逆高週期 → 兩邊都不做）"
+    elif setup.side == "none" and setup.structure == "偏多":
         plan = "（傾向做多，條件未齊）"
     elif setup.side == "none" and setup.structure == "偏空":
         plan = "（傾向做空，條件未齊）"
@@ -2036,7 +2040,15 @@ def print_checklist(setup: ChecklistResult) -> None:
         print(f"  原因: {setup.missing_steps or setup.note or '觀望'}")
 
     print()
-    if setup.structure == "偏多":
+    # 本地結構 vs 高週期打架時，不要只喊「偏空禁多」造成以為該做空
+    if not setup.mtf_aligned and setup.structure in ("偏多", "偏空"):
+        print(
+            color(
+                f"【衝突】{setup.interval} 本地{setup.structure}，但高週期逆向 → 觀望，禁多也禁空",
+                "1;31",
+            )
+        )
+    elif setup.structure == "偏多":
         print(color("【硬規則】結構偏多 → 只做多，禁止做空", "1;31"))
     elif setup.structure == "偏空":
         print(color("【硬規則】結構偏空 → 只做空，禁止做多", "1;31"))
@@ -2044,9 +2056,12 @@ def print_checklist(setup: ChecklistResult) -> None:
         print(color("【硬規則】盤整 → 不給方向單，等選邊", "1;31"))
     trig = color("可扣板機", "1;32") if setup.trigger_ready else color("尚未扣板機", "1;33")
     wait = color("等回測", "33") if setup.waiting_retest else ""
-    conclude_side = side_txt if setup.trigger_ready else (
-        "暫不下手" if setup.side == "none" else f"{side_txt}（未齊）"
-    )
+    if not setup.mtf_aligned and setup.side == "none":
+        conclude_side = "暫不下手（逆高週期）"
+    else:
+        conclude_side = side_txt if setup.trigger_ready else (
+            "暫不下手" if setup.side == "none" else f"{side_txt}（未齊）"
+        )
     print(
         f"結論: {color(conclude_side, '1;33')} ｜ {trig} ｜ 邏輯分 {setup.setup_score:.0f}/100"
         + (f" ｜ {wait}" if wait else "")
