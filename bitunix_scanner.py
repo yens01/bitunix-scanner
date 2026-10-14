@@ -60,7 +60,8 @@ from signal_tracker import (
 )
 
 BASE = "https://fapi.bitunix.com"
-TIMEOUT = 20
+TIMEOUT = 30  # SSL／跨區偶發慢；逾時會自動重試
+HTTP_RETRIES = 3
 AUTO_RECORD_YES = True  # Setup／監看出現 YES 時自動寫入日記
 LOCAL_ENV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "telegram.local.env")
 
@@ -168,20 +169,41 @@ class SetupFilterConfig:
 # ── HTTP ─────────────────────────────────────────────────────────────────────
 
 def _get(path: str, params: dict[str, Any] | None = None) -> Any:
+    """GET Bitunix API；逾時／連線中斷自動重試。"""
     qs = urllib.parse.urlencode({k: v for k, v in (params or {}).items() if v is not None})
     url = f"{BASE}{path}" + (f"?{qs}" if qs else "")
-    req = urllib.request.Request(url, headers={"User-Agent": "BitunixScanner/1.0"})
-    try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
-            body = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        raise RuntimeError(f"HTTP {e.code}: {url}") from e
-    except urllib.error.URLError as e:
-        raise RuntimeError(f"連線失敗: {e.reason}") from e
-
-    if body.get("code") != 0:
-        raise RuntimeError(f"API 錯誤: {body.get('msg', body)}")
-    return body.get("data")
+    last_err: Exception | None = None
+    for attempt in range(1, HTTP_RETRIES + 1):
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "BitunixScanner/1.1",
+                "Accept": "application/json",
+                "Connection": "close",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+                body = json.loads(resp.read().decode("utf-8"))
+            if body.get("code") != 0:
+                raise RuntimeError(f"API 錯誤: {body.get('msg', body)}")
+            return body.get("data")
+        except urllib.error.HTTPError as e:
+            # 5xx 可重試；4xx 直接失敗
+            last_err = e
+            if e.code < 500 or attempt >= HTTP_RETRIES:
+                raise RuntimeError(f"HTTP {e.code}: {url}") from e
+        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
+            last_err = e
+            if attempt >= HTTP_RETRIES:
+                reason = getattr(e, "reason", e)
+                raise RuntimeError(
+                    f"連線失敗（已重試 {HTTP_RETRIES} 次）: {reason}"
+                ) from e
+        # 短暫退避再試（常見 SSL handshake timeout）
+        time.sleep(0.8 * attempt)
+        print(f"  網路不穩，重試 {attempt}/{HTTP_RETRIES}…", flush=True)
+    raise RuntimeError(f"連線失敗: {last_err}")
 
 
 def fetch_tickers() -> list[dict]:
@@ -2703,8 +2725,13 @@ def export_csv(signals: list[CoinSignal], path: str, top: int = 100) -> None:
 
 def scan(min_vol: float) -> list[CoinSignal]:
     print("正在抓取 Bitunix 市場資料…")
-    tickers = fetch_tickers()
-    pairs = fetch_pairs()
+    try:
+        tickers = fetch_tickers()
+        pairs = fetch_pairs()
+    except RuntimeError as e:
+        print(color(f"抓取失敗: {e}", "1;31"))
+        print(color("請檢查網路／VPN／防火牆後再試（Bitunix API 連線逾時）。", "33"))
+        raise
     try:
         funding = fetch_funding_batch()
     except RuntimeError:
@@ -3201,8 +3228,12 @@ def watch_loop(
 
 def interactive() -> None:
     enable_ansi()
-    signals = scan(min_vol=50_000)
-    print_table(signals, top=25, mode="hot")
+    signals: list[CoinSignal] = []
+    try:
+        signals = scan(min_vol=50_000)
+        print_table(signals, top=25, mode="hot")
+    except RuntimeError:
+        print(color("啟動掃描失敗，可稍後按 r 重試，或直接 d 幣種查詢。", "33"))
     setups: list[ChecklistResult] = []
 
     while True:
@@ -3221,9 +3252,12 @@ def interactive() -> None:
         if low in {"q", "quit", "exit"}:
             break
         if low in {"r", "refresh"}:
-            signals = scan(min_vol=50_000)
-            setups = []
-            print_table(signals, top=25, mode="hot")
+            try:
+                signals = scan(min_vol=50_000)
+                setups = []
+                print_table(signals, top=25, mode="hot")
+            except RuntimeError:
+                continue
         elif low in {"h", "hot"}:
             print_table(signals, top=25, mode="hot")
         elif low in {"g", "gainers"}:
@@ -3478,9 +3512,17 @@ def main() -> None:
         sym = args.symbol.upper().replace("-", "").replace("/", "")
         if not sym.endswith("USDT"):
             sym += "USDT"
-        signals = scan(min_vol=0)
-        meta = next((x for x in signals if x.symbol == sym), None)
-        info = analyze_klines(sym, args.interval, with_mtf=not args.no_mtf)
+        meta = None
+        try:
+            signals = scan(min_vol=0)
+            meta = next((x for x in signals if x.symbol == sym), None)
+        except RuntimeError:
+            print("全市場掃描失敗，改直接分析該幣…")
+        try:
+            info = analyze_klines(sym, args.interval, with_mtf=not args.no_mtf)
+        except (RuntimeError, TimeoutError, OSError) as e:
+            print(f"分析失敗: {e}")
+            return
         print_detail(info, meta, full=bool(args.full))
         return
 
