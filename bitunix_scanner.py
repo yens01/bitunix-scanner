@@ -2237,202 +2237,222 @@ def _px_or_dash(v: float) -> str:
     return fmt_price(v) if v and v > 0 else "-"
 
 
-def print_checklist(setup: ChecklistResult) -> None:
-    print()
-    print(color("── 實戰做單流程（11步）──", "1;36"))
-    print("每個工具都在問：這個位置值不值得冒險？不是找藉口進場。")
-    if setup.workflow:
-        for title, passed, detail in setup.workflow:
-            print(f"  {_ok(passed)} {title}")
-            print(f"      {detail}")
-        if setup.trigger_ready:
-            progress_note = "可扣板機"
-        else:
-            progress_note = setup.missing_steps or "條件未齊，觀望"
-        print(
-            color(
-                f"  → 流程進度 {setup.workflow_passed}/11 ｜ {progress_note}",
-                "1;33",
-            )
-        )
-        if setup.mtf_note:
-            print(f"  MTF: {setup.mtf_note}")
-    else:
-        print("  （尚未產生流程）")
-
-    print()
-    print(color("── 第四章六問｜支撐壓力｜Fibo（細節）──", "1;35"))
-    for title, passed, detail in setup.chapter4:
-        print(f"  {_ok(passed)} {title}: {detail}")
-    for title, passed, detail in setup.checklist:
-        print(f"  {_ok(passed)} {title}: {detail}")
+def print_checklist(setup: ChecklistResult, *, full: bool = False) -> None:
+    """預設精簡：結論＋缺步＋區／進出場；full 才展開 11 步與第四章。"""
     fib = setup.fibo
-    if fib and fib.ready and fib.levels:
-        print(
-            f"  Fibo水位 0.382={fmt_price(fib.levels.get('0.382', 0))}  "
-            f"0.5={fmt_price(fib.levels.get('0.5', 0))}  "
-            f"0.618={fmt_price(fib.levels.get('0.618', 0))}"
-            + (
-                f"  力道返還{fib.force_return_tag}≈{fmt_price(fib.force_return_price)}"
-                if fib.force_return_price
-                else ""
-            )
-        )
-    if setup.eq_levels:
-        print(f"  {setup.eq_levels}")
-    if setup.liquidity:
-        print(f"  流動性: {setup.liquidity}")
-    if setup.indicators:
-        print(f"  指標: {setup.indicators}")
+    side_txt = {"long": "做多", "short": "做空", "none": "暫不下手"}.get(
+        setup.side, setup.side
+    )
 
     print()
-    print(color("── 入場／停損／止盈位置 ──", "1;32"))
-    side_txt = {"long": "做多 LONG", "short": "做空 SHORT", "none": "暫不下手"}.get(setup.side, setup.side)
-    plan = ""
-    if setup.side == "none" and not setup.mtf_aligned and setup.structure in ("偏多", "偏空"):
-        plan = f"（{setup.interval}本地{setup.structure}，但逆高週期 → 兩邊都不做）"
-    elif setup.side == "none" and setup.structure == "偏多":
-        plan = "（傾向做多，條件未齊）"
-    elif setup.side == "none" and setup.structure == "偏空":
-        plan = "（傾向做空，條件未齊）"
-    print(f"  方向: {side_txt}{plan}")
-
-    # 僅 YES 顯示完整進出場；等回測只給計畫摘要；其餘不顯示價位避免誤以為可進
-    if setup.trigger_ready:
-        print(f"  入場: {_px_or_dash(setup.entry)}")
-        print(f"  停損: {_px_or_dash(setup.stop)}" + (f"  ← {setup.invalidation_reason}" if setup.invalidation_reason else ""))
-        print(f"  止盈: {_px_or_dash(setup.tp)}" + (
-            f"  ← 力道返還 {fib.force_return_tag}" if fib and fib.force_return_price and setup.tp == fib.force_return_price else ""
-        ))
-        if setup.entry and setup.stop and setup.entry > 0:
-            risk_pct = abs(setup.entry - setup.stop) / setup.entry * 100
-            print(f"  風險幅度: {risk_pct:.2f}%（入場→停損）")
-        if setup.entry and setup.tp and setup.entry > 0:
-            reward_pct = abs(setup.tp - setup.entry) / setup.entry * 100
-            print(f"  目標幅度: {reward_pct:.2f}%（入場→止盈）")
-        if setup.rr:
-            print(f"  盈虧比 RR: {setup.rr:.2f}" + (" ✓" if setup.rr >= 1.5 else f" （建議≥1.5）"))
-    elif setup.waiting_retest:
-        print(color("  （等回測・僅計畫參考，非可進場）", "33"))
-        print(f"  計畫區中軸: {_px_or_dash(setup.entry)}")
-        print(f"  計畫停損: {_px_or_dash(setup.stop)}")
-        print(f"  計畫止盈: {_px_or_dash(setup.tp)}" + (f" ｜計畫RR {setup.rr:.1f}" if setup.rr else ""))
-    else:
-        print(color("  條件未齊 → 暫不顯示進場／停損／止盈（避免誤當可下單）", "33"))
-        print(f"  原因: {setup.missing_steps or setup.note or '觀望'}")
-
-    print()
-    # 本地結構 vs 高週期打架時，不要只喊「偏空禁多」造成以為該做空
+    print(color("── 結論 ──", "1;32"))
     if not setup.mtf_aligned and setup.structure in ("偏多", "偏空"):
         print(
             color(
-                f"【衝突】{setup.interval} 本地{setup.structure}，但高週期逆向 → 觀望，禁多也禁空",
+                f"【衝突】{setup.interval}本地{setup.structure}，逆高週期 → 觀望（禁多也禁空）",
                 "1;31",
             )
         )
+        conclude = "暫不下手（逆高週期）"
     elif setup.structure == "偏多":
-        print(color("【硬規則】結構偏多 → 只做多，禁止做空", "1;31"))
-    elif setup.structure == "偏空":
-        print(color("【硬規則】結構偏空 → 只做空，禁止做多", "1;31"))
-    elif setup.structure == "盤整":
-        print(color("【硬規則】盤整 → 不給方向單，等選邊", "1;31"))
-    trig = color("可扣板機", "1;32") if setup.trigger_ready else color("尚未扣板機", "1;33")
-    wait = color("等回測", "33") if setup.waiting_retest else ""
-    if not setup.mtf_aligned and setup.side == "none":
-        conclude_side = "暫不下手（逆高週期）"
-    else:
-        conclude_side = side_txt if setup.trigger_ready else (
+        print(color("【硬規則】偏多・禁空", "1;31"))
+        conclude = side_txt if setup.trigger_ready else (
             "暫不下手" if setup.side == "none" else f"{side_txt}（未齊）"
         )
-    print(
-        f"結論: {color(conclude_side, '1;33')} ｜ {trig} ｜ 邏輯分 {setup.setup_score:.0f}/100"
-        + (f" ｜ {wait}" if wait else "")
-    )
-    print(f"提醒: {setup.note}")
-    print(color("好單不是衝動；是方向、位置、止損、目標都說得通。", "1;36"))
+    elif setup.structure == "偏空":
+        print(color("【硬規則】偏空・禁多", "1;31"))
+        conclude = side_txt if setup.trigger_ready else (
+            "暫不下手" if setup.side == "none" else f"{side_txt}（未齊）"
+        )
+    elif setup.structure == "盤整":
+        print(color("【硬規則】盤整・不給方向單", "1;31"))
+        conclude = "暫不下手"
+    else:
+        conclude = side_txt if setup.trigger_ready else "暫不下手"
 
-    if setup.supports:
-        s_txt = " ｜ ".join(f"{fmt_price(z.lo)}-{fmt_price(z.hi)}(×{z.strength})" for z in setup.supports)
-        print(f"近端支撐區: {s_txt}")
-    if setup.resists:
-        r_txt = " ｜ ".join(f"{fmt_price(z.lo)}-{fmt_price(z.hi)}(×{z.strength})" for z in setup.resists)
-        print(f"近端壓力區: {r_txt}")
+    trig = color("可扣板機", "1;32") if setup.trigger_ready else color("尚未扣板機", "1;33")
+    wait = " ｜ 等回測" if setup.waiting_retest else ""
+    print(
+        f"{color(conclude, '1;33')} ｜ {trig}{wait} ｜ "
+        f"流程 {setup.workflow_passed}/11 ｜ 分 {setup.setup_score:.0f}"
+    )
+    if setup.missing_steps and not setup.trigger_ready:
+        miss = setup.missing_steps.replace("缺：", "").replace("缺:", "").strip()
+        print(f"缺 {miss}")
+    if setup.zone_lo and setup.zone_hi:
+        zlab = "箱體" if setup.structure == "盤整" else "優先區"
+        print(
+            f"{zlab} {fmt_price(setup.zone_lo)}–{fmt_price(setup.zone_hi)}"
+            + (f"  （{setup.zone_kind}）" if setup.zone_kind not in ("", "none") else "")
+        )
+    if setup.div_poc_note:
+        print(f"背離/POC  {setup.div_poc_note}")
+    if setup.mtf_note:
+        print(f"MTF  {setup.mtf_note}")
+
+    # 進出場（精簡一行）
+    if setup.trigger_ready:
+        risk_pct = (
+            abs(setup.entry - setup.stop) / setup.entry * 100
+            if setup.entry and setup.stop
+            else 0
+        )
+        print(
+            f"入場 {_px_or_dash(setup.entry)}  "
+            f"損 {_px_or_dash(setup.stop)}（{risk_pct:.2f}%）  "
+            f"盈 {_px_or_dash(setup.tp)}  RR {setup.rr:.1f}"
+        )
+    elif setup.waiting_retest and setup.entry:
+        print(
+            color("等回測・計畫參考（非可進）", "33")
+            + f"  入{_px_or_dash(setup.entry)} 損{_px_or_dash(setup.stop)} "
+            f"盈{_px_or_dash(setup.tp)}"
+            + (f" RR{setup.rr:.1f}" if setup.rr else "")
+        )
+    else:
+        print(color("條件未齊 → 不顯示進出場", "33"))
+
+    # 備註縮短
+    if setup.note:
+        brief = setup.note
+        for key in ("品質閘", "不扣板機", "追價", "追突破", "硬規則", "逆高週期"):
+            if key in brief:
+                # 抓含關鍵字的一小段
+                for part in brief.replace("｜", "；").split("；"):
+                    if key in part:
+                        brief = part.strip()
+                        break
+                break
+        if len(brief) > 70:
+            brief = brief[:70] + "…"
+        print(f"備註  {brief}")
+
+    if setup.supports or setup.resists:
+        bits: list[str] = []
+        if setup.supports:
+            z = setup.supports[0]
+            bits.append(f"撐{fmt_price(z.lo)}-{fmt_price(z.hi)}")
+        if setup.resists:
+            z = setup.resists[0]
+            bits.append(f"壓{fmt_price(z.lo)}-{fmt_price(z.hi)}")
+        print("近端  " + " ｜ ".join(bits))
+
+    # 11 步：精簡只列缺的；full 才全展開
+    if setup.workflow:
+        print()
+        if full:
+            print(color("── 實戰流程 11 步（完整）──", "1;36"))
+            for title, passed, detail in setup.workflow:
+                print(f"  {_ok(passed)} {title}")
+                print(f"      {detail}")
+        else:
+            fails = [(t, d) for t, ok, d in setup.workflow if not ok]
+            chips = "".join(
+                (color("✓", "32") if ok else color("✗", "31")) for _, ok, _ in setup.workflow
+            )
+            print(f"流程 {chips}  {setup.workflow_passed}/11")
+            if fails:
+                print(color("未過：", "33") + " " + "、".join(t.split(" ", 1)[0] for t, _ in fails[:6]))
+
+    if full:
+        print()
+        print(color("── 第四章／清單（完整）──", "1;35"))
+        for title, passed, detail in setup.chapter4:
+            print(f"  {_ok(passed)} {title}: {detail}")
+        for title, passed, detail in setup.checklist:
+            print(f"  {_ok(passed)} {title}: {detail}")
+        if fib and fib.ready and fib.levels:
+            print(
+                f"  Fibo 0.382={fmt_price(fib.levels.get('0.382', 0))}  "
+                f"0.5={fmt_price(fib.levels.get('0.5', 0))}  "
+                f"0.618={fmt_price(fib.levels.get('0.618', 0))}"
+            )
+        if setup.eq_levels:
+            print(f"  {setup.eq_levels}")
+        if setup.liquidity:
+            print(f"  流動性: {setup.liquidity}")
+        if setup.indicators:
+            print(f"  指標: {setup.indicators}")
+        if setup.supports:
+            s_txt = " ｜ ".join(
+                f"{fmt_price(z.lo)}-{fmt_price(z.hi)}(×{z.strength})" for z in setup.supports
+            )
+            print(f"支撐區: {s_txt}")
+        if setup.resists:
+            r_txt = " ｜ ".join(
+                f"{fmt_price(z.lo)}-{fmt_price(z.hi)}(×{z.strength})" for z in setup.resists
+            )
+            print(f"壓力區: {r_txt}")
+    else:
+        print(color("（要完整 11 步／第四章：detail 幣種 --full 或 d 幣種 full）", "2"))
     print()
 
 
-def print_detail(info: dict[str, Any], meta: CoinSignal | None = None) -> None:
+def print_detail(
+    info: dict[str, Any],
+    meta: CoinSignal | None = None,
+    *,
+    full: bool = False,
+) -> None:
     if info.get("error"):
         print(info["error"])
         return
     print()
-    print(color(f"══ {info['symbol']} 細節分析 ({info['interval']}) ══", "1;36"))
-    if meta:
-        print(
-            f"24h: {c_chg(meta.change_pct)}  振幅 {meta.range_pct:.2f}%  "
-            f"成交額 {fmt_num(meta.quote_vol)}  "
-            f"費率 {(meta.funding * 100 if meta.funding is not None else float('nan')):+.4f}%"
-            if meta.funding is not None
-            else f"24h: {c_chg(meta.change_pct)}  振幅 {meta.range_pct:.2f}%  成交額 {fmt_num(meta.quote_vol)}"
-        )
-        if meta.max_leverage:
-            print(f"最大槓桿: {meta.max_leverage}x  標籤: {', '.join(meta.tags)}")
+    print(color(f"══ {info['symbol']}  ({info['interval']}) ══", "1;36"))
     live = info.get("ticker_last") or (meta.last if meta else 0) or info["last"]
     k_close = info.get("k_close") or info["last"]
-    print(f"現價: {fmt_price(live)}  （交易所最新成交，非限價單）")
-    # 急漲急跌時 K 收常落後 ticker，分開標示避免誤會
-    if k_close > 0 and abs(live - k_close) / max(live, 1e-12) >= 0.001:
-        print(
-            f"{info['interval']} K收: {fmt_price(k_close)}  "
-            f"（上一根 {c_chg(info['change_bar'])}｜與現價不同屬正常）"
-        )
-    else:
-        print(f"上一根K: {c_chg(info['change_bar'])}")
-    print(
-        f"MA5: {fmt_price(info.get('ma5', 0))}  MA10: {fmt_price(info.get('ma10', 0))}  "
-        f"MA30: {fmt_price(info.get('ma30', 0))}"
-    )
-    print(f"EMA9: {fmt_price(info['ema9'])}  EMA21: {fmt_price(info['ema21'])}")
-    rsi_s = f"{info['rsi']:.1f}" if info["rsi"] is not None else "-"
-    print(f"RSI(14): {rsi_s}  量能比(近/均): {info['vol_surge']:.2f}x")
-    print(f"近20根高低: 支撐 {fmt_price(info['support'])}  壓力 {fmt_price(info['resist'])}")
+    head = f"現價 {fmt_price(live)}"
+    if meta:
+        head += f"  ｜  24h {c_chg(meta.change_pct)}  振幅 {meta.range_pct:.1f}%  額 {fmt_num(meta.quote_vol)}"
+    print(head)
+    if k_close > 0 and abs(live - k_close) / max(live, 1e-12) >= 0.002:
+        print(f"K收 {fmt_price(k_close)}（與現價偏離）")
+    rsi_s = f"{info['rsi']:.0f}" if info.get("rsi") is not None else "-"
+    print(f"RSI {rsi_s}  量比 {info.get('vol_surge', 0):.1f}x  MA {fmt_price(info.get('ma5', 0))}/{fmt_price(info.get('ma10', 0))}/{fmt_price(info.get('ma30', 0))}")
+
     mtf = info.get("mtf") or {}
     if mtf:
-        print("多週期方向: " + "  ".join(f"{k}={v}" for k, v in mtf.items()))
+        order = ("1H", "4H", "1D", "1W", "1M")
+        chips = [f"{k}{mtf[k]}" for k in order if k in mtf]
+        for k, v in mtf.items():
+            if k not in order:
+                chips.append(f"{k}{v}")
+        print("多週期  " + " · ".join(chips))
 
     pack = info.get("tf_pack") or {}
     if pack:
-        print()
-        print(color("── 1H／4H 結構（方向）──", "1;36"))
         print(f"  {_tf_status_line(pack.get('4h'), '4H')}")
         print(f"  {_tf_status_line(pack.get('1h'), '1H')}")
         m5 = pack.get("5m")
-        print(color("── 5m 進場窗 ──", "1;36"))
         if m5:
             ok, why = _htf_bias_ok_for_5m(pack, m5)
-            print(f"  {_tf_status_line(m5, '5m')}")
-            print(f"  高週期檢查: {why}")
-            if m5.entry and m5.stop and m5.tp and m5.rr > 0 and (
-                m5.trigger_ready or m5.waiting_retest or m5.at_zone
-            ):
+            print(f"  {_tf_status_line(m5, '5m')}  （{why}）")
+            show_5m = bool(
+                ok
+                and m5.entry
+                and m5.stop
+                and m5.tp
+                and m5.rr > 0
+                and (m5.trigger_ready or m5.at_zone)
+            )
+            if show_5m:
                 risk_pct = abs(m5.entry - m5.stop) / m5.entry * 100
-                tag = "可參考進場" if (ok and m5.trigger_ready) else "計畫價（條件未齊或逆高週期）"
-                print(f"  {tag}")
                 print(
-                    f"  入場 {fmt_price(m5.entry)}  停損 {fmt_price(m5.stop)}"
-                    f"（{risk_pct:.2f}%）  止盈 {fmt_price(m5.tp)}  RR {m5.rr:.1f}"
+                    f"5m進場 入{fmt_price(m5.entry)} 損{fmt_price(m5.stop)}"
+                    f"（{risk_pct:.2f}%）盈{fmt_price(m5.tp)} RR{m5.rr:.1f}"
                 )
-            if m5.missing_steps:
-                print(f"  缺: {m5.missing_steps}")
-            if not ok:
-                print(color("  （5m 與 1H/4H 不同向時，優先信高週期，勿追 5m）", "33"))
-        else:
-            print("  5m 無資料")
+
+    if full:
+        print(
+            f"EMA9/21 {fmt_price(info['ema9'])}/{fmt_price(info['ema21'])}  "
+            f"近20 撐{fmt_price(info['support'])} 壓{fmt_price(info['resist'])}"
+        )
 
     setup: ChecklistResult | None = info.get("setup")
     if setup:
-        print_checklist(setup)
+        print_checklist(setup, full=full)
     else:
-        print(color(f"偏向: {info['bias']}", "1;33"))
+        print(color(f"偏向: {info.get('bias', '-')}", "1;33"))
         print()
 
 
@@ -2478,7 +2498,7 @@ def print_setup_table(
                 "2",
             )
         )
-        print(color("詳情  detail 幣種", "2"))
+        print(color("詳情  d 幣種 ｜ d 幣種 full", "2"))
         print()
         return
 
@@ -3255,11 +3275,16 @@ def interactive() -> None:
             )
             print_btc_eth_daily_plan(telegram=want_tg)
         elif low.startswith("d ") or low.startswith("detail "):
-            parts = cmd.split(maxsplit=1)
+            parts = cmd.split()
             if len(parts) < 2:
-                print("用法: d BTCUSDT")
+                print("用法: d BTCUSDT ｜ d BTCUSDT full")
                 continue
-            sym = parts[1].strip().upper().replace("-", "").replace("/", "")
+            want_full = any(p.lower() == "full" for p in parts[2:]) or parts[1].lower() == "full"
+            sym_token = parts[1] if parts[1].lower() != "full" else (parts[2] if len(parts) > 2 else "")
+            if not sym_token:
+                print("用法: d BTCUSDT ｜ d BTCUSDT full")
+                continue
+            sym = sym_token.strip().upper().replace("-", "").replace("/", "")
             if not sym.endswith("USDT"):
                 sym += "USDT"
             meta = next((s for s in signals if s.symbol == sym), None)
@@ -3268,7 +3293,7 @@ def interactive() -> None:
             except RuntimeError as e:
                 print(e)
                 continue
-            print_detail(info, meta)
+            print_detail(info, meta, full=want_full)
         elif low in {"c", "csv"}:
             export_csv(signals, "bitunix_scan.csv", top=100)
             if setups:
@@ -3358,10 +3383,11 @@ def main() -> None:
         help="同一幣冷卻分鐘（預設 45）",
     )
 
-    d = sub.add_parser("detail", help="單幣細節 + 第四章六問 + 支撐壓力清單")
+    d = sub.add_parser("detail", help="單幣細節（預設精簡；--full 展開 11 步）")
     d.add_argument("symbol", type=str)
     d.add_argument("--interval", default="15m", help="K線週期 如 5m 15m 1h")
     d.add_argument("--no-mtf", action="store_true", help="不快取 1H/4H/D 多週期")
+    d.add_argument("--full", action="store_true", help="展開完整 11 步／第四章細節")
 
     pl = sub.add_parser("plan", help="BTC／ETH 日內規劃（今日高低・高拋低吸）")
     pl.add_argument("--telegram", action="store_true", help="同時推送到 Telegram")
@@ -3455,7 +3481,7 @@ def main() -> None:
         signals = scan(min_vol=0)
         meta = next((x for x in signals if x.symbol == sym), None)
         info = analyze_klines(sym, args.interval, with_mtf=not args.no_mtf)
-        print_detail(info, meta)
+        print_detail(info, meta, full=bool(args.full))
         return
 
     if args.cmd == "plan":
