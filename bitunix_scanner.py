@@ -622,7 +622,20 @@ def analyze_klines(
 
     mtf = fetch_mtf_bias(symbol) if with_mtf else {}
     opens = fetch_session_opens(symbol) if with_mtf else {}
-    setup = evaluate_setup(symbol, candles, interval, mtf=mtf, opens=opens)
+    htf_poc = candles if str(interval).lower() in {"4h", "240"} else None
+    if htf_poc is None:
+        try:
+            htf_poc = parse_klines(fetch_klines(symbol, "4h", limit=80))
+        except RuntimeError:
+            htf_poc = None
+    setup = evaluate_setup(
+        symbol,
+        candles,
+        interval,
+        mtf=mtf,
+        opens=opens,
+        htf_poc_candles=htf_poc,
+    )
     tf_pack = build_tf_pack(symbol) if with_mtf and with_tf_pack else {}
 
     return {
@@ -669,7 +682,21 @@ def evaluate_symbol(
         tfs = mtf_tfs if mtf_tfs is not None else ["1h", "4h", "1d"]
         mtf = fetch_mtf_bias(symbol, tfs) if with_mtf else {}
         opens = fetch_session_opens(symbol) if with_mtf else {}
-        return evaluate_setup(symbol, candles, interval, mtf=mtf, opens=opens)
+        # Willy 背離戰法：另取 4H 作 POC／背離錨（操作週期已是 4h 則重用）
+        htf_poc = candles if str(interval).lower() in {"4h", "240"} else None
+        if htf_poc is None:
+            try:
+                htf_poc = parse_klines(fetch_klines(symbol, "4h", limit=80))
+            except RuntimeError:
+                htf_poc = None
+        return evaluate_setup(
+            symbol,
+            candles,
+            interval,
+            mtf=mtf,
+            opens=opens,
+            htf_poc_candles=htf_poc,
+        )
     except RuntimeError:
         return None
 
@@ -1175,6 +1202,17 @@ def format_telegram_detail(info: dict[str, Any], meta: CoinSignal | None = None)
         lines.append(
             f"流程 {setup.workflow_passed}/11  ·  分 {setup.setup_score:.0f}"
         )
+        if setup.div_poc_note:
+            dpn = setup.div_poc_note
+            if len(dpn) > 56:
+                dpn = dpn[:56] + "…"
+            lines.append(f"🎯 {_esc(dpn)}")
+            if setup.poc_4h > 0:
+                gap_poc = abs(float(live or 0) - setup.poc_4h) / float(live or 1) * 100
+                lines.append(
+                    f"4H POC <code>{_esc(_px(setup.poc_4h))}</code>"
+                    + (f"  ·  距 {gap_poc:.1f}%" if gap_poc > 0.05 else "  ·  靠近")
+                )
         if setup.zone_lo and setup.zone_hi:
             zlab = "箱體" if setup.structure == "盤整" else "優先區"
             zline = (

@@ -153,6 +153,12 @@ class ChecklistResult:
     plan_day_lo: float = 0.0
     plan_day_hi: float = 0.0
     plan_box_clipped: bool = False
+    # Trader Willy 背離戰法：4H POC ＋ RSI 頂/底背離
+    poc_4h: float = 0.0
+    div_poc_note: str = ""
+    # Trader Willy 背離戰法：4H POC + RSI 背離匯合
+    poc_4h: float = 0.0
+    div_poc_note: str = ""
 
 
 def parse_klines(raw: list[dict]) -> list[Candle]:
@@ -899,6 +905,104 @@ def detect_rsi_divergence(candles: list[Candle]) -> str:
     return f"RSI={last_r:.0f}無明顯背離"
 
 
+def regular_rsi_divergence_side(candles: list[Candle]) -> str:
+    """只回傳常規背離方向：top / bottom / ''（不含隱性）。"""
+    tag = detect_rsi_divergence(candles)
+    if "頂背離" in tag and "隱性" not in tag:
+        return "top"
+    if "底背離" in tag and "隱性" not in tag:
+        return "bottom"
+    return ""
+
+
+def approx_poc(candles: list[Candle], *, buckets: int = 24) -> tuple[float, str]:
+    """
+    近似 Volume Profile POC：近段依價格桶累積成交量，取最大量桶中價。
+    （Trader Willy 背離戰法用的 4H POC 錨點）
+    """
+    window = candles[-48:] if len(candles) >= 48 else candles
+    if not window:
+        return 0.0, "無POC"
+    lo = min(c.low for c in window)
+    hi = max(c.high for c in window)
+    if hi <= lo:
+        best = max(window, key=lambda c: c.volume)
+        return best.mid, f"POC≈{fmt_short(best.mid)}(量能峰)"
+    n = max(8, min(buckets, len(window)))
+    width = (hi - lo) / n
+    vol = [0.0] * n
+    for c in window:
+        # 成交量依 K 高低落在桶內均分
+        i0 = int((c.low - lo) / width)
+        i1 = int((c.high - lo) / width)
+        i0 = max(0, min(n - 1, i0))
+        i1 = max(0, min(n - 1, i1))
+        if i1 < i0:
+            i0, i1 = i1, i0
+        share = c.volume / (i1 - i0 + 1)
+        for i in range(i0, i1 + 1):
+            vol[i] += share
+    best_i = max(range(n), key=lambda i: vol[i])
+    poc = lo + (best_i + 0.5) * width
+    return poc, f"POC≈{fmt_short(poc)}(VP量能峰)"
+
+
+def analyze_divergence_poc(
+    candles: list[Candle],
+    *,
+    htf_candles: list[Candle] | None,
+    px: float,
+    atr_v: float,
+    structure: str,
+) -> tuple[float, str, list[str], float]:
+    """
+    Trader Willy 背離戰法：
+    - 4H（或備用本地）RSI 常規頂/底背離
+    - 價格靠近 4H POC（量能控制點）作匯合／止盈錨
+    回傳 (poc_4h, 說明, 額外匯合標籤, 建議止盈錨或 0)
+    """
+    poc_src = htf_candles if htf_candles and len(htf_candles) >= 30 else candles
+    poc, poc_txt = approx_poc(poc_src)
+    near_poc = poc > 0 and price_near_level(px, poc, atr_v * 1.2)
+    div_htf = regular_rsi_divergence_side(htf_candles) if htf_candles and len(htf_candles) >= 30 else ""
+    div_loc = regular_rsi_divergence_side(candles)
+    div = div_htf or div_loc
+    src = "4H" if div_htf else ("本地" if div_loc else "")
+
+    tags: list[str] = []
+    note = ""
+    tp_anchor = 0.0
+
+    if div == "top":
+        note = f"背離戰法:頂背離({src})｜{poc_txt}"
+        if near_poc:
+            tags.append("頂背離+近4H POC")
+            note += "｜近POC匯合"
+        elif structure == "偏空":
+            tags.append("頂背離偏空")
+        # 空單止盈常看回 POC（POC 在現價下方時）
+        if poc > 0 and poc < px:
+            tp_anchor = poc
+    elif div == "bottom":
+        note = f"背離戰法:底背離({src})｜{poc_txt}"
+        if near_poc:
+            tags.append("底背離+近4H POC")
+            note += "｜近POC匯合"
+        elif structure == "偏多":
+            tags.append("底背離偏多")
+        if poc > 0 and poc > px:
+            tp_anchor = poc
+    elif poc > 0:
+        note = f"背離戰法:{poc_txt}"
+        if near_poc:
+            tags.append("近4H POC")
+
+    if near_poc and "近POC" not in tags:
+        # 與舊標籤相容
+        pass
+    return poc, note, tags, tp_anchor
+
+
 def detect_liquidity_zones(candles: list[Candle], structure: str, atr_v: float) -> tuple[str, bool]:
     """
     失衡(FVG) / OB / BPR / 真空區。
@@ -948,16 +1052,6 @@ def detect_liquidity_zones(candles: list[Candle], structure: str, atr_v: float) 
     if not bits:
         return "無明顯失衡/OB/BPR/真空", False
     return "｜".join(bits[:4]), near
-
-
-def approx_poc(candles: list[Candle]) -> tuple[float, str]:
-    """用近段成交額最大的 K 中價近似 POC。"""
-    window = candles[-40:] if len(candles) >= 40 else candles
-    if not window:
-        return 0.0, "無POC"
-    best = max(window, key=lambda c: c.volume)
-    poc = best.mid
-    return poc, f"POC≈{fmt_short(poc)}(量能峰)"
 
 
 def check_mtf_alignment(structure: str, mtf: dict[str, str]) -> tuple[bool, str]:
@@ -1446,6 +1540,7 @@ def evaluate_setup(
     interval: str = "15m",
     mtf: dict[str, str] | None = None,
     opens: dict[str, float] | None = None,
+    htf_poc_candles: list[Candle] | None = None,
 ) -> ChecklistResult:
     empty = ChecklistResult(
         symbol=symbol,
@@ -1649,17 +1744,30 @@ def evaluate_setup(
     eq_txt, eqh, eql = detect_equal_levels(candles, atr_v)
     liq_txt, liq_near = detect_liquidity_zones(candles, structure, atr_v)
     rsi_div = detect_rsi_divergence(candles)
-    poc, poc_txt = approx_poc(candles)
+    # Trader Willy：4H POC ＋ 常規頂/底背離（小幣也適用）
+    poc_4h, div_poc_note, div_poc_tags, poc_tp = analyze_divergence_poc(
+        candles,
+        htf_candles=htf_poc_candles,
+        px=px,
+        atr_v=atr_v,
+        structure=structure,
+    )
+    poc, poc_txt = approx_poc(htf_poc_candles or candles)
+    if poc_4h <= 0:
+        poc_4h = poc
     if liq_near:
         confluence.append("流動性區匯合")
-    if price_near_level(px, poc, atr_v):
+    if price_near_level(px, poc_4h if poc_4h > 0 else poc, atr_v * 1.2):
         confluence.append("近POC")
     if any(price_near_level(px, lv, atr_v) for lv in eqh + eql):
         confluence.append("近EQH/EQL")
-    if "背離" in rsi_div:
+    if ("頂背離" in rsi_div or "底背離" in rsi_div) and "無明顯" not in rsi_div:
         confluence.append(rsi_div.split("(")[0])
+    for t in div_poc_tags:
+        if t not in confluence:
+            confluence.append(t)
 
-    # 硬匯合：要反應／結構證據；單純「碰到 Fibo／POC」不算
+    # 硬匯合：要反應／結構證據；背離+POC 算硬匯合（Willy）
     hard_conf = [
         c
         for c in confluence
@@ -1673,6 +1781,8 @@ def evaluate_setup(
             "Fibo位上有反應",
             "流動性區匯合",
             "近EQH/EQL",
+            "頂背離+近4H POC",
+            "底背離+近4H POC",
         )
         or c.startswith("力道返還")
         or c.startswith("SMC")
@@ -1734,6 +1844,19 @@ def evaluate_setup(
                 tp = fr
                 risk = abs(entry - stop)
                 rr = (abs(tp - entry) / risk) if risk > 0 else 0.0
+        # Willy：背離單優先把 4H POC 當第一止盈錨（方向正確且 RR 不更差）
+        if poc_tp > 0:
+            risk = abs(entry - stop)
+            if risk > 0:
+                rr_poc = abs(poc_tp - entry) / risk
+                poc_dir_ok = (plan_side == "short" and poc_tp < entry) or (
+                    plan_side == "long" and poc_tp > entry
+                )
+                if poc_dir_ok and rr_poc >= MIN_RR and (tp <= 0 or rr_poc >= rr * 0.85):
+                    tp = poc_tp
+                    rr = rr_poc
+                    if div_poc_note:
+                        div_poc_note += "｜止盈錨4H POC"
     rr_ok = rr >= MIN_RR and side != "none"  # RR 達標只在真正有方向單時算通過
 
     # 多週期一致性：逆 4H/日 不可進
@@ -2038,11 +2161,24 @@ def evaluate_setup(
     ind_txt = "｜".join(ind_bits)
     ind_ok = (
         ma_tag in ("多頭排列", "空頭排列", "糾結偏多", "糾結偏空")
-        or "背離" in rsi_div
+        or ("頂背離" in rsi_div or "底背離" in rsi_div)
         or "近POC" in confluence
+        or any("背離" in t for t in div_poc_tags)
     )
     if liq_near:
         score = min(score + 4, 100)
+    # Willy 背離＋4H POC：與結構同向加分
+    if "頂背離+近4H POC" in confluence and structure == "偏空":
+        score = min(score + 10, 100)
+    elif "底背離+近4H POC" in confluence and structure == "偏多":
+        score = min(score + 10, 100)
+    elif any("背離" in t for t in div_poc_tags) and (
+        (structure == "偏空" and any("頂" in t for t in div_poc_tags))
+        or (structure == "偏多" and any("底" in t for t in div_poc_tags))
+    ):
+        score = min(score + 5, 100)
+    if div_poc_note:
+        note += f" ｜{div_poc_note}"
 
     workflow = build_workflow11(
         mtf=mtf,
@@ -2148,4 +2284,6 @@ def evaluate_setup(
         indicators=ind_txt,
         mtf_aligned=mtf_aligned,
         mtf_note=mtf_note,
+        poc_4h=poc_4h,
+        div_poc_note=div_poc_note,
     )
