@@ -515,8 +515,28 @@ def _tf_status_line(r: ChecklistResult | None, tf: str) -> str:
     return f"{tf}: {r.structure}/{side}｜{st}｜{r.workflow_passed}/11{zone}"
 
 
-def _tf_status_block(r: ChecklistResult | None, tf: str) -> list[str]:
-    """Telegram 用：週期狀態拆成清楚的 1～2 行。"""
+def _zone_gap_pct(r: ChecklistResult, last_price: float) -> float:
+    """現價距區最近緣的百分比；在區內為 0。"""
+    if r.at_zone or not (r.zone_lo > 0 and r.zone_hi >= r.zone_lo):
+        return 0.0 if r.at_zone else 999.0
+    px = last_price if last_price > 0 else r.entry
+    if px <= 0:
+        return 999.0
+    if r.zone_lo <= px <= r.zone_hi:
+        return 0.0
+    if px < r.zone_lo:
+        return (r.zone_lo - px) / px * 100.0
+    return (px - r.zone_hi) / px * 100.0
+
+
+def _tf_status_block(
+    r: ChecklistResult | None,
+    tf: str,
+    *,
+    compact: bool = False,
+    last_price: float = 0.0,
+) -> list[str]:
+    """Telegram 用：週期狀態；compact 時區與狀態同一行。"""
     if not r:
         return [f"<b>{_esc(tf)}</b>  無資料"]
     side = _side_short_label(r)
@@ -528,14 +548,20 @@ def _tf_status_block(r: ChecklistResult | None, tf: str) -> list[str]:
         st = "盤整"
     else:
         st = "觀望"
-    head = f"<b>{_esc(tf)}</b>  {_esc(r.structure)}/{_esc(side)} · {_esc(st)} · {r.workflow_passed}/11"
-    out = [head]
+    head = f"<b>{_esc(tf)}</b>  {_esc(r.structure)}/{_esc(side)} · {_esc(st)}"
+    if not compact:
+        head += f" · {r.workflow_passed}/11"
     if r.zone_lo and r.zone_hi:
-        out.append(
-            f"　　區 <code>{_esc(_px(r.zone_lo))}</code>–"
+        z = (
+            f"<code>{_esc(_px(r.zone_lo))}</code>–"
             f"<code>{_esc(_px(r.zone_hi))}</code>"
         )
-    return out
+        if compact:
+            gap = _zone_gap_pct(r, last_price) if last_price > 0 else -1.0
+            gap_txt = f" 距{gap:.1f}%" if gap > 0.05 else (" 在區" if gap == 0 else "")
+            return [f"{head}｜{z}{gap_txt}"]
+        return [head, f"　　區 {z}"]
+    return [head]
 
 
 def _htf_bias_ok_for_5m(pack: dict[str, ChecklistResult | None], m5: ChecklistResult) -> tuple[bool, str]:
@@ -1096,7 +1122,7 @@ def normalize_query_symbol(text: str) -> str | None:
 
 
 def format_telegram_detail(info: dict[str, Any], meta: CoinSignal | None = None) -> str:
-    """手機回覆用 detail：分區排版，重點結論在上半。"""
+    """手機回覆用 detail：結論優先、標距區、多週期精簡。"""
     if info.get("error"):
         return f"❌ {_esc(str(info['error']))}"
     setup: ChecklistResult | None = info.get("setup")
@@ -1104,26 +1130,31 @@ def format_telegram_detail(info: dict[str, Any], meta: CoinSignal | None = None)
     k_close = info.get("k_close") or info.get("last") or 0
     iv = str(info.get("interval") or "15m")
 
-    lines: list[str] = [
-        f"🔎 <b>{_esc(info['symbol'])}</b>  ·  {_esc(iv)}",
-        f"現價 <code>{_esc(_px(live))}</code>",
-    ]
-    if k_close > 0 and live > 0 and abs(live - k_close) / live >= 0.001:
-        lines.append(f"K收 <code>{_esc(_px(k_close))}</code>")
+    head = f"🔎 <b>{_esc(info['symbol'])}</b>  ·  {_esc(iv)}"
     if meta:
-        lines.append(
-            f"24h {meta.change_pct:+.2f}%  ·  振幅 {meta.range_pct:.1f}%  ·  "
-            f"額 {fmt_num(meta.quote_vol)}"
+        head += (
+            f"\n現價 <code>{_esc(_px(live))}</code>"
+            f"  ·  24h {meta.change_pct:+.2f}%"
+            f"  ·  額 {fmt_num(meta.quote_vol)}"
         )
+    else:
+        head += f"\n現價 <code>{_esc(_px(live))}</code>"
+    lines: list[str] = [head]
+    if k_close > 0 and live > 0 and abs(live - k_close) / live >= 0.002:
+        lines.append(f"K收 <code>{_esc(_px(k_close))}</code>（與現價偏離）")
 
     # ── 結論（先看這段）──
     lines.append("")
     lines.append(f"—— <b>{_esc(iv)} 結論</b> ——")
     if setup:
+        gap = _zone_gap_pct(setup, float(live or 0))
         if setup.trigger_ready:
             status = "✅ 可扣板機"
         elif setup.waiting_retest:
-            status = "⏳ 等回測"
+            if gap <= DEFAULT_NEAR_ZONE_PCT:
+                status = "⏳ 等回測・靠近"
+            else:
+                status = f"⏳ 等回測・遠處 {gap:.1f}%"
         elif setup.structure == "盤整":
             status = "📋 盤整觀望"
         else:
@@ -1146,55 +1177,65 @@ def format_telegram_detail(info: dict[str, Any], meta: CoinSignal | None = None)
         )
         if setup.zone_lo and setup.zone_hi:
             zlab = "箱體" if setup.structure == "盤整" else "優先區"
-            lines.append(
+            zline = (
                 f"{zlab} <code>{_esc(_px(setup.zone_lo))}</code>–"
                 f"<code>{_esc(_px(setup.zone_hi))}</code>"
             )
+            if gap > 0.05 and not setup.at_zone:
+                zline += f"  ·  距區 <b>{gap:.1f}%</b>"
+            elif setup.at_zone:
+                zline += "  ·  在區內"
+            lines.append(zline)
+        # 遠處等回測：不展開 15m 進出場，避免誤以為可現價進
         show_levels = setup.trigger_ready or (
             setup.side in ("long", "short")
             and setup.entry
             and setup.stop
             and setup.tp
             and setup.rr > 0
-            and (setup.waiting_retest or setup.at_zone)
+            and (setup.at_zone or (setup.waiting_retest and gap <= DEFAULT_NEAR_ZONE_PCT))
         )
         if show_levels:
             risk_pct = abs(setup.entry - setup.stop) / setup.entry * 100 if setup.entry else 0
-            lines.append("")
-            lines.append(f"入場 <code>{_esc(_px(setup.entry))}</code>")
             lines.append(
-                f"停損 <code>{_esc(_px(setup.stop))}</code>  （{risk_pct:.2f}%）"
-            )
-            lines.append(
-                f"止盈 <code>{_esc(_px(setup.tp))}</code>  ·  RR <b>{setup.rr:.1f}</b>"
+                f"入場 <code>{_esc(_px(setup.entry))}</code>  "
+                f"損 <code>{_esc(_px(setup.stop))}</code>（{risk_pct:.2f}%）  "
+                f"盈 <code>{_esc(_px(setup.tp))}</code>  RR<b>{setup.rr:.1f}</b>"
             )
             if setup.trigger_ready and setup.entry and setup.stop:
                 rl = format_risk_line(setup.entry, setup.stop)
                 if rl:
                     lines.append(_esc(rl))
-        if setup.missing_steps:
+        elif setup.waiting_retest and gap > DEFAULT_NEAR_ZONE_PCT:
+            lines.append("📌 未靠近區・先別追；回到區再給進出場")
+        if setup.missing_steps and not setup.trigger_ready:
             miss = setup.missing_steps.replace("缺：", "").replace("缺:", "").strip()
-            # 太長就只留前幾項
             parts = [p.strip() for p in miss.replace("、", ",").split(",") if p.strip()]
-            if len(parts) > 4:
-                miss = "、".join(parts[:4]) + "…"
-            else:
-                miss = "、".join(parts) if parts else miss
-            lines.append(f"缺 {_esc(miss)}")
+            # 只留關鍵缺步代碼／短名
+            short_parts: list[str] = []
+            for p in parts[:3]:
+                token = p.split()[0] if p.split() else p
+                short_parts.append(token)
+            if short_parts:
+                extra = "…" if len(parts) > 3 else ""
+                lines.append(f"缺 {_esc('、'.join(short_parts))}{extra}")
         if setup.note:
-            # 備註只留第一句／品質閘重點，避免牆上文字
-            brief = setup.note.split("｜")[0].strip()
-            for frag in setup.note.split("｜"):
-                if "品質閘" in frag or "不扣板機" in frag:
-                    brief = frag.strip()
+            brief = ""
+            # 優先短標籤，避免整段說明洗版
+            for key in ("品質閘", "不扣板機", "追價", "追突破", "硬規則"):
+                if key in setup.note:
+                    brief = key
                     break
-            if len(brief) > 72:
-                brief = brief[:72] + "…"
-            lines.append(f"備註 {_esc(brief)}")
+            if not brief:
+                brief = setup.note.replace("｜", "；").split("；")[0].strip()
+            if len(brief) > 28:
+                brief = brief[:28] + "…"
+            if brief:
+                lines.append(f"備註 {_esc(brief)}")
     else:
         lines.append(f"偏向 {_esc(str(info.get('bias', '-')))}")
 
-    # ── 多週期 ──
+    # ── 多週期（精簡一行／週期）──
     mtf = info.get("mtf") or {}
     pack = info.get("tf_pack") or {}
     if mtf or pack:
@@ -1209,23 +1250,53 @@ def format_telegram_detail(info: dict[str, Any], meta: CoinSignal | None = None)
         lines.append(" · ".join(chips))
     if pack:
         for key, lab in (("4h", "4H"), ("1h", "1H")):
-            lines.extend(_tf_status_block(pack.get(key), lab))
+            lines.extend(
+                _tf_status_block(
+                    pack.get(key), lab, compact=True, last_price=float(live or 0)
+                )
+            )
         m5 = pack.get("5m")
         if m5:
             ok, why = _htf_bias_ok_for_5m(pack, m5)
-            lines.extend(_tf_status_block(m5, "5m"))
+            gap5 = _zone_gap_pct(m5, float(live or 0))
+            lines.extend(
+                _tf_status_block(m5, "5m", compact=True, last_price=float(live or 0))
+            )
             lines.append(f"　　{_esc(why)}")
-            if m5.entry and m5.stop and m5.tp and m5.rr > 0 and (
-                m5.trigger_ready or m5.waiting_retest or m5.at_zone
-            ):
-                risk_pct = abs(m5.entry - m5.stop) / m5.entry * 100
-                tag = "5m可參考進場" if (ok and m5.trigger_ready) else "5m計畫價"
-                lines.append(
-                    f"　　{tag}\n"
-                    f"　　入 <code>{_esc(_px(m5.entry))}</code>  "
-                    f"損 <code>{_esc(_px(m5.stop))}</code>（{risk_pct:.2f}%）\n"
-                    f"　　盈 <code>{_esc(_px(m5.tp))}</code>  RR{m5.rr:.1f}"
+            risk_pct = (
+                abs(m5.entry - m5.stop) / m5.entry * 100
+                if m5.entry and m5.stop
+                else 0.0
+            )
+            # 5m 進出場：須同向＋靠近區＋停損別過窄（雜訊）
+            show_5m = bool(
+                m5.entry
+                and m5.stop
+                and m5.tp
+                and m5.rr > 0
+                and ok
+                and risk_pct >= 0.35
+                and (
+                    m5.trigger_ready
+                    or m5.at_zone
+                    or (m5.waiting_retest and gap5 <= DEFAULT_NEAR_ZONE_PCT)
                 )
+            )
+            if show_5m:
+                tag = "5m可參考進場" if m5.trigger_ready else "5m計畫價・靠近區"
+                lines.append(
+                    f"　　{tag}  "
+                    f"入 <code>{_esc(_px(m5.entry))}</code>  "
+                    f"損 <code>{_esc(_px(m5.stop))}</code>（{risk_pct:.2f}%）  "
+                    f"盈 <code>{_esc(_px(m5.tp))}</code> RR{m5.rr:.1f}"
+                )
+            elif m5.waiting_retest or m5.trigger_ready:
+                if not ok:
+                    lines.append("　　5m 計畫略（高週期未同向）")
+                elif risk_pct > 0 and risk_pct < 0.35:
+                    lines.append("　　5m 計畫略（停損過窄・雜訊）")
+                elif gap5 > DEFAULT_NEAR_ZONE_PCT:
+                    lines.append(f"　　5m 區距 {gap5:.1f}%・未靠近不給價")
 
     lines.append("")
     lines.append("⚠️ 僅供參考，非投資建議")
