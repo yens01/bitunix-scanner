@@ -14,7 +14,7 @@ permissions:
 jobs:
   scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
 
@@ -65,8 +65,8 @@ jobs:
           RISK_MAX_SAME_SIDE: ${{ secrets.RISK_MAX_SAME_SIDE }}
           RISK_MAX_TOTAL_OPEN: ${{ secrets.RISK_MAX_TOTAL_OPEN }}
           PYTHONIOENCODING: utf-8
-        # n=160：擴大山寨覆蓋；逾時 10 分鐘
-        run: python bitunix_scanner.py watch-once --n 160
+        # n=200：擴大山寨覆蓋；逾時 12 分鐘
+        run: python bitunix_scanner.py watch-once --n 200
 
       - name: Show journal stats
         if: always()

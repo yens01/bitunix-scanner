@@ -107,7 +107,7 @@ DEFAULT_MAX_RISK_PCT = 1.5           # 振幅大時允許稍寬停損
 DEFAULT_NEAR_ZONE_PCT = 0.8          # 等回測：距區 ≤0.8% 才推卡片
 DEFAULT_ALERT_COOLDOWN_MIN = 45      # 同一幣冷卻分鐘
 DEFAULT_MAX_ALERTS_PER_WAVE = 4      # 同波最多推播檔數（YES+靠近合計；不含日記）
-DEFAULT_SCAN_POOL = 160              # 掃描池（成交額排序取前 N；雲端約可在 8～10 分內跑完）
+DEFAULT_SCAN_POOL = 200              # 掃描池（成交額排序取前 N；雲端約可在 10～12 分內跑完）
 # BTC/ETH 日內規劃時段（台灣時間）：下午四點／晚上八點／美股開盤
 # 美股開盤：夏令約 21:30、冬令約 22:30；預設用 21:30（夏令），冬令可改 22:30
 SESSION_PLAN_SLOTS: tuple[tuple[int, int, str], ...] = (
@@ -1576,7 +1576,7 @@ def _alt_watch_bias(r: ChecklistResult) -> tuple[str, str] | None:
 
 def build_alt_watchlist_message(
     *,
-    pool_n: int = 100,
+    pool_n: int = 200,
     per_bucket: int = 6,
     interval: str = "15m",
 ) -> str:
