@@ -52,6 +52,8 @@ from risk_manager import (
     load_risk_config,
 )
 from signal_tracker import (
+    TRAIL_BE_AT_R,
+    collect_breakeven_hints,
     print_journal,
     print_stats_by_ruleset,
     record_plan_signals,
@@ -90,7 +92,8 @@ load_local_env()
 
 # ── Setup 過濾預設（去重／降噪）────────────────────────────────────────────
 DEFAULT_MIN_SETUP_VOL = 500_000      # 最低 24h 成交額 USDT
-DEFAULT_MAX_RANGE_PCT = 50.0         # 排除過度瘋狂振幅（略放寬）
+DEFAULT_MIN_RANGE_PCT = 8.0          # 24h 振幅太小＝沒波段，不要
+DEFAULT_MAX_RANGE_PCT = 60.0         # 排除過度瘋狂振幅
 DEFAULT_MIN_LIST_DAYS = 7.0          # 上市未滿 N 天排除
 DEFAULT_MAX_RR = 3.0                 # RR 鎖上緣（過高多半停損太近／目標過遠）
 DEFAULT_MIN_RR = 1.5                 # RR 鎖下緣
@@ -98,8 +101,8 @@ DEFAULT_IDEAL_RR_LO = 1.5            # 品質排序：理想 RR 下緣
 DEFAULT_IDEAL_RR_HI = 2.5            # 品質排序：理想 RR 上緣
 DEFAULT_TOP_MAJOR_PER_SIDE = 2       # 大幣同向名額
 DEFAULT_TOP_ALT_PER_SIDE = 5         # 山寨同向名額（日記／列表可多留；推播另限）
-DEFAULT_MIN_RISK_PCT = 0.4           # 風險幅度下限（停損太近易掃損）
-DEFAULT_MAX_RISK_PCT = 1.0           # 風險幅度上限（過寬風險失控）
+DEFAULT_MIN_RISK_PCT = 0.45          # 風險幅度下限（停損太近易掃損）
+DEFAULT_MAX_RISK_PCT = 1.5           # 振幅大時允許稍寬停損
 DEFAULT_NEAR_ZONE_PCT = 0.8          # 等回測：距區 ≤0.8% 才推卡片
 DEFAULT_ALERT_COOLDOWN_MIN = 45      # 同一幣冷卻分鐘
 DEFAULT_MAX_ALERTS_PER_WAVE = 4      # 同波最多推播檔數（YES+靠近合計；不含日記）
@@ -152,6 +155,7 @@ MAJOR_SYMBOLS = {
 @dataclass
 class SetupFilterConfig:
     min_quote_vol: float = DEFAULT_MIN_SETUP_VOL
+    min_range_pct: float = DEFAULT_MIN_RANGE_PCT
     max_range_pct: float = DEFAULT_MAX_RANGE_PCT
     min_list_days: float = DEFAULT_MIN_LIST_DAYS
     max_rr: float = DEFAULT_MAX_RR
@@ -755,9 +759,11 @@ def quality_rank(
     r: ChecklistResult,
     vol: float,
     cfg: SetupFilterConfig,
+    *,
+    range_pct: float = 0.0,
 ) -> float:
     """
-    品質分：RR 落在 1.5~3 最優、流程步數高、成交量大、可進優先。
+    品質分：RR 落在 1.5~3 最優、流程步數高、成交量大、振幅偏大、可進優先。
     用來取代「先到先贏」的同向名額。
     """
     q = 0.0
@@ -777,6 +783,15 @@ def quality_rank(
     q += min(r.setup_score, 100) * 0.15
     # 成交量（log）
     q += min(math.log10(max(vol, 1)) / 9 * 25, 25)
+    # 振幅：偏好有波段的幣（約 12～35% 最佳）
+    if range_pct >= 25:
+        q += 14
+    elif range_pct >= 15:
+        q += 10
+    elif range_pct >= 10:
+        q += 6
+    elif range_pct >= cfg.min_range_pct:
+        q += 3
     if _is_major(r.symbol):
         q += 8
     if r.mtf_aligned:
@@ -826,6 +841,8 @@ def filter_setups(
             reasons.append(f"量<{cfg.min_quote_vol/1e3:.0f}K")
 
         rng = sig.range_pct if sig else 0.0
+        if rng < cfg.min_range_pct:
+            reasons.append(f"振幅{rng:.1f}%太小")
         if rng >= cfg.max_range_pct:
             reasons.append(f"振幅{rng:.0f}%過大")
 
@@ -873,11 +890,17 @@ def filter_setups(
 
         kept.append(r)
 
+    def _q(x: ChecklistResult) -> float:
+        sig = sig_map.get(x.symbol)
+        return quality_rank(
+            x,
+            sig.quote_vol if sig else 0.0,
+            cfg,
+            range_pct=sig.range_pct if sig else 0.0,
+        )
+
     # 品質排序
-    kept.sort(
-        key=lambda x: quality_rank(x, sig_map[x.symbol].quote_vol if x.symbol in sig_map else 0, cfg),
-        reverse=True,
-    )
+    kept.sort(key=_q, reverse=True)
 
     # 大幣 / 山寨 × 多 / 空 分組名額
     slots = {
@@ -906,10 +929,7 @@ def filter_setups(
 
     # 最終仍以品質分排序輸出
     limited.sort(
-        key=lambda x: (
-            x.trigger_ready,
-            quality_rank(x, sig_map[x.symbol].quote_vol if x.symbol in sig_map else 0, cfg),
-        ),
+        key=lambda x: (x.trigger_ready, _q(x)),
         reverse=True,
     )
     return limited, rejected
@@ -925,10 +945,16 @@ def pick_wave_alerts(
 ) -> tuple[list[ChecklistResult], list[ChecklistResult]]:
     """同波最多推 max_n 檔：先 YES 再靠近區，皆依品質分排序。"""
     cfg = cfg or SetupFilterConfig()
-    sig_map = {s.symbol: s.quote_vol for s in (signals or [])}
+    vol_map = {s.symbol: s.quote_vol for s in (signals or [])}
+    rng_map = {s.symbol: s.range_pct for s in (signals or [])}
 
     def _q(r: ChecklistResult) -> float:
-        return quality_rank(r, sig_map.get(r.symbol, 0.0), cfg)
+        return quality_rank(
+            r,
+            vol_map.get(r.symbol, 0.0),
+            cfg,
+            range_pct=rng_map.get(r.symbol, 0.0),
+        )
 
     yes_s = sorted(yes, key=_q, reverse=True)
     near_s = sorted(near, key=_q, reverse=True)
@@ -1467,7 +1493,7 @@ def poll_telegram_queries(
                     f"📋 <b>BTC／ETH 日內規劃</b>\n🕐 {tw}\n"
                     f"BTC／ETH・今日高低＋亞／倫／紐時段（參考，非必進）\n\n"
                     + "\n\n".join(format_telegram_plan_card(r) for r in plans)
-                    + "\n\n⚠️ 收盤破箱勿追｜禁逆日線做多｜自行確認槓桿與風險"
+                    + "\n\n⚠️ 收盤破箱勿追｜做多需日／4H同向｜自行確認槓桿與風險"
                 )
                 _telegram_send(body, chat_id=from_chat)
             handled += 1
@@ -1713,15 +1739,19 @@ def _format_session_hl_lines(r: ChecklistResult, *, html: bool = False) -> list[
     return out
 
 
-def _plan_blocks_long_vs_daily(r: ChecklistResult) -> bool:
-    """日線偏空時，4H 偏多不當方向規劃。"""
+def _plan_blocks_long_htf(r: ChecklistResult) -> bool:
+    """做多需日線偏多；有 4H 時 4H 也要偏多。"""
     if r.structure != "偏多" and r.side != "long":
         return False
-    if (r.mtf or {}).get("1D") == "偏空":
+    mtf = r.mtf or {}
+    if mtf.get("1D") != "偏多":
+        return True
+    if "4H" in mtf and mtf.get("4H") != "偏多":
         return True
     note = f"{r.mtf_note or ''}｜{r.note or ''}"
-    return "禁逆日線做多" in note or (
-        "逆高週期" in note and "1D" in note and r.structure == "偏多"
+    return any(
+        tag in note
+        for tag in ("禁逆日線做多", "做多需日線偏多", "做多需4H偏多")
     )
 
 
@@ -1740,12 +1770,12 @@ def _apply_session_intraday_box(r: ChecklistResult) -> ChecklistResult:
     """
     BTC／ETH 規劃改套「台灣日今日高低」（15m），供日內高拋低吸。
     並附亞洲／倫敦／紐約盤高低；結構／高週期仍用 4H。
-    禁逆日線做多：改成箱體規劃。
+    做多未齊日／4H：改成箱體規劃。
     """
     if r.symbol.upper() not in SESSION_BOX_TARGET_WIDTH:
         return r
     target = SESSION_BOX_TARGET_WIDTH[r.symbol.upper()]
-    block_long = _plan_blocks_long_vs_daily(r)
+    block_long = _plan_blocks_long_htf(r)
     # 有明確方向、非禁多、區已合理 → 不覆蓋支撐／壓力（仍補三大盤高低）
     keep_zone = (
         not block_long
@@ -1758,7 +1788,7 @@ def _apply_session_intraday_box(r: ChecklistResult) -> ChecklistResult:
         candles = parse_klines(raw)
     except Exception:
         if block_long:
-            _downgrade_plan_to_box(r, "禁逆日線做多，改看箱")
+            _downgrade_plan_to_box(r, "做多未齊日／4H，改看箱")
         return r
 
     _fill_trading_session_hl(r, candles)
@@ -1772,7 +1802,7 @@ def _apply_session_intraday_box(r: ChecklistResult) -> ChecklistResult:
         day_box = build_adaptive_range_box(candles, target_width=target)
     if day_box is None:
         if block_long:
-            _downgrade_plan_to_box(r, "禁逆日線做多，改看箱")
+            _downgrade_plan_to_box(r, "做多未齊日／4H，改看箱")
         return r
 
     # 保留真實今日高低（給卡片對照；進出場箱可另裁近端）
@@ -1800,7 +1830,7 @@ def _apply_session_intraday_box(r: ChecklistResult) -> ChecklistResult:
     r.zone_kind = "range"
     r.note = f"{r.note}｜{tag}" if r.note else tag
     if block_long:
-        _downgrade_plan_to_box(r, "禁逆日線做多，改看箱")
+        _downgrade_plan_to_box(r, "做多未齊日／4H，改看箱")
     if r.structure == "盤整":
         edges = _session_box_edge_levels(r)
         if edges:
@@ -1912,8 +1942,11 @@ def format_telegram_plan_card(r: ChecklistResult) -> str:
                 f"止盈低 <code>{_esc(_px(st))}</code>"
             )
         lines.append(f"高週期 {htf}")
-        if "禁逆日線" in (r.note or "") or "禁逆日線" in (r.mtf_note or ""):
-            lines.append("🚫 日線偏空・不做多，只看箱")
+        if any(
+            tag in (r.note or "") or tag in (r.mtf_note or "")
+            for tag in ("禁逆日線", "做多需日線", "做多需4H", "做多未齊")
+        ):
+            lines.append("🚫 做多未齊日／4H・只看箱")
         lines.append("🚫 收盤破箱勿追｜依進行中時段高低操作")
         lines.append("備註: 今日＋亞/倫/紐時段高低參考，非必進")
         return "\n".join(lines)
@@ -2028,8 +2061,11 @@ def format_console_plan_card(r: ChecklistResult) -> str:
             lines.append(f"  │ 低點多 {_px(le)} / 停 {_px(ls)} / 盈高 {_px(lt)}")
             lines.append(f"  │ 高點空 {_px(se)} / 停 {_px(ss)} / 盈低 {_px(st)}")
         lines.append(f"  │ 高週期 {htf}")
-        if "禁逆日線" in (r.note or "") or "禁逆日線" in (r.mtf_note or ""):
-            lines.append("  │ 日線偏空・不做多，只看箱")
+        if any(
+            tag in (r.note or "") or tag in (r.mtf_note or "")
+            for tag in ("禁逆日線", "做多需日線", "做多需4H", "做多未齊")
+        ):
+            lines.append("  │ 做多未齊日／4H・只看箱")
         lines.append("  └ 收盤破箱勿追｜依進行中時段高低操作")
         return "\n".join(lines)
 
@@ -2108,6 +2144,39 @@ def build_telegram_message(title: str, setups: list[ChecklistResult], *, kind: s
         body += f"\n\n…另有 {len(setups) - 6} 檔未列出"
     foot = "\n\n⚠️ 僅供規劃，請自行確認槓桿與風險"
     return f"{head}\n\n{body}{foot}"
+
+
+def notify_breakeven_hints(hints: list[Any], *, telegram: bool = True) -> None:
+    """有利達 0.8R：提醒手動把停損移到成本。"""
+    if not hints:
+        return
+    lines: list[str] = []
+    for e in hints:
+        side = "多" if e.side == "long" else "空"
+        kind = "等回測" if (e.kind or "") == "retest" else "YES"
+        lines.append(
+            f"{e.symbol} {side}（{kind}）MFE {e.mfe_r:.2f}R｜"
+            f"請把停損移到成本 {_px(e.entry)}"
+        )
+        print(
+            color(
+                f"保本提醒: {e.symbol} {side} MFE {e.mfe_r:.2f}R → 停損移至 {_px(e.entry)}",
+                "1;33",
+            )
+        )
+    title = f"有利≥{TRAIL_BE_AT_R:g}R・請手動保本"
+    body = (
+        f"🛡 <b>{_esc(title)}</b>\n"
+        f"🕐 {now_tw().strftime('%m-%d %H:%M')}\n"
+        + "\n".join(f"• {_esc(x)}" for x in lines)
+        + "\n\n日記結算也會按保本計算；請自行改交易所停損。"
+    )
+    if telegram:
+        ok = _telegram_send(body)
+        if ok:
+            print(f"  → 已推送保本提醒 {len(hints)} 筆")
+        elif os.environ.get("TELEGRAM_BOT_TOKEN"):
+            print("  → 保本提醒推送失敗")
 
 
 def notify_alert(
@@ -2571,6 +2640,7 @@ def print_setup_table(
         print(
             color(
                 f"規則 RR{DEFAULT_MIN_RR:g}~{DEFAULT_MAX_RR:g} · "
+                f"振幅{DEFAULT_MIN_RANGE_PCT:g}~{DEFAULT_MAX_RANGE_PCT:g}% · "
                 f"風險{DEFAULT_MIN_RISK_PCT:g}~{DEFAULT_MAX_RISK_PCT:g}% · "
                 f"同向大幣{DEFAULT_TOP_MAJOR_PER_SIDE}/山寨{DEFAULT_TOP_ALT_PER_SIDE}",
                 "2",
@@ -2679,6 +2749,7 @@ def print_setup_table(
     print(
         color(
             f"規則 RR{DEFAULT_MIN_RR:g}~{DEFAULT_MAX_RR:g} · "
+            f"振幅{DEFAULT_MIN_RANGE_PCT:g}~{DEFAULT_MAX_RANGE_PCT:g}% · "
             f"風險{DEFAULT_MIN_RISK_PCT:g}~{DEFAULT_MAX_RISK_PCT:g}% · "
             f"多*/空*=計畫向 · detail 幣種",
             "2",
@@ -3052,6 +3123,7 @@ def watch_once(
     print(
         color(
             f"單次掃描｜冷卻 {cooldown_min:.0f} 分｜"
+            f"振幅{DEFAULT_MIN_RANGE_PCT}~{DEFAULT_MAX_RANGE_PCT}%｜"
             f"風險{DEFAULT_MIN_RISK_PCT}~{DEFAULT_MAX_RISK_PCT}%｜"
             f"RR{DEFAULT_MIN_RR}~{DEFAULT_MAX_RR}｜同波≤{DEFAULT_MAX_ALERTS_PER_WAVE}｜"
             f"1R={rc.risk_pct_per_r:g}%×{rc.account_usdt:g}U｜同向≤{rc.max_same_side}",
@@ -3061,11 +3133,13 @@ def watch_once(
     if not os.environ.get("TELEGRAM_BOT_TOKEN") or not os.environ.get("TELEGRAM_CHAT_ID"):
         print("警告: 未設定 TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID，不會推播")
 
-    # 先結算日記，釋放已平倉的同向名額
+    # 先結算日記，釋放已平倉的同向名額；並檢查保本提醒
     try:
         n_upd, n_open = resolve_all(fetch_klines, parse_klines, max_bars=96)
         if n_upd:
             print(f"日記結算：更新 {n_upd} 筆，未結 {n_open}")
+        be_hints = collect_breakeven_hints(fetch_klines, parse_klines, max_bars=96)
+        notify_breakeven_hints(be_hints, telegram=True)
     except Exception as ex:
         print(f"日記結算略過: {ex}")
 
@@ -3192,6 +3266,12 @@ def watch_loop(
     cfg = SetupFilterConfig()
     while True:
         try:
+            try:
+                resolve_all(fetch_klines, parse_klines, max_bars=96)
+                be_hints = collect_breakeven_hints(fetch_klines, parse_klines, max_bars=96)
+                notify_breakeven_hints(be_hints, telegram=True)
+            except Exception as ex:
+                print(f"日記／保本檢查略過: {ex}")
             signals = scan(min_vol=cfg.min_quote_vol)
             price_map = {s.symbol: s.last for s in signals}
             setups = run_filtered_setup(signals, n=n, top=15, cfg=cfg, show=False)
@@ -3398,10 +3478,14 @@ def interactive() -> None:
             print("正在用後續 K 線結算未平倉訊號…")
             n_upd, n_open = resolve_all(fetch_klines, parse_klines, max_bars=96)
             print(f"本輪更新 {n_upd} 筆，仍未結算 {n_open} 筆")
+            be_hints = collect_breakeven_hints(fetch_klines, parse_klines, max_bars=96)
+            notify_breakeven_hints(be_hints, telegram=True)
             print_stats_by_ruleset()
         elif low in {"js", "stats"}:
             # 先嘗試結算再開統計（全部／新規則 v2／舊規則分開）
             resolve_all(fetch_klines, parse_klines, max_bars=96)
+            be_hints = collect_breakeven_hints(fetch_klines, parse_klines, max_bars=96)
+            notify_breakeven_hints(be_hints, telegram=True)
             print_stats_by_ruleset()
         else:
             print("未知指令")
@@ -3445,6 +3529,8 @@ def main() -> None:
     u.add_argument("--top-alt", type=int, default=DEFAULT_TOP_ALT_PER_SIDE, help="山寨同向名額")
     u.add_argument("--min-risk", type=float, default=DEFAULT_MIN_RISK_PCT, help="最低風險幅度(%%)")
     u.add_argument("--max-risk", type=float, default=DEFAULT_MAX_RISK_PCT, help="最高風險幅度(%%)")
+    u.add_argument("--min-range", type=float, default=DEFAULT_MIN_RANGE_PCT, help="最低 24h 振幅(%%)")
+    u.add_argument("--max-range", type=float, default=DEFAULT_MAX_RANGE_PCT, help="最高 24h 振幅(%%)")
     u.add_argument(
         "--max-wave",
         type=int,
@@ -3526,6 +3612,8 @@ def main() -> None:
     if args.cmd == "setup":
         cfg = SetupFilterConfig(
             min_quote_vol=args.min_vol,
+            min_range_pct=args.min_range,
+            max_range_pct=args.max_range,
             max_rr=args.max_rr,
             min_rr=args.min_rr,
             ideal_rr_lo=args.min_rr,
@@ -3607,9 +3695,17 @@ def main() -> None:
                 fetch_klines, parse_klines, max_bars=args.max_bars
             )
             print(f"本輪更新 {n_upd} 筆，仍未結算 {n_open} 筆")
+            be_hints = collect_breakeven_hints(
+                fetch_klines, parse_klines, max_bars=args.max_bars
+            )
+            notify_breakeven_hints(be_hints, telegram=True)
             print_stats_by_ruleset()
         elif args.action == "stats":
             resolve_all(fetch_klines, parse_klines, max_bars=args.max_bars)
+            be_hints = collect_breakeven_hints(
+                fetch_klines, parse_klines, max_bars=args.max_bars
+            )
+            notify_breakeven_hints(be_hints, telegram=True)
             print_stats_by_ruleset()
             print_journal(limit=min(args.limit, 15))
         return

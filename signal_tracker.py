@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 訊號日記與事後追蹤
-- YES：可進場訊號 → 先碰 SL/TP；有利達 1R 後移動停損至成本
-- 規劃 v3：禁逆日線做多；盤整用 15m 收盤破箱（非影線）
+- YES：可進場訊號 → 先碰 SL/TP；有利達 0.8R 後移動停損至成本
+- 規劃 v3：做多需日／4H 同向；盤整用 15m 收盤破箱（非影線）
 """
 
 from __future__ import annotations
@@ -33,8 +33,10 @@ PLAN_MAX_BARS_15M = 32  # 15m × 32 ≈ 8 小時
 PLAN_MAX_BARS_4H = 18  # 舊版 4H 規劃
 # 同根同時碰到 SL/TP 時採保守：算停損
 CONSERVATIVE_SAME_BAR = True
-# YES：有利偏移達此 R 後，停損移到成本（減少先賺後吐）
-TRAIL_BE_AT_R = 1.0
+# YES／等回測：有利偏移達此 R 後，停損移到成本（減少先賺後吐）
+TRAIL_BE_AT_R = 0.8
+# 日記備註標記：已推過「請手動保本」提醒，避免重複刷屏
+BE_HINT_TAG = "已提示保本"
 
 
 @dataclass
@@ -139,14 +141,20 @@ def _setup_trade_side(s: Any) -> str:
     return "none"
 
 
-def _blocks_long_vs_daily(s: Any) -> bool:
+def _blocks_long_htf(s: Any) -> bool:
+    """做多需日線偏多；有 4H 時也要偏多。"""
     if _setup_trade_side(s) != "long":
         return False
     mtf = getattr(s, "mtf", None) or {}
-    if mtf.get("1D") == "偏空":
+    if mtf.get("1D") != "偏多":
+        return True
+    if "4H" in mtf and mtf.get("4H") != "偏多":
         return True
     blob = f"{getattr(s, 'mtf_note', '') or ''}｜{getattr(s, 'note', '') or ''}"
-    return "禁逆日線做多" in blob
+    return any(
+        tag in blob
+        for tag in ("禁逆日線做多", "做多需日線偏多", "做多需4H偏多")
+    )
 
 
 def record_yes_signals(
@@ -166,7 +174,7 @@ def record_yes_signals(
         side = _setup_trade_side(s)
         if side not in ("long", "short"):
             continue
-        if _blocks_long_vs_daily(s):
+        if _blocks_long_htf(s):
             continue
         entry = float(getattr(s, "entry", 0) or 0)
         stop = float(getattr(s, "stop", 0) or 0)
@@ -216,7 +224,7 @@ def record_retest_signals(
 ) -> list[JournalEntry]:
     """
     記錄「靠近區・等回測」計畫單（尚未可扣板機）。
-    有完整入場／停損／止盈才入帳，結算方式同 YES（含 1R 保本）。
+    有完整入場／停損／止盈才入帳，結算方式同 YES（含 0.8R 保本）。
     """
     rows = load_journal(path)
     now_ms = _now_ms()
@@ -231,7 +239,7 @@ def record_retest_signals(
         side = _setup_trade_side(s)
         if side not in ("long", "short"):
             continue
-        if _blocks_long_vs_daily(s):
+        if _blocks_long_htf(s):
             continue
         entry = float(getattr(s, "entry", 0) or 0)
         stop = float(getattr(s, "stop", 0) or 0)
@@ -294,7 +302,7 @@ def _recent_plan_duplicate(
 def _plan_directional_side(s: Any) -> str:
     """
     只有高週期同向、且已到區／等回測／可進，才記成方向單。
-    禁逆日線做多；未到區改走箱體檢驗。
+    做多需日／4H 同向；未到區改走箱體檢驗。
     """
     structure = str(getattr(s, "structure", "") or "")
     if structure not in ("偏多", "偏空"):
@@ -303,9 +311,12 @@ def _plan_directional_side(s: Any) -> str:
     mtf_note = str(getattr(s, "mtf_note", "") or "")
     note = str(getattr(s, "note", "") or "")
     if structure == "偏多" and (
-        mtf.get("1D") == "偏空"
-        or "禁逆日線做多" in mtf_note
-        or "禁逆日線做多" in note
+        mtf.get("1D") != "偏多"
+        or ("4H" in mtf and mtf.get("4H") != "偏多")
+        or any(
+            tag in mtf_note or tag in note
+            for tag in ("禁逆日線做多", "做多需日線偏多", "做多需4H偏多")
+        )
     ):
         return "none"
     if (not bool(getattr(s, "mtf_aligned", True))) or ("逆高週期" in mtf_note):
@@ -365,8 +376,11 @@ def record_plan_signals(
                 tp = zone_hi
             src_note = str(getattr(s, "note", "") or "")
             mtf_note = str(getattr(s, "mtf_note", "") or "")
-            if "禁逆日線" in src_note or "禁逆日線" in mtf_note:
-                extra = "禁逆日線做多，改看箱"
+            if any(
+                tag in src_note or tag in mtf_note
+                for tag in ("禁逆日線", "做多需日線", "做多需4H")
+            ):
+                extra = "做多未齊日／4H，改看箱"
             elif structure in ("偏多", "偏空"):
                 extra = "未到區，改以今日高低檢驗"
             else:
@@ -544,7 +558,7 @@ def resolve_entry(
     observing = after if len(after) < max_bars else after[:max_bars]
     mfe = 0.0
     mae = 0.0
-    # 動態停損：有利達 1R 後移到成本；R 仍用原始風險計算
+    # 動態停損：有利達 0.8R 後移到成本；R 仍用原始風險計算
     cur_stop = entry.stop
     trailed = False
     use_trail = (kind or "yes") in ("yes", "retest") and TRAIL_BE_AT_R > 0
@@ -684,6 +698,23 @@ def resolve_entry(
     return entry
 
 
+def _mfe_from_candles(entry: JournalEntry, candles: list[Any]) -> float:
+    """訊號後最大有利偏移（以原始風險為 1R）。"""
+    risk = entry.risk()
+    if risk <= 0 or entry.side not in ("long", "short"):
+        return 0.0
+    _t, _h, _l, _c = _candle_accessors()
+    del _c
+    after = [c for c in candles if _t(c) > entry.signal_time_ms]
+    mfe = 0.0
+    for c in after:
+        if entry.side == "long":
+            mfe = max(mfe, (_h(c) - entry.entry) / risk)
+        else:
+            mfe = max(mfe, (entry.entry - _l(c)) / risk)
+    return mfe
+
+
 def resolve_all(
     fetch_klines_fn: Callable[[str, str, int], list],
     parse_fn: Callable[[list], list],
@@ -728,6 +759,54 @@ def resolve_all(
             still_open += 1
     save_journal(rows, path)
     return updated, still_open
+
+
+def collect_breakeven_hints(
+    fetch_klines_fn: Callable[[str, str, int], list],
+    parse_fn: Callable[[list], list],
+    *,
+    path: Path = JOURNAL_PATH,
+    max_bars: int = DEFAULT_MAX_BARS,
+) -> list[JournalEntry]:
+    """
+    找出未結算 YES／等回測：有利已達 TRAIL_BE_AT_R、尚未提示過保本。
+    標記 BE_HINT_TAG 後存檔，回傳本輪要推播的筆數清單。
+    """
+    if TRAIL_BE_AT_R <= 0:
+        return []
+    rows = load_journal(path)
+    hints: list[JournalEntry] = []
+    changed = False
+    for i, e in enumerate(rows):
+        if e.status != "open":
+            continue
+        if (e.kind or "yes") not in ("yes", "retest"):
+            continue
+        if e.side not in ("long", "short"):
+            continue
+        if BE_HINT_TAG in (e.note or ""):
+            continue
+        if e.risk() <= 0:
+            continue
+        try:
+            iv = (e.interval or "15m").lower()
+            raw = fetch_klines_fn(e.symbol, iv, min(max_bars + 50, 200))
+            candles = parse_fn(raw)
+            mfe = _mfe_from_candles(e, candles)
+            e.mfe_r = round(mfe, 3)
+            if mfe < TRAIL_BE_AT_R:
+                rows[i] = e
+                continue
+            tag = f"{BE_HINT_TAG}（MFE {mfe:.2f}R）"
+            e.note = f"{e.note}｜{tag}" if e.note else tag
+            rows[i] = e
+            hints.append(e)
+            changed = True
+        except Exception:
+            continue
+    if changed:
+        save_journal(rows, path)
+    return hints
 
 
 @dataclass
@@ -829,11 +908,11 @@ def print_stats_by_ruleset(rows: list[JournalEntry] | None = None, path: Path = 
     plan_rows = [
         r for r in rows_by_ruleset(rows, PLAN_RULESET) if (r.kind or "yes") == "plan"
     ]
-    print_stats(compute_stats(yes_rows), f"YES · {CURRENT_RULESET}（1R後保本）")
+    print_stats(compute_stats(yes_rows), f"YES · {CURRENT_RULESET}（0.8R後保本）")
     print_stats(compute_stats(retest_rows), f"等回測 · {CURRENT_RULESET}")
     print_stats(
         compute_stats(plan_rows),
-        f"規劃 · {PLAN_RULESET}（禁逆日線做多｜收盤破箱）",
+        f"規劃 · {PLAN_RULESET}（做多需日／4H｜收盤破箱）",
     )
     if PLAN_RULESET != CURRENT_RULESET:
         old_plans = [
