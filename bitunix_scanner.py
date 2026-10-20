@@ -1138,6 +1138,106 @@ def _telegram_send(text: str, *, html: bool = True, chat_id: str | None = None) 
     return False
 
 
+def _telegram_send_photo(
+    png: bytes,
+    *,
+    caption: str = "",
+    chat_id: str | None = None,
+    html: bool = True,
+) -> bool:
+    """multipart 上傳 PNG 到 sendPhoto。"""
+    import uuid
+
+    token, default_chat = _telegram_token_chat()
+    chat = (chat_id or default_chat).strip()
+    if not token or not chat or not png:
+        return False
+    boundary = f"----Bitunix{uuid.uuid4().hex}"
+    chunks: list[bytes] = []
+
+    def _field(name: str, value: str) -> None:
+        chunks.append(
+            (
+                f"--{boundary}\r\n"
+                f'Content-Disposition: form-data; name="{name}"\r\n\r\n'
+                f"{value}\r\n"
+            ).encode("utf-8")
+        )
+
+    _field("chat_id", chat)
+    if caption:
+        _field("caption", caption[:1024])
+        if html:
+            _field("parse_mode", "HTML")
+    chunks.append(
+        (
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="photo"; filename="plan.png"\r\n'
+            f"Content-Type: image/png\r\n\r\n"
+        ).encode("utf-8")
+    )
+    chunks.append(png)
+    chunks.append(b"\r\n")
+    chunks.append(f"--{boundary}--\r\n".encode("utf-8"))
+    body = b"".join(chunks)
+    url = f"https://api.telegram.org/bot{token}/sendPhoto"
+    req = urllib.request.Request(
+        url,
+        data=body,
+        method="POST",
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=45) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        return bool(data.get("ok"))
+    except Exception:
+        return False
+
+
+def build_plan_chart_png(plans: list[ChecklistResult]) -> bytes | None:
+    """抓 15m K 線畫日內規劃圖；失敗或無 matplotlib 回 None。"""
+    try:
+        from plan_chart import render_session_plan_chart
+    except ImportError:
+        return None
+    candles_map: dict[str, list] = {}
+    for r in plans:
+        try:
+            raw = fetch_klines(r.symbol, SESSION_BOX_INTERVAL, limit=120)
+            candles = parse_klines(raw)
+            if len(candles) >= 20:
+                candles_map[r.symbol] = candles
+        except Exception:
+            continue
+    if not candles_map:
+        return None
+    return render_session_plan_chart(plans, candles_map)
+
+
+def notify_plan_with_chart(
+    title: str,
+    plans: list[ChecklistResult],
+    *,
+    chat_id: str | None = None,
+) -> bool:
+    """先推文字卡，再推規劃圖（有圖才附）。"""
+    msg = build_telegram_message(title, plans, kind="plan")
+    ok_text = _telegram_send(msg, chat_id=chat_id)
+    png = build_plan_chart_png(plans)
+    ok_img = False
+    if png:
+        cap = f"📊 {_esc(title)}\n15m + 今日高低 Fibo（0=高）"
+        ok_img = _telegram_send_photo(png, caption=cap, chat_id=chat_id)
+        if ok_img:
+            print("  → 已推送規劃圖")
+        else:
+            print("  → 規劃圖推送失敗")
+    else:
+        print("  → 無規劃圖（略過；可 pip install matplotlib）")
+    return ok_text or ok_img
+
+
 def load_telegram_offset(path: str = TELEGRAM_OFFSET_PATH) -> int:
     if not os.path.isfile(path):
         return 0
@@ -1676,13 +1776,8 @@ def poll_telegram_queries(
                 _telegram_send("❌ 無法取得 BTC／ETH 日內規劃", chat_id=from_chat)
             else:
                 tw = now_tw().strftime("%m-%d %H:%M")
-                body = (
-                    f"📋 <b>BTC／ETH 日內規劃</b>\n🕐 {tw}\n"
-                    f"今日高低＋時段高低＋Fibo（參考，非必進）\n\n"
-                    + "\n\n".join(format_telegram_plan_card(r) for r in plans)
-                    + "\n\n⚠️ 收盤破箱勿追｜做多需日／4H同向｜自行確認槓桿與風險"
-                )
-                _telegram_send(body, chat_id=from_chat)
+                title = f"BTC／ETH 日內規劃 · {tw}"
+                notify_plan_with_chart(title, plans, chat_id=from_chat)
             handled += 1
             continue
         if key == "STATS":
@@ -3240,17 +3335,23 @@ def print_btc_eth_daily_plan(*, telegram: bool = False) -> list[ChecklistResult]
         print(format_console_plan_card(r))
         print()
     print(color("破今日高低勿追｜區間內高拋低吸｜自行確認槓桿與風險", "2"))
+    png = build_plan_chart_png(plans)
+    if png:
+        chart_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "btc_eth_plan_chart.png"
+        )
+        try:
+            with open(chart_path, "wb") as fp:
+                fp.write(png)
+            print(color(f"規劃圖已存 → {chart_path}", "1;36"))
+        except OSError as ex:
+            print(f"規劃圖存檔失敗: {ex}")
+    else:
+        print(color("（無規劃圖：可 pip install matplotlib）", "2"))
     print()
     if telegram:
         title = f"BTC／ETH 日內規劃（手動 {tw.strftime('%H:%M')}）"
-        notify_alert(
-            title,
-            setups=plans,
-            kind="plan",
-            sound=False,
-            desktop=False,
-            telegram=True,
-        )
+        notify_plan_with_chart(title, plans)
         print(color("已推送到 Telegram", "1;32"))
     return plans
 
@@ -3351,14 +3452,17 @@ def send_session_major_plans(
         )
         print(f"日內規劃：「{label}」無變化（短訊）｜{brief}")
     else:
-        notify_alert(
-            title,
-            setups=plans,
-            kind="plan",
-            sound=False,
-            desktop=False,
-            telegram=telegram,
-        )
+        if telegram:
+            notify_plan_with_chart(title, plans)
+        else:
+            notify_alert(
+                title,
+                setups=plans,
+                kind="plan",
+                sound=False,
+                desktop=False,
+                telegram=False,
+            )
         print(f"日內規劃：已推「{label}」{', '.join(r.symbol for r in plans)}")
         # 內容沒變不重寫日記；結算用 15m 收盤破箱，不用 4H 影線
         record_plan_signals(

@@ -22,6 +22,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install deps
+        run: pip install -r requirements.txt
+
       # 固定前綴還原上一輪冷卻／日記；每次用新 key 寫回（cache key 不可覆寫）
       - name: Restore cooldown + journal
         uses: actions/cache@v4
