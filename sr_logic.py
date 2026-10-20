@@ -156,9 +156,8 @@ class ChecklistResult:
     # Trader Willy 背離戰法：4H POC ＋ RSI 頂/底背離
     poc_4h: float = 0.0
     div_poc_note: str = ""
-    # Trader Willy 背離戰法：4H POC + RSI 背離匯合
-    poc_4h: float = 0.0
-    div_poc_note: str = ""
+    # 日空＋4H 反抽未破＋15m 高位見頂 → 獨立空訊（非一般 YES）
+    fade_ready: bool = False
 
 
 def parse_klines(raw: list[dict]) -> list[Candle]:
@@ -417,6 +416,41 @@ def build_zones(candles: list[Candle], atr_v: float) -> tuple[list[Zone], list[Z
         hi = max(c.high for c in candles[-20:])
         resists = [Zone("resistance", hi - band * 0.5, hi + band * 0.2, 1, 1)]
     return supports, resists
+
+
+def _at_local_high_for_fade(
+    candles: list[Candle],
+    last: Candle,
+    atr_v: float,
+    resists: list[Zone],
+    active_zone: Zone | None,
+    priority_zone: Zone | None,
+) -> tuple[bool, str]:
+    """
+    高位見頂位置：近壓力區，或靠近近段高點，且尚未從高點崩很遠。
+    """
+    window = candles[-24:] if len(candles) >= 24 else candles
+    if not window or atr_v <= 0:
+        return False, "無波動基準"
+    hi = max(c.high for c in window)
+    lo = min(c.low for c in window)
+    # 已從高點跌超約 2×ATR → 追空，不算見頂
+    if hi - last.close > atr_v * 2.0:
+        return False, "已離高點過遠"
+    z = active_zone or priority_zone
+    if z and z.kind == "resistance" and (
+        z.near(last.high, atr_v) or z.near(last.close, atr_v) or z.contains(last.close, atr_v * 0.15)
+    ):
+        return True, "近壓力區"
+    if any(
+        r.near(last.high, atr_v) or r.near(last.close, atr_v) for r in resists[:4]
+    ):
+        return True, "近壓力位"
+    if last.high >= hi - atr_v * 0.45:
+        return True, "近段高點"
+    if hi > lo and (last.close - lo) / (hi - lo) >= 0.68:
+        return True, "近段上緣"
+    return False, "未在高位"
 
 
 def detect_candle_signals(c: Candle, prev: Candle, atr_v: float) -> list[str]:
@@ -1056,14 +1090,15 @@ def detect_liquidity_zones(candles: list[Candle], structure: str, atr_v: float) 
 
 def check_mtf_alignment(structure: str, mtf: dict[str, str]) -> tuple[bool, str]:
     """
-    多週期一致性：操作週期方向不可明顯逆 4H/日/週。
+    多週期一致性：操作週期方向不可明顯逆 4H/日。
+    小幣週線常滯後、參考價值低 → 對齊不計入 1W（畫面仍可顯示）。
     回傳 (是否對齊, 說明)
     """
     if structure not in ("偏多", "偏空"):
         return True, "盤整不檢查高週期對齊"
 
-    # 高週期權重：4H/1D/1W/1M
-    htf_keys = [k for k in ("4H", "1D", "1W", "1M") if k in mtf]
+    # 高週期權重：4H/1D/1M（不含 1W）
+    htf_keys = [k for k in ("4H", "1D", "1M") if k in mtf]
     if not htf_keys:
         # 只有 1H 也參考；完全抓不到高週期 → 不可當對齊（避免 KORU 類無 MTF 仍 YES）
         if "1H" in mtf:
@@ -2005,6 +2040,60 @@ def evaluate_setup(
         and close_dir_ok
     )
 
+    # ── 日空反抽見頂（fade）：與一般 YES 分開 ────────────────────────────
+    # 1D 偏空 + 4H 仍偏多（反抽未破）+ 15m 高位空方硬反應 → 可推空，不要求 MTF 對齊
+    fade_ready = False
+    fade_loc = ""
+    if (
+        not trigger_ready
+        and mtf.get("1D") == "偏空"
+        and mtf.get("4H") == "偏多"
+        and hard_bear
+        and not react_conflict
+        and close_dir_ok
+    ):
+        at_high, fade_loc = _at_local_high_for_fade(
+            candles, last, atr_v, resists, active_zone, priority_zone
+        )
+        if at_high:
+            fade_entry = px
+            fade_zone = None
+            if active_zone and active_zone.kind == "resistance":
+                fade_zone = active_zone
+            elif priority_zone and priority_zone.kind == "resistance":
+                fade_zone = priority_zone
+            fade_stop, fade_inv = compute_invalidation(
+                "short", fade_zone, last, atr_v, structure
+            )
+            if fade_stop <= fade_entry:
+                fade_stop = last.high + atr_v * 0.15
+                fade_inv = "突破見頂高點 → 空單理由失效"
+            fade_tp, fade_rr = compute_targets(
+                "short", fade_entry, fade_stop, supports, resists, atr_v
+            )
+            fade_stop_ok = (
+                fade_stop > fade_entry
+                and atr_v > 0
+                and abs(fade_entry - fade_stop) >= atr_v * 0.25
+            )
+            fade_level_ok = True
+            if fade_zone is not None and last.close > fade_zone.hi:
+                fade_level_ok = False
+            if fade_tp > 0 and fade_rr >= MIN_RR and fade_stop_ok and fade_level_ok:
+                fade_ready = True
+                side = "short"
+                entry = fade_entry
+                stop = fade_stop
+                tp = fade_tp
+                rr = fade_rr
+                invalidation = fade_stop
+                inv_reason = fade_inv
+                rr_ok = True
+                if "日空反抽見頂" not in confluence:
+                    confluence.append("日空反抽見頂")
+                if hard_bear and "高位硬反應" not in confluence:
+                    confluence.append("高位硬反應")
+
     # 評分
     score = 0.0
     if structure in ("偏多", "偏空"):
@@ -2027,14 +2116,16 @@ def evaluate_setup(
         score += min(rr * 5, 12)
     if trigger_ready:
         score += 10
+    if fade_ready:
+        score += 12  # 獨立見頂空訊
     if chasing:
         score = max(score - 20, 0)
     if mtf_aligned and mtf and (
         (structure == "偏多" and mtf_bull >= 2) or (structure == "偏空" and mtf_bear >= 2)
     ):
         score += 5
-    if not mtf_aligned:
-        score = max(score - 25, 0)  # 逆高週期大幅降權
+    if not mtf_aligned and not fade_ready:
+        score = max(score - 25, 0)  # 逆高週期大幅降權（fade 例外）
 
     # 支撐壓力四步清單
     loc_ok = at_zone and (
@@ -2059,9 +2150,10 @@ def evaluate_setup(
         ),
         (
             "④ 扣板機（匯合+RR）",
-            trigger_ready,
+            trigger_ready or fade_ready,
             (
                 f"{'、'.join(confluence[:4]) if confluence else '無匯合'}｜RR={rr:.2f}"
+                + ("｜日空反抽見頂" if fade_ready else "")
                 if side != "none"
                 else "尚未形成方向單"
             ),
@@ -2245,15 +2337,22 @@ def evaluate_setup(
     missing = summarize_missing_steps(workflow)
     if trigger_ready and wf_passed >= 8:
         score = min(score + 5, 100)
+    if fade_ready:
+        score = min(score + 3, 100)
     if workflow:
         t11, _, _ = workflow[-1]
+        enter_ok = trigger_ready or fade_ready
         workflow[-1] = (
             t11,
-            trigger_ready,
+            enter_ok,
             (
-                f"{'可進場觀察' if trigger_ready else '暫不進場'}｜"
-                f"MTF{'✓' if mtf_aligned else '✗'} "
-                f"位置{'✓' if at_zone else '✗'} "
+                (
+                    "日空反抽見頂・可空"
+                    if fade_ready
+                    else ("可進場觀察" if trigger_ready else "暫不進場")
+                )
+                + f"｜MTF{'✓' if mtf_aligned else '✗'} "
+                f"位置{'✓' if (at_zone or fade_ready) else '✗'} "
                 f"止損{'✓' if stop > 0 and side != 'none' else '✗'} "
                 f"目標{'✓' if rr_ok else '✗'}｜{missing}"
             ),
@@ -2262,7 +2361,9 @@ def evaluate_setup(
         missing = summarize_missing_steps(workflow)
 
     note += f" ｜實戰流程 {wf_passed}/11｜{missing}"
-    if not trigger_ready:
+    if fade_ready:
+        note += f"｜日空反抽見頂可空（{fade_loc or '高位'}｜不要求4H已轉空）"
+    elif not trigger_ready:
         note += "｜未齊全不進場"
 
     return ChecklistResult(
@@ -2309,4 +2410,5 @@ def evaluate_setup(
         mtf_note=mtf_note,
         poc_4h=poc_4h,
         div_poc_note=div_poc_note,
+        fade_ready=fade_ready,
     )
