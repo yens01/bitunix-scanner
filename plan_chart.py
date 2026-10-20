@@ -31,6 +31,65 @@ def _span_hi_lo(plan: Any) -> tuple[float, float] | None:
     return None
 
 
+def _zones_from_candles(candles: list[Any], *, max_n: int = 3) -> tuple[list[Any], list[Any]]:
+    """用該週期 K 線算支撐／壓力（與掃瞄器同一套 build_zones）。"""
+    if len(candles) < 30:
+        return [], []
+    try:
+        from sr_logic import atr, build_zones
+    except ImportError:
+        return [], []
+    atr_v = atr(candles, 14)
+    if atr_v <= 0:
+        return [], []
+    supports, resists = build_zones(candles, atr_v)
+    return list(supports[:max_n]), list(resists[:max_n])
+
+
+def _draw_sr_zones(
+    ax: Any,
+    supports: list[Any],
+    resists: list[Any],
+    *,
+    x_end: float,
+) -> list[float]:
+    """畫該週期支撐／壓力帶；回傳用到的價位供擴展 y 軸。"""
+    used: list[float] = []
+    for i, z in enumerate(supports, 1):
+        lo, hi = float(z.lo), float(z.hi)
+        mid = (lo + hi) / 2
+        ax.axhspan(lo, hi, color="#26a69a", alpha=0.16, zorder=0)
+        ax.axhline(mid, color="#66bb6a", linewidth=1.0, linestyle="-", alpha=0.75)
+        ax.text(
+            0.2,
+            mid,
+            f" S{i} {_px(mid)}",
+            color="#a5d6a7",
+            fontsize=7,
+            va="center",
+            ha="left",
+            zorder=5,
+        )
+        used.extend([lo, hi])
+    for i, z in enumerate(resists, 1):
+        lo, hi = float(z.lo), float(z.hi)
+        mid = (lo + hi) / 2
+        ax.axhspan(lo, hi, color="#ef5350", alpha=0.14, zorder=0)
+        ax.axhline(mid, color="#ef9a9a", linewidth=1.0, linestyle="-", alpha=0.75)
+        ax.text(
+            max(x_end * 0.02, 0.2),
+            mid,
+            f" R{i} {_px(mid)}",
+            color="#ffcdd2",
+            fontsize=7,
+            va="center",
+            ha="left",
+            zorder=5,
+        )
+        used.extend([lo, hi])
+    return used
+
+
 def _draw_one(
     ax: Any,
     plan: Any,
@@ -39,6 +98,7 @@ def _draw_one(
     interval: str,
     show_trade_box: bool = False,
     label_fib: bool = True,
+    draw_sr: bool = True,
 ) -> None:
     symbol = str(getattr(plan, "symbol", "") or "")
     closes = [float(c.close) for c in candles]
@@ -62,6 +122,15 @@ def _draw_one(
 
     ax.plot(xs, closes, color="#90caf9", linewidth=0.9, alpha=0.45, zorder=1)
 
+    # 該週期自己的支撐／壓力（15m／4H 各自算）
+    sr_prices: list[float] = []
+    if draw_sr:
+        supports, resists = _zones_from_candles(candles, max_n=3)
+        sr_prices = _draw_sr_zones(
+            ax, supports, resists, x_end=float(max(len(xs) - 1, 1))
+        )
+
+    # 今日高低 Fibo（共用價位；15m 標完整、4H 只畫線較不擠）
     span = _span_hi_lo(plan)
     if span:
         lo, hi = span
@@ -74,7 +143,7 @@ def _draw_one(
             ("1 Lo", lo, "#42a5f5", 1.4),
         ]
         for name, y, col, lw in levels:
-            ax.axhline(y, color=col, linewidth=lw, linestyle="--", alpha=0.85)
+            ax.axhline(y, color=col, linewidth=lw, linestyle="--", alpha=0.7)
             if label_fib:
                 ax.text(
                     len(xs) - 1,
@@ -100,7 +169,7 @@ def _draw_one(
             or abs(zhi - span[1]) / span[1] > 0.0005
         )
     ):
-        ax.axhspan(zlo, zhi, color="#7e57c2", alpha=0.12, zorder=0)
+        ax.axhspan(zlo, zhi, color="#7e57c2", alpha=0.10, zorder=0)
         ax.text(
             0,
             (zlo + zhi) / 2,
@@ -112,7 +181,7 @@ def _draw_one(
 
     last = closes[-1] if closes else 0
     role = "entry" if interval.lower() in {"15m", "5m"} else "structure"
-    title = f"{symbol}  {interval}  ({role})  last {_px(last)}"
+    title = f"{symbol}  {interval}  ({role})  last {_px(last)}  ·  S/R"
     struct = str(getattr(plan, "structure", "") or "")
     if struct and interval.lower() in {"4h", "1h"}:
         title += f"  ·  {struct}"
@@ -128,6 +197,9 @@ def _draw_one(
         if span:
             y0 = min(y0, span[0] - pad * 0.3)
             y1 = max(y1, span[1] + pad * 0.3)
+        for p in sr_prices:
+            y0 = min(y0, p - pad * 0.2)
+            y1 = max(y1, p + pad * 0.2)
         ax.set_ylim(y0, y1)
     ax.grid(True, color="#263238", linewidth=0.5, alpha=0.8)
 
@@ -180,7 +252,7 @@ def render_session_plan_chart(
     )
     fig.suptitle(
         f"BTC / ETH Plan  ·  15m entry + {htf_interval} structure  ·  "
-        "Fibo = Day High/Low (0=High)",
+        "TF S/R + Day Fibo (0=High)",
         color="#eceff1",
         fontsize=11,
         y=0.995,
@@ -196,6 +268,7 @@ def render_session_plan_chart(
                 interval="15m",
                 show_trade_box=True,
                 label_fib=True,
+                draw_sr=True,
             )
         else:
             axes[i][0].set_facecolor("#1a1d23")
@@ -209,7 +282,8 @@ def render_session_plan_chart(
                 c_htf,
                 interval=htf_interval,
                 show_trade_box=False,
-                label_fib=True,
+                label_fib=False,  # 4H 以結構 S/R 為主，Fibo 只留虛線
+                draw_sr=True,
             )
         else:
             axes[i][1].set_facecolor("#1a1d23")

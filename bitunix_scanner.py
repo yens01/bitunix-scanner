@@ -1226,13 +1226,40 @@ def build_plan_chart_png(plans: list[ChecklistResult]) -> bytes | None:
     return render_session_plan_chart(plans, candles_map, htf_interval=htf)
 
 
+def _plan_guide_html() -> str:
+    """Telegram plan 讀圖說明（與規劃圖配套）。"""
+    htf = (SESSION_PLAN_INTERVAL or "4h").upper()
+    return (
+        "📖 <b>讀圖說明</b>（配合上一張規劃圖）\n"
+        "\n"
+        "<b>① 左圖 15m＝進出</b>\n"
+        "• 綠 <b>S</b>＝近端支撐｜紅 <b>R</b>＝近端壓力\n"
+        "• 虛線＝今日高低 <b>Fibo</b>（0=高、1=低）\n"
+        "• 用途：看現價有沒有回到區／Fibo，再等 K 線反應\n"
+        "\n"
+        f"<b>② 右圖 {htf}＝結構</b>\n"
+        "• 綠 <b>S</b>／紅 <b>R</b>＝大週期支撐壓力（戰場）\n"
+        "• 用途：先看大區間站哪邊；卡在中間＝偏盤整，勿追\n"
+        "\n"
+        "<b>③ 怎麼一起用</b>\n"
+        f"1. 先看右圖 {htf}：大支撐～大壓力\n"
+        "2. 再看左圖 15m：回測到 Fibo 或近端 S／R\n"
+        "3. 才考慮文字卡「低點試多／高點試空」\n"
+        "\n"
+        "💡 <b>一句話</b>：4H 定戰場，15m 等回測到線再動手。\n"
+        "（兩圖 S／R 數字不同是正常的，週期不同。）\n"
+        "\n"
+        "⚠️ 參考非必進｜收盤破箱勿追｜自行確認風險"
+    )
+
+
 def notify_plan_with_chart(
     title: str,
     plans: list[ChecklistResult],
     *,
     chat_id: str | None = None,
 ) -> bool:
-    """先推文字卡，再推規劃圖（有圖才附）。"""
+    """文字卡 → 規劃圖 → 讀圖說明。"""
     msg = build_telegram_message(title, plans, kind="plan")
     ok_text = _telegram_send(msg, chat_id=chat_id)
     png = build_plan_chart_png(plans)
@@ -1241,7 +1268,8 @@ def notify_plan_with_chart(
         htf = (SESSION_PLAN_INTERVAL or "4h").upper()
         cap = (
             f"📊 {_esc(title)}\n"
-            f"左 15m 進出｜右 {htf} 結構｜Fibo=今日高低（0=高）"
+            f"左 15m 進出＋S/R｜右 {htf} 結構＋S/R｜虛線=今日Fibo\n"
+            "下一則＝讀圖說明"
         )
         ok_img = _telegram_send_photo(png, caption=cap, chat_id=chat_id)
         if ok_img:
@@ -1250,7 +1278,10 @@ def notify_plan_with_chart(
             print("  → 規劃圖推送失敗")
     else:
         print("  → 無規劃圖（略過；可 pip install matplotlib）")
-    return ok_text or ok_img
+    ok_guide = _telegram_send(_plan_guide_html(), chat_id=chat_id)
+    if ok_guide:
+        print("  → 已推送讀圖說明")
+    return ok_text or ok_img or ok_guide
 
 
 def load_telegram_offset(path: str = TELEGRAM_OFFSET_PATH) -> int:
@@ -2503,7 +2534,9 @@ def build_telegram_message(title: str, setups: list[ChecklistResult], *, kind: s
         ),
         "plan": (
             f"📘 <b>{_esc(title)}</b>\n🕐 {now}\n"
-            f"BTC／ETH・<b>{SESSION_PLAN_INTERVAL.upper()}</b> 日內規劃（參考，非必進）"
+            f"BTC／ETH・今日高低＋時段＋Fibo（參考，非必進）\n"
+            f"結構用 <b>{SESSION_PLAN_INTERVAL.upper()}</b>｜圖：左15m／右"
+            f"{SESSION_PLAN_INTERVAL.upper()}＋各自S/R"
         ),
     }.get(kind, f"<b>{_esc(title)}</b>\n🕐 {now}")
 
@@ -2512,7 +2545,13 @@ def build_telegram_message(title: str, setups: list[ChecklistResult], *, kind: s
     body = "\n\n————\n\n".join(cards)
     if len(setups) > 6:
         body += f"\n\n…另有 {len(setups) - 6} 檔未列出"
-    foot = "\n\n⚠️ 僅供規劃，請自行確認槓桿與風險"
+    if kind == "plan":
+        foot = (
+            "\n\n📌 接著會推：規劃圖＋讀圖說明"
+            "\n⚠️ 僅供規劃，請自行確認槓桿與風險"
+        )
+    else:
+        foot = "\n\n⚠️ 僅供規劃，請自行確認槓桿與風險"
     return f"{head}\n\n{body}{foot}"
 
 
