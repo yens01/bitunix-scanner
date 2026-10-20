@@ -1196,23 +1196,34 @@ def _telegram_send_photo(
 
 
 def build_plan_chart_png(plans: list[ChecklistResult]) -> bytes | None:
-    """抓 15m K 線畫日內規劃圖；失敗或無 matplotlib 回 None。"""
+    """抓 15m＋4H K 線畫日內規劃圖；失敗或無 matplotlib 回 None。"""
     try:
         from plan_chart import render_session_plan_chart
     except ImportError:
         return None
-    candles_map: dict[str, list] = {}
+    htf = (SESSION_PLAN_INTERVAL or "4h").lower()
+    candles_map: dict[str, dict[str, list]] = {}
     for r in plans:
+        pack: dict[str, list] = {}
         try:
-            raw = fetch_klines(r.symbol, SESSION_BOX_INTERVAL, limit=120)
-            candles = parse_klines(raw)
-            if len(candles) >= 20:
-                candles_map[r.symbol] = candles
+            raw15 = fetch_klines(r.symbol, SESSION_BOX_INTERVAL, limit=120)
+            c15 = parse_klines(raw15)
+            if len(c15) >= 20:
+                pack["15m"] = c15
         except Exception:
-            continue
+            pass
+        try:
+            raw_htf = fetch_klines(r.symbol, htf, limit=80)
+            c_htf = parse_klines(raw_htf)
+            if len(c_htf) >= 12:
+                pack[htf] = c_htf
+        except Exception:
+            pass
+        if pack:
+            candles_map[r.symbol] = pack
     if not candles_map:
         return None
-    return render_session_plan_chart(plans, candles_map)
+    return render_session_plan_chart(plans, candles_map, htf_interval=htf)
 
 
 def notify_plan_with_chart(
@@ -1227,7 +1238,11 @@ def notify_plan_with_chart(
     png = build_plan_chart_png(plans)
     ok_img = False
     if png:
-        cap = f"📊 {_esc(title)}\n15m + 今日高低 Fibo（0=高）"
+        htf = (SESSION_PLAN_INTERVAL or "4h").upper()
+        cap = (
+            f"📊 {_esc(title)}\n"
+            f"左 15m 進出｜右 {htf} 結構｜Fibo=今日高低（0=高）"
+        )
         ok_img = _telegram_send_photo(png, caption=cap, chat_id=chat_id)
         if ok_img:
             print("  → 已推送規劃圖")
@@ -3344,10 +3359,31 @@ def print_btc_eth_daily_plan(*, telegram: bool = False) -> list[ChecklistResult]
             with open(chart_path, "wb") as fp:
                 fp.write(png)
             print(color(f"規劃圖已存 → {chart_path}", "1;36"))
+            # CMD 無法嵌圖：用系統預設看圖程式開啟
+            try:
+                if sys.platform == "win32":
+                    os.startfile(chart_path)  # type: ignore[attr-defined]
+                elif sys.platform == "darwin":
+                    import subprocess
+
+                    subprocess.Popen(["open", chart_path])
+                else:
+                    import subprocess
+
+                    subprocess.Popen(["xdg-open", chart_path])
+                print(color("已用看圖程式開啟（CMD 本身無法內嵌圖片）", "1;36"))
+            except OSError as ex:
+                print(f"無法自動開圖：{ex}（請手動開啟檔案）")
         except OSError as ex:
             print(f"規劃圖存檔失敗: {ex}")
     else:
-        print(color("（無規劃圖：可 pip install matplotlib）", "2"))
+        print(
+            color(
+                "（無規劃圖：請用同一個 python 執行 "
+                "python -m pip install -r requirements.txt）",
+                "2",
+            )
+        )
     print()
     if telegram:
         title = f"BTC／ETH 日內規劃（手動 {tw.strftime('%H:%M')}）"
