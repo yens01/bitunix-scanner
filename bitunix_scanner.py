@@ -1229,7 +1229,7 @@ def build_plan_chart_png(plans: list[ChecklistResult]) -> bytes | None:
 def _plan_guide_plain() -> str:
     """一句話讀圖（重點）。"""
     htf = (SESSION_PLAN_INTERVAL or "4h").upper()
-    return f"綠S撐／紅R壓見上表｜右{htf}戰場→左15m到線再進｜破箱勿追"
+    return f"右{htf}戰場 → 左15m碰到🟢S／🔴R再進｜破箱勿追"
 
 
 def _plan_guide_html() -> str:
@@ -1284,99 +1284,129 @@ def _fetch_plan_sr_levels(
     return lv15, lv4h
 
 
-def _format_sr_bits(levels: list[tuple[str, float]], *, max_each: int = 2) -> str:
-    """綠S＝支撐、紅R＝壓力（各最多 max_each 檔，對齊圖上顏色）。"""
-    if not levels:
-        return "（無）"
+def _split_sr_levels(
+    levels: list[tuple[str, float]],
+    *,
+    max_each: int = 2,
+) -> tuple[list[tuple[str, float]], list[tuple[str, float]]]:
     supports = [(k, v) for k, v in levels if str(k).upper().startswith("S")][:max_each]
     resists = [(k, v) for k, v in levels if str(k).upper().startswith("R")][:max_each]
-    bits: list[str] = []
-    if supports:
-        bits.append("綠S " + " ".join(f"{k}={_px(v)}" for k, v in supports))
-    if resists:
-        bits.append("紅R " + " ".join(f"{k}={_px(v)}" for k, v in resists))
-    if not bits:
-        return "  ".join(f"{k}={_px(v)}" for k, v in levels[: max_each * 2])
-    return "｜".join(bits)
+    return supports, resists
+
+
+def _format_px_list(
+    levels: list[tuple[str, float]],
+    *,
+    html: bool = False,
+) -> str:
+    if not levels:
+        return "—"
+    if html:
+        return "  ".join(
+            f"{_esc(k)}=<code>{_esc(_px(v))}</code>" for k, v in levels
+        )
+    return "  ".join(f"{k}={_px(v)}" for k, v in levels)
+
+
+def _format_sr_tf_block(
+    label: str,
+    levels: list[tuple[str, float]],
+    *,
+    html: bool = False,
+) -> list[str]:
+    """單一週期：標題 + 🟢S 一行 + 🔴R 一行。"""
+    supports, resists = _split_sr_levels(levels)
+    if html:
+        return [
+            f"⏱ <b>{_esc(label)}</b>",
+            f"🟢S {_format_px_list(supports, html=True)}",
+            f"🔴R {_format_px_list(resists, html=True)}",
+        ]
+    return [
+        f"⏱ {label}",
+        f"🟢S {_format_px_list(supports)}",
+        f"🔴R {_format_px_list(resists)}",
+    ]
+
+
+def _plan_coin_block(r: ChecklistResult, *, html: bool = False) -> list[str]:
+    """單一幣種重點區塊（圖示分區）。"""
+    htf = (SESSION_PLAN_INTERVAL or "4h").upper()
+    name = r.symbol.replace("USDT", "")
+    bias = _plan_htf_bias_line(r)
+    lines: list[str] = []
+    if html:
+        lines.append(f"🪙 <b>{_esc(name)}</b> · {_esc(r.structure)}")
+        lines.append(f"📡 {_esc(bias)}")
+    else:
+        lines.append(f"🪙 {name} · {r.structure}")
+        lines.append(f"📡 {bias}")
+
+    edges = _session_box_edge_levels(r)
+    if edges:
+        _mid, le, ls, lt, se, ss, st = edges
+        if html:
+            lines.append(
+                f"🟢低多 進<code>{_esc(_px(le))}</code>  "
+                f"損<code>{_esc(_px(ls))}</code>  "
+                f"盈<code>{_esc(_px(lt))}</code>"
+            )
+            lines.append(
+                f"🔴高空 進<code>{_esc(_px(se))}</code>  "
+                f"損<code>{_esc(_px(ss))}</code>  "
+                f"盈<code>{_esc(_px(st))}</code>"
+            )
+        else:
+            lines.append(f"🟢低多 進{_px(le)}  損{_px(ls)}  盈{_px(lt)}")
+            lines.append(f"🔴高空 進{_px(se)}  損{_px(ss)}  盈{_px(st)}")
+    elif r.entry > 0 and r.stop > 0 and r.tp > 0:
+        rr = f"  RR{r.rr:.1f}" if r.rr else ""
+        if html:
+            lines.append(
+                f"🎯 進<code>{_esc(_px(r.entry))}</code>  "
+                f"損<code>{_esc(_px(r.stop))}</code>  "
+                f"盈<code>{_esc(_px(r.tp))}</code>{_esc(rr)}"
+            )
+        else:
+            lines.append(
+                f"🎯 進{_px(r.entry)}  損{_px(r.stop)}  盈{_px(r.tp)}{rr}"
+            )
+
+    span_lo = r.plan_day_lo if r.plan_day_lo > 0 else r.zone_lo
+    span_hi = r.plan_day_hi if r.plan_day_hi > r.plan_day_lo else r.zone_hi
+    if span_hi > span_lo > 0:
+        w = span_hi - span_lo
+        p382 = span_hi - w * 0.382
+        p50 = span_hi - w * 0.5
+        p618 = span_hi - w * 0.618
+        if html:
+            lines.append(
+                "📐 Fibo  "
+                f"0.382=<code>{_esc(_px(p382))}</code>  "
+                f"0.5=<code>{_esc(_px(p50))}</code>  "
+                f"0.618=<code>{_esc(_px(p618))}</code>"
+            )
+        else:
+            lines.append(
+                f"📐 Fibo  0.382={_px(p382)}  0.5={_px(p50)}  0.618={_px(p618)}"
+            )
+
+    lv15, lv4h = _fetch_plan_sr_levels(r.symbol)
+    lines.extend(_format_sr_tf_block("15m 進出", lv15, html=html))
+    lines.extend(_format_sr_tf_block(f"{htf} 戰場", lv4h, html=html))
+    return lines
 
 
 def _plan_levels_plain(plans: list[ChecklistResult]) -> str:
-    """重點數字：進出場＋中段 Fibo＋15m/4H 綠S紅R。"""
-    htf = (SESSION_PLAN_INTERVAL or "4h").upper()
-    blocks: list[str] = []
-    for r in plans:
-        name = r.symbol.replace("USDT", "")
-        lines: list[str] = [f"【{name}】{r.structure}｜{_plan_htf_bias_line(r)}"]
-        edges = _session_box_edge_levels(r)
-        if edges:
-            _mid, le, ls, lt, se, ss, st = edges
-            lines.append(f"低多 {_px(le)}／損{_px(ls)}／盈{_px(lt)}")
-            lines.append(f"高空 {_px(se)}／損{_px(ss)}／盈{_px(st)}")
-        elif r.entry > 0 and r.stop > 0 and r.tp > 0:
-            lines.append(
-                f"進{_px(r.entry)}／損{_px(r.stop)}／盈{_px(r.tp)}"
-                + (f" RR{r.rr:.1f}" if r.rr else "")
-            )
-        span_lo = r.plan_day_lo if r.plan_day_lo > 0 else r.zone_lo
-        span_hi = r.plan_day_hi if r.plan_day_hi > r.plan_day_lo else r.zone_hi
-        if span_hi > span_lo > 0:
-            w = span_hi - span_lo
-            lines.append(
-                f"Fibo 0.382={_px(span_hi - w * 0.382)} "
-                f"0.5={_px(span_hi - w * 0.5)} "
-                f"0.618={_px(span_hi - w * 0.618)}"
-            )
-        lv15, lv4h = _fetch_plan_sr_levels(r.symbol)
-        lines.append(f"15m {_format_sr_bits(lv15)}")
-        lines.append(f"{htf} {_format_sr_bits(lv4h)}")
-        blocks.append("\n".join(lines))
+    """重點數字（圖示分區，純文字）。"""
+    blocks = ["\n".join(_plan_coin_block(r, html=False)) for r in plans]
     return "\n\n".join(blocks)
 
 
 def _plan_levels_html(plans: list[ChecklistResult]) -> str:
-    """Telegram 重點：進出場＋中段 Fibo＋綠S／紅R。"""
-    htf = (SESSION_PLAN_INTERVAL or "4h").upper()
-    parts: list[str] = []
-    for r in plans:
-        name = _esc(r.symbol.replace("USDT", ""))
-        parts.append(
-            f"<b>{name}</b> {_esc(r.structure)}｜{_esc(_plan_htf_bias_line(r))}"
-        )
-        edges = _session_box_edge_levels(r)
-        if edges:
-            _mid, le, ls, lt, se, ss, st = edges
-            parts.append(
-                f"低多 <code>{_esc(_px(le))}</code>／"
-                f"損<code>{_esc(_px(ls))}</code>／"
-                f"盈<code>{_esc(_px(lt))}</code>"
-            )
-            parts.append(
-                f"高空 <code>{_esc(_px(se))}</code>／"
-                f"損<code>{_esc(_px(ss))}</code>／"
-                f"盈<code>{_esc(_px(st))}</code>"
-            )
-        elif r.entry > 0 and r.stop > 0 and r.tp > 0:
-            parts.append(
-                f"進<code>{_esc(_px(r.entry))}</code>／"
-                f"損<code>{_esc(_px(r.stop))}</code>／"
-                f"盈<code>{_esc(_px(r.tp))}</code>"
-                + (f" RR{r.rr:.1f}" if r.rr else "")
-            )
-        span_lo = r.plan_day_lo if r.plan_day_lo > 0 else r.zone_lo
-        span_hi = r.plan_day_hi if r.plan_day_hi > r.plan_day_lo else r.zone_hi
-        if span_hi > span_lo > 0:
-            w = span_hi - span_lo
-            parts.append(
-                "Fibo "
-                f"0.382=<code>{_esc(_px(span_hi - w * 0.382))}</code> "
-                f"0.5=<code>{_esc(_px(span_hi - w * 0.5))}</code> "
-                f"0.618=<code>{_esc(_px(span_hi - w * 0.618))}</code>"
-            )
-        lv15, lv4h = _fetch_plan_sr_levels(r.symbol)
-        parts.append(f"15m {_esc(_format_sr_bits(lv15))}")
-        parts.append(f"{htf} {_esc(_format_sr_bits(lv4h))}")
-        parts.append("")
-    return "\n".join(parts).rstrip()
+    """Telegram 重點（圖示分區）。"""
+    blocks = ["\n".join(_plan_coin_block(r, html=True)) for r in plans]
+    return "\n\n————\n\n".join(blocks)
 
 
 def _print_plan_action_summary(plans: list[ChecklistResult]) -> None:
@@ -1394,7 +1424,7 @@ def notify_plan_with_chart(
 ) -> bool:
     """一則重點數字＋一句讀圖 → 再推規劃圖。"""
     tw = now_tw().strftime("%m-%d %H:%M")
-    head = f"📘 <b>{_esc(title)}</b> · {tw}"
+    head = f"📘 <b>{_esc(title)}</b>\n🕐 {tw}"
     sess_bits: list[str] = []
     for r in plans:
         name = r.symbol.replace("USDT", "")
@@ -1402,20 +1432,20 @@ def notify_plan_with_chart(
             if not active:
                 continue
             sess_bits.append(
-                f"{_esc(name)}{_esc(sname)} "
+                f"{_esc(name)} {_esc(sname)} "
                 f"<code>{_esc(_px(lo))}</code>–<code>{_esc(_px(hi))}</code>"
             )
     body = head
     if sess_bits:
-        body += "\n" + "｜".join(sess_bits)
+        body += "\n🗓 進行中 " + " ｜ ".join(sess_bits)
     body += "\n\n" + _plan_levels_html(plans)
-    body += "\n" + _plan_guide_html()
+    body += "\n\n" + _plan_guide_html()
     ok_text = _telegram_send(body, chat_id=chat_id)
     png = build_plan_chart_png(plans)
     ok_img = False
     if png:
         htf = (SESSION_PLAN_INTERVAL or "4h").upper()
-        cap = f"📊 {_esc(title)}｜15m綠S紅R｜{htf}戰場｜虛線Fibo"
+        cap = f"📊 {_esc(title)}｜🟢S 🔴R｜左15m｜右{htf}"
         ok_img = _telegram_send_photo(png, caption=cap, chat_id=chat_id)
         if ok_img:
             print("  → 已推送規劃圖")
