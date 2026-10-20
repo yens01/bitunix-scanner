@@ -1226,31 +1226,170 @@ def build_plan_chart_png(plans: list[ChecklistResult]) -> bytes | None:
     return render_session_plan_chart(plans, candles_map, htf_interval=htf)
 
 
-def _plan_guide_html() -> str:
-    """Telegram plan 讀圖說明（與規劃圖配套）。"""
+def _plan_guide_plain() -> str:
+    """精簡讀圖說明（CMD）。"""
     htf = (SESSION_PLAN_INTERVAL or "4h").upper()
     return (
-        "📖 <b>讀圖說明</b>（配合上一張規劃圖）\n"
-        "\n"
-        "<b>① 左圖 15m＝進出</b>\n"
-        "• 綠 <b>S</b>＝近端支撐｜紅 <b>R</b>＝近端壓力\n"
-        "• 虛線＝今日高低 <b>Fibo</b>（0=高、1=低）\n"
-        "• 用途：看現價有沒有回到區／Fibo，再等 K 線反應\n"
-        "\n"
-        f"<b>② 右圖 {htf}＝結構</b>\n"
-        "• 綠 <b>S</b>／紅 <b>R</b>＝大週期支撐壓力（戰場）\n"
-        "• 用途：先看大區間站哪邊；卡在中間＝偏盤整，勿追\n"
-        "\n"
-        "<b>③ 怎麼一起用</b>\n"
-        f"1. 先看右圖 {htf}：大支撐～大壓力\n"
-        "2. 再看左圖 15m：回測到 Fibo 或近端 S／R\n"
-        "3. 才考慮文字卡「低點試多／高點試空」\n"
-        "\n"
-        "💡 <b>一句話</b>：4H 定戰場，15m 等回測到線再動手。\n"
-        "（兩圖 S／R 數字不同是正常的，週期不同。）\n"
-        "\n"
-        "⚠️ 參考非必進｜收盤破箱勿追｜自行確認風險"
+        f"左15m＝進出（近端S/R＋今日Fibo）｜右{htf}＝結構（大S/R）\n"
+        f"先看右圖戰場 → 再等左圖回測到線 → 才用下方進出場數字\n"
+        "一句話：4H 定戰場，15m 等到線再動手｜破箱勿追｜非必進"
     )
+
+
+def _plan_guide_html() -> str:
+    """精簡讀圖說明（Telegram）。"""
+    htf = (SESSION_PLAN_INTERVAL or "4h").upper()
+    return (
+        "📖 <b>讀圖</b>："
+        f"左15m進出（S/R＋Fibo）｜右{htf}結構（大S/R）\n"
+        "先看右圖戰場 → 左圖回測到線 → 再用數字進出場\n"
+        "💡 4H定戰場，15m等到線｜破箱勿追｜非必進"
+    )
+
+
+def _print_plan_guide() -> None:
+    """CMD 印出精簡讀圖說明。"""
+    print(color("── 讀圖 ──", "1;36"))
+    for line in _plan_guide_plain().splitlines():
+        print(color(line, "1;33") if line.startswith("一句話") else line)
+    print()
+
+
+def _fetch_plan_sr_levels(
+    symbol: str,
+) -> tuple[list[tuple[str, float]], list[tuple[str, float]]]:
+    """
+    與規劃圖同一套：回傳 (15m_S/R標籤價, 4H_S/R標籤價)
+    例: [("S1", 81695.0), ("R1", 82143.0)], [...]
+    """
+    try:
+        from plan_chart import _zones_from_candles
+    except ImportError:
+        return [], []
+
+    def _labels(candles: list, prefix: str) -> list[tuple[str, float]]:
+        supports, resists = _zones_from_candles(candles, max_n=3)
+        out: list[tuple[str, float]] = []
+        for i, z in enumerate(supports, 1):
+            mid = (float(z.lo) + float(z.hi)) / 2
+            out.append((f"S{i}", mid))
+        for i, z in enumerate(resists, 1):
+            mid = (float(z.lo) + float(z.hi)) / 2
+            out.append((f"R{i}", mid))
+        return out
+
+    lv15: list[tuple[str, float]] = []
+    lv4h: list[tuple[str, float]] = []
+    htf = (SESSION_PLAN_INTERVAL or "4h").lower()
+    try:
+        c15 = parse_klines(fetch_klines(symbol, SESSION_BOX_INTERVAL, limit=120))
+        if len(c15) >= 30:
+            lv15 = _labels(c15, "15m")
+    except Exception:
+        pass
+    try:
+        c4 = parse_klines(fetch_klines(symbol, htf, limit=80))
+        if len(c4) >= 30:
+            lv4h = _labels(c4, htf)
+    except Exception:
+        pass
+    return lv15, lv4h
+
+
+def _format_sr_bits(levels: list[tuple[str, float]]) -> str:
+    if not levels:
+        return "（無）"
+    return "  ".join(f"{k}={_px(v)}" for k, v in levels)
+
+
+def _plan_levels_plain(plans: list[ChecklistResult]) -> str:
+    """純文字：進出場＋Fibo＋15m/4H S/R（高週期已在精簡卡，此處不重複）。"""
+    htf = (SESSION_PLAN_INTERVAL or "4h").upper()
+    blocks: list[str] = []
+    for r in plans:
+        name = r.symbol.replace("USDT", "")
+        lines: list[str] = [f"【{name}】{r.structure}"]
+        edges = _session_box_edge_levels(r)
+        if edges:
+            _mid, le, ls, lt, se, ss, st = edges
+            lines.append(f"低多  進{_px(le)}  損{_px(ls)}  盈{_px(lt)}")
+            lines.append(f"高空  進{_px(se)}  損{_px(ss)}  盈{_px(st)}")
+        elif r.entry > 0 and r.stop > 0 and r.tp > 0:
+            lines.append(
+                f"進{_px(r.entry)}  損{_px(r.stop)}  盈{_px(r.tp)}"
+                + (f"  RR{r.rr:.1f}" if r.rr else "")
+            )
+        span_lo = r.plan_day_lo if r.plan_day_lo > 0 else r.zone_lo
+        span_hi = r.plan_day_hi if r.plan_day_hi > r.plan_day_lo else r.zone_hi
+        if span_hi > span_lo > 0:
+            w = span_hi - span_lo
+            lines.append(
+                f"Fibo  0={_px(span_hi)}  "
+                f"0.382={_px(span_hi - w * 0.382)}  "
+                f"0.5={_px(span_hi - w * 0.5)}  "
+                f"0.618={_px(span_hi - w * 0.618)}  "
+                f"1={_px(span_lo)}"
+            )
+        lv15, lv4h = _fetch_plan_sr_levels(r.symbol)
+        lines.append(f"15m  {_format_sr_bits(lv15)}")
+        lines.append(f"{htf}  {_format_sr_bits(lv4h)}")
+        blocks.append("\n".join(lines))
+    return "\n\n".join(blocks)
+
+
+def _plan_levels_html(plans: list[ChecklistResult]) -> str:
+    """Telegram：進出場＋Fibo＋S/R 數字。"""
+    htf = (SESSION_PLAN_INTERVAL or "4h").upper()
+    parts: list[str] = ["📐 <b>關鍵數字</b>", ""]
+    for r in plans:
+        name = _esc(r.symbol.replace("USDT", ""))
+        parts.append(f"<b>{name}</b> · {_esc(r.structure)}")
+        edges = _session_box_edge_levels(r)
+        if edges:
+            _mid, le, ls, lt, se, ss, st = edges
+            parts.append(
+                f"低多 進<code>{_esc(_px(le))}</code> "
+                f"損<code>{_esc(_px(ls))}</code> "
+                f"盈<code>{_esc(_px(lt))}</code>"
+            )
+            parts.append(
+                f"高空 進<code>{_esc(_px(se))}</code> "
+                f"損<code>{_esc(_px(ss))}</code> "
+                f"盈<code>{_esc(_px(st))}</code>"
+            )
+        elif r.entry > 0 and r.stop > 0 and r.tp > 0:
+            parts.append(
+                f"進<code>{_esc(_px(r.entry))}</code> "
+                f"損<code>{_esc(_px(r.stop))}</code> "
+                f"盈<code>{_esc(_px(r.tp))}</code>"
+                + (f" RR{r.rr:.1f}" if r.rr else "")
+            )
+        span_lo = r.plan_day_lo if r.plan_day_lo > 0 else r.zone_lo
+        span_hi = r.plan_day_hi if r.plan_day_hi > r.plan_day_lo else r.zone_hi
+        if span_hi > span_lo > 0:
+            w = span_hi - span_lo
+            parts.append(
+                "Fibo "
+                f"0=<code>{_esc(_px(span_hi))}</code> "
+                f"0.382=<code>{_esc(_px(span_hi - w * 0.382))}</code> "
+                f"0.5=<code>{_esc(_px(span_hi - w * 0.5))}</code> "
+                f"0.618=<code>{_esc(_px(span_hi - w * 0.618))}</code> "
+                f"1=<code>{_esc(_px(span_lo))}</code>"
+            )
+        lv15, lv4h = _fetch_plan_sr_levels(r.symbol)
+        parts.append(f"15m <code>{_esc(_format_sr_bits(lv15))}</code>")
+        parts.append(f"{htf} <code>{_esc(_format_sr_bits(lv4h))}</code>")
+        # TG 路徑沒有精簡卡，高週期放這裡一次
+        parts.append(f"高週期 {_esc(_plan_htf_bias_line(r))}")
+        parts.append("")
+    return "\n".join(parts).rstrip()
+
+
+def _print_plan_action_summary(plans: list[ChecklistResult]) -> None:
+    """CMD：進出場／Fibo／S/R 數字（單一區塊）。"""
+    print(color("══ 關鍵數字 ══", "1;36"))
+    print(_plan_levels_plain(plans))
+    print()
 
 
 def notify_plan_with_chart(
@@ -1259,18 +1398,33 @@ def notify_plan_with_chart(
     *,
     chat_id: str | None = None,
 ) -> bool:
-    """文字卡 → 規劃圖 → 讀圖說明。"""
-    msg = build_telegram_message(title, plans, kind="plan")
-    ok_text = _telegram_send(msg, chat_id=chat_id)
+    """一則：進行中時段＋關鍵數字＋短讀圖 → 再推規劃圖（不重貼完整卡）。"""
+    tw = now_tw().strftime("%m-%d %H:%M")
+    head = (
+        f"📘 <b>{_esc(title)}</b>\n🕐 {tw}\n"
+        f"結構 {SESSION_PLAN_INTERVAL.upper()}｜參考非必進"
+    )
+    sess_bits: list[str] = []
+    for r in plans:
+        name = r.symbol.replace("USDT", "")
+        for sname, lo, hi, active in r.plan_session_hl or []:
+            if not active:
+                continue
+            sess_bits.append(
+                f"{_esc(name)} {_esc(sname)} "
+                f"<code>{_esc(_px(lo))}</code>–<code>{_esc(_px(hi))}</code>"
+            )
+    body = head
+    if sess_bits:
+        body += "\n進行中：" + " ｜ ".join(sess_bits)
+    body += "\n\n" + _plan_levels_html(plans)
+    body += "\n\n" + _plan_guide_html()
+    ok_text = _telegram_send(body, chat_id=chat_id)
     png = build_plan_chart_png(plans)
     ok_img = False
     if png:
         htf = (SESSION_PLAN_INTERVAL or "4h").upper()
-        cap = (
-            f"📊 {_esc(title)}\n"
-            f"左 15m 進出＋S/R｜右 {htf} 結構＋S/R｜虛線=今日Fibo\n"
-            "下一則＝讀圖說明"
-        )
+        cap = f"📊 {_esc(title)}｜左15m｜右{htf}｜虛線Fibo"
         ok_img = _telegram_send_photo(png, caption=cap, chat_id=chat_id)
         if ok_img:
             print("  → 已推送規劃圖")
@@ -1278,10 +1432,7 @@ def notify_plan_with_chart(
             print("  → 規劃圖推送失敗")
     else:
         print("  → 無規劃圖（略過；可 pip install matplotlib）")
-    ok_guide = _telegram_send(_plan_guide_html(), chat_id=chat_id)
-    if ok_guide:
-        print("  → 已推送讀圖說明")
-    return ok_text or ok_img or ok_guide
+    return bool(ok_text or ok_img)
 
 
 def load_telegram_offset(path: str = TELEGRAM_OFFSET_PATH) -> int:
@@ -1460,17 +1611,64 @@ def build_alt_watchlist_message(
         bits = [f"<b>{_esc(base)}</b>", f"{direction}"]
         if tag:
             bits.append(tag)
-        if r.rr > 0 and (r.trigger_ready or getattr(r, "fade_ready", False)):
+        if r.rr > 0 and (
+            r.trigger_ready
+            or getattr(r, "fade_ready", False)
+            or r.waiting_retest
+        ):
             bits.append(f"RR{r.rr:.1f}")
         bits.append(f"分{r.setup_score:.0f}")
         if r.waiting_retest and r.zone_lo and r.zone_hi:
-            gap = zone_distance_pct(r, sig_map[r.symbol].last if r.symbol in sig_map else r.entry)
+            gap = zone_distance_pct(
+                r, sig_map[r.symbol].last if r.symbol in sig_map else r.entry
+            )
             if gap < 50:
                 bits.append(f"距區{gap:.1f}%")
         return " · ".join(bits)
 
+    def _levels_block(r: ChecklistResult, *, plan_only: bool = False) -> list[str]:
+        """進場／止損／止盈；等回測標「計畫價」。"""
+        out: list[str] = []
+        has_trade = r.entry > 0 and r.stop > 0 and r.tp > 0
+        if has_trade:
+            lab = "計畫進場" if (plan_only or r.waiting_retest) else "進場"
+            out.append(
+                f"　{lab} <code>{_esc(_px(r.entry))}</code>"
+                f"  止損 <code>{_esc(_px(r.stop))}</code>"
+                f"  止盈 <code>{_esc(_px(r.tp))}</code>"
+            )
+            risk_pct = abs(r.entry - r.stop) / r.entry * 100 if r.entry else 0
+            extra = []
+            if r.rr > 0:
+                extra.append(f"RR {r.rr:.1f}")
+            if risk_pct > 0:
+                extra.append(f"風險 {risk_pct:.2f}%")
+            if extra:
+                out.append("　" + " ｜ ".join(extra))
+        elif r.zone_lo > 0 and r.zone_hi >= r.zone_lo:
+            zlab = "回測區" if r.waiting_retest else "觀察區"
+            out.append(
+                f"　{zlab} <code>{_esc(_px(r.zone_lo))}</code>–"
+                f"<code>{_esc(_px(r.zone_hi))}</code>"
+                "（尚未形成完整進出場）"
+            )
+        else:
+            out.append("　進出場未齊（可傳幣名看詳情）")
+        return out
+
+    def _emit(
+        emoji: str,
+        r: ChecklistResult,
+        direction: str,
+        *,
+        tag: str,
+        plan_only: bool = False,
+    ) -> None:
+        lines.append(f"{emoji} {_line(r, direction, tag=tag)}")
+        lines.extend(_levels_block(r, plan_only=plan_only))
+
     lines: list[str] = [
-        f"⭐ <b>小幣關注清單</b>",
+        "⭐ <b>小幣關注清單</b>",
         f"🕐 {tw} ｜ {_esc(interval)} ｜ 池 {len(pool)} 檔",
         "",
     ]
@@ -1484,24 +1682,24 @@ def build_alt_watchlist_message(
         lines.append("<b>✅ 可進</b>")
         for r, d, _ in go:
             emoji = "🟢" if d == "多" else "🔴"
-            lines.append(f"{emoji} {_line(r, f'做{d}', tag='可進')}")
+            _emit(emoji, r, f"做{d}", tag="可進")
         lines.append("")
     if fade:
         lines.append("<b>🔻 日空見頂・空</b>")
         for r, d, _ in fade:
-            lines.append(f"🔴 {_line(r, f'做{d}', tag='見頂')}")
+            _emit("🔴", r, f"做{d}", tag="見頂")
         lines.append("")
     if wait:
-        lines.append("<b>⏳ 等回測</b>")
+        lines.append("<b>⏳ 等回測</b>（價為計畫參考，到區再確認）")
         for r, d, _ in wait:
             emoji = "🟢" if d == "多" else "🔴"
-            lines.append(f"{emoji} {_line(r, f'偏{d}', tag='等回測')}")
+            _emit(emoji, r, f"偏{d}", tag="等回測", plan_only=True)
         lines.append("")
     if watch:
         lines.append("<b>👀 方向關注</b>")
         for r, d, _ in watch:
             emoji = "🟢" if d == "多" else "🔴"
-            lines.append(f"{emoji} {_line(r, f'偏{d}', tag='關注')}")
+            _emit(emoji, r, f"偏{d}", tag="關注", plan_only=True)
         lines.append("")
 
     if not (go or fade or wait or watch):
@@ -1509,7 +1707,8 @@ def build_alt_watchlist_message(
         lines.append("可稍後再傳 <code>小幣推薦</code>，或直接查幣種。")
     else:
         lines.append("傳幣名可看詳情（例 <code>MAGIC</code>）")
-        lines.append("⚠️ 關注清單非即時下單建議｜自行確認風險")
+        lines.append("等回測價＝計畫參考，到區＋反應再進｜非即時下單建議")
+        lines.append("⚠️ 自行確認槓桿與風險")
 
     return "\n".join(lines).rstrip()
 
@@ -2094,12 +2293,19 @@ def _fill_trading_session_hl(r: ChecklistResult, candles: list) -> None:
     r.plan_session_hl = rows
 
 
-def _format_session_hl_lines(r: ChecklistResult, *, html: bool = False) -> list[str]:
+def _format_session_hl_lines(
+    r: ChecklistResult,
+    *,
+    html: bool = False,
+    active_only: bool = False,
+) -> list[str]:
     """規劃卡用：三大盤高低文字列。"""
     if not r.plan_session_hl:
         return []
     out: list[str] = []
     for name, lo, hi, active in r.plan_session_hl:
+        if active_only and not active:
+            continue
         w = hi - lo
         wtxt = f"{w:.0f}點" if w >= 20 else f"{w:.2f}點"
         mark = "◀進行中" if active else ""
@@ -2290,8 +2496,11 @@ def format_telegram_card(r: ChecklistResult, *, kind: str) -> str:
     return "\n".join(lines)
 
 
-def format_telegram_plan_card(r: ChecklistResult) -> str:
-    """4H 日內規劃卡：盤整短卡；有方向＋回測區才展開進出場。"""
+def format_telegram_plan_card(r: ChecklistResult, *, slim: bool = True) -> str:
+    """
+    日內規劃卡。
+    slim=True（預設）：只留箱／進行中時段／高週期；進出場與 Fibo 改由關鍵數字訊息給。
+    """
     group = "大幣" if _is_major(r.symbol) else "山寨"
     htf = _esc(_plan_htf_bias_line(r))
     zone = _plan_zone_line(r, html=True)
@@ -2307,34 +2516,35 @@ def format_telegram_plan_card(r: ChecklistResult) -> str:
             lines.append(day_line)
         if zone:
             lines.append(zone)
-        sess = _format_session_hl_lines(r, html=True)
+        sess = _format_session_hl_lines(r, html=True, active_only=slim)
         if sess:
             lines.append("—— 時段高低 ——")
             lines.extend(sess)
-        edges = _session_box_edge_levels(r)
-        if edges:
-            _mid, le, ls, lt, se, ss, st = edges
-            lines.append(
-                f"低點試多 入場 <code>{_esc(_px(le))}</code> "
-                f"停損 <code>{_esc(_px(ls))}</code> "
-                f"止盈高 <code>{_esc(_px(lt))}</code>"
-            )
-            lines.append(
-                f"高點試空 入場 <code>{_esc(_px(se))}</code> "
-                f"停損 <code>{_esc(_px(ss))}</code> "
-                f"止盈低 <code>{_esc(_px(st))}</code>"
-            )
-        fibo = _format_plan_fibo_lines(r, html=True)
-        if fibo:
-            lines.extend(fibo)
+        if not slim:
+            edges = _session_box_edge_levels(r)
+            if edges:
+                _mid, le, ls, lt, se, ss, st = edges
+                lines.append(
+                    f"低點試多 入場 <code>{_esc(_px(le))}</code> "
+                    f"停損 <code>{_esc(_px(ls))}</code> "
+                    f"止盈高 <code>{_esc(_px(lt))}</code>"
+                )
+                lines.append(
+                    f"高點試空 入場 <code>{_esc(_px(se))}</code> "
+                    f"停損 <code>{_esc(_px(ss))}</code> "
+                    f"止盈低 <code>{_esc(_px(st))}</code>"
+                )
+            fibo = _format_plan_fibo_lines(r, html=True)
+            if fibo:
+                lines.extend(fibo)
         lines.append(f"高週期 {htf}")
         if any(
             tag in (r.note or "") or tag in (r.mtf_note or "")
             for tag in ("禁逆日線", "做多需日線", "做多需4H", "做多未齊")
         ):
             lines.append("🚫 做多未齊日／4H・只看箱")
-        lines.append("🚫 收盤破箱勿追｜依進行中時段高低操作")
-        lines.append("備註: 今日＋時段高低＋Fibo參考，非必進")
+        if not slim:
+            lines.append("🚫 收盤破箱勿追｜依進行中時段高低操作")
         return "\n".join(lines)
 
     if r.side == "long" or r.structure == "偏多":
@@ -2359,30 +2569,32 @@ def format_telegram_plan_card(r: ChecklistResult) -> str:
     ]
     if zone:
         lines.append(zone)
-    sess = _format_session_hl_lines(r, html=True)
+    sess = _format_session_hl_lines(r, html=True, active_only=slim)
     if sess:
         lines.append("—— 時段高低 ——")
         lines.extend(sess)
-    fibo = _format_plan_fibo_lines(r, html=True)
-    if fibo:
-        lines.extend(fibo)
+    if not slim:
+        fibo = _format_plan_fibo_lines(r, html=True)
+        if fibo:
+            lines.extend(fibo)
     lines.append(f"高週期 {htf}")
 
-    if full:
+    if slim:
+        if ban:
+            lines.append(ban)
+        return "\n".join(lines)
+    elif full:
         risk_pct = abs(r.entry - r.stop) / r.entry * 100
         reward_pct = abs(r.tp - r.entry) / r.entry * 100 if r.tp else 0
         lines.append(f"計畫入場 <code>{_esc(_px(r.entry))}</code>")
         lines.append(f"計畫停損 <code>{_esc(_px(r.stop))}</code>  （約 {risk_pct:.2f}%）")
         lines.append(f"計畫止盈 <code>{_esc(_px(r.tp))}</code>  （約 {reward_pct:.2f}%）")
         lines.append(f"RR <b>{r.rr:.1f}</b> ｜ 流程 {r.workflow_passed}/11 ｜ 分 {r.setup_score:.0f}")
-        note = _esc(r.missing_steps or r.note or "條件齊再進")
     else:
         lines.append("進出場: 等回測到區後再給完整計畫")
-        note = "有方向但尚未到回測區，先看上下沿"
 
     if ban:
         lines.append(ban)
-    lines.append(f"備註: {note}")
     return "\n".join(lines)
 
 
@@ -2431,7 +2643,8 @@ def format_console_card(r: ChecklistResult, *, kind: str) -> str:
     return "\n".join(lines)
 
 
-def format_console_plan_card(r: ChecklistResult) -> str:
+def format_console_plan_card(r: ChecklistResult, *, slim: bool = True) -> str:
+    """slim：箱＋進行中時段＋高週期；進出場／Fibo／S/R 交給關鍵數字區塊。"""
     htf = _plan_htf_bias_line(r)
     zone = _plan_zone_line(r, html=False)
     full = _plan_show_full_levels(r)
@@ -2446,22 +2659,26 @@ def format_console_plan_card(r: ChecklistResult) -> str:
             lines.append(f"  │ {day_line}")
         if zone:
             lines.append(f"  │ {zone}")
-        for sline in _format_session_hl_lines(r, html=False):
+        for sline in _format_session_hl_lines(r, html=False, active_only=slim):
             lines.append(f"  │ {sline}")
-        edges = _session_box_edge_levels(r)
-        if edges:
-            _mid, le, ls, lt, se, ss, st = edges
-            lines.append(f"  │ 低點多 {_px(le)} / 停 {_px(ls)} / 盈高 {_px(lt)}")
-            lines.append(f"  │ 高點空 {_px(se)} / 停 {_px(ss)} / 盈低 {_px(st)}")
-        for fl in _format_plan_fibo_lines(r, html=False):
-            lines.append(f"  │ {fl}")
+        if not slim:
+            edges = _session_box_edge_levels(r)
+            if edges:
+                _mid, le, ls, lt, se, ss, st = edges
+                lines.append(f"  │ 低點多 {_px(le)} / 停 {_px(ls)} / 盈高 {_px(lt)}")
+                lines.append(f"  │ 高點空 {_px(se)} / 停 {_px(ss)} / 盈低 {_px(st)}")
+            for fl in _format_plan_fibo_lines(r, html=False):
+                lines.append(f"  │ {fl}")
         lines.append(f"  │ 高週期 {htf}")
         if any(
             tag in (r.note or "") or tag in (r.mtf_note or "")
             for tag in ("禁逆日線", "做多需日線", "做多需4H", "做多未齊")
         ):
             lines.append("  │ 做多未齊日／4H・只看箱")
-        lines.append("  └ 收盤破箱勿追｜依進行中時段高低操作")
+        if slim:
+            lines[-1] = "  └" + lines[-1][3:] if lines[-1].startswith("  │") else lines[-1]
+        else:
+            lines.append("  └ 收盤破箱勿追｜依進行中時段高低操作")
         return "\n".join(lines)
 
     side_txt = (
@@ -2479,12 +2696,15 @@ def format_console_plan_card(r: ChecklistResult) -> str:
     ]
     if zone:
         lines.append(f"  │ {zone}")
-    for sline in _format_session_hl_lines(r, html=False):
+    for sline in _format_session_hl_lines(r, html=False, active_only=slim):
         lines.append(f"  │ {sline}")
-    for fl in _format_plan_fibo_lines(r, html=False):
-        lines.append(f"  │ {fl}")
+    if not slim:
+        for fl in _format_plan_fibo_lines(r, html=False):
+            lines.append(f"  │ {fl}")
     lines.append(f"  │ 高週期 {htf}")
-    if full:
+    if slim:
+        lines[-1] = "  └" + lines[-1][3:] if lines[-1].startswith("  │") else lines[-1]
+    elif full:
         risk_pct = abs(r.entry - r.stop) / r.entry * 100
         lines.append(f"  │ 入場 {_px(r.entry)}")
         lines.append(f"  │ 停損 {_px(r.stop)}  （約 {risk_pct:.2f}%）")
@@ -2534,9 +2754,7 @@ def build_telegram_message(title: str, setups: list[ChecklistResult], *, kind: s
         ),
         "plan": (
             f"📘 <b>{_esc(title)}</b>\n🕐 {now}\n"
-            f"BTC／ETH・今日高低＋時段＋Fibo（參考，非必進）\n"
-            f"結構用 <b>{SESSION_PLAN_INTERVAL.upper()}</b>｜圖：左15m／右"
-            f"{SESSION_PLAN_INTERVAL.upper()}＋各自S/R"
+            f"結構 <b>{SESSION_PLAN_INTERVAL.upper()}</b>｜參考非必進"
         ),
     }.get(kind, f"<b>{_esc(title)}</b>\n🕐 {now}")
 
@@ -2545,13 +2763,7 @@ def build_telegram_message(title: str, setups: list[ChecklistResult], *, kind: s
     body = "\n\n————\n\n".join(cards)
     if len(setups) > 6:
         body += f"\n\n…另有 {len(setups) - 6} 檔未列出"
-    if kind == "plan":
-        foot = (
-            "\n\n📌 接著會推：規劃圖＋讀圖說明"
-            "\n⚠️ 僅供規劃，請自行確認槓桿與風險"
-        )
-    else:
-        foot = "\n\n⚠️ 僅供規劃，請自行確認槓桿與風險"
+    foot = "\n\n⚠️ 僅供規劃，請自行確認槓桿與風險"
     return f"{head}\n\n{body}{foot}"
 
 
@@ -3378,17 +3590,16 @@ def print_btc_eth_daily_plan(*, telegram: bool = False) -> list[ChecklistResult]
         )
     )
     print(
-        f"結構用 {SESSION_PLAN_INTERVAL.upper()}｜日內箱用今日高低（{SESSION_BOX_INTERVAL}）"
-        f"｜附Fibo｜參考非必進"
+        f"結構 {SESSION_PLAN_INTERVAL.upper()}｜箱 {SESSION_BOX_INTERVAL}"
+        f"｜數字在圖後｜參考非必進"
     )
     plans = _build_btc_eth_plans()
     if not plans:
         print(color("無法取得 BTC／ETH 規劃資料", "1;31"))
         return []
     for r in plans:
-        print(format_console_plan_card(r))
+        print(format_console_plan_card(r, slim=True))
         print()
-    print(color("破今日高低勿追｜區間內高拋低吸｜自行確認槓桿與風險", "2"))
     png = build_plan_chart_png(plans)
     if png:
         chart_path = os.path.join(
@@ -3424,6 +3635,9 @@ def print_btc_eth_daily_plan(*, telegram: bool = False) -> list[ChecklistResult]
             )
         )
     print()
+    # 圖出來後：先印數字（S/R／Fibo／進出場），再印讀圖說明
+    _print_plan_action_summary(plans)
+    _print_plan_guide()
     if telegram:
         title = f"BTC／ETH 日內規劃（手動 {tw.strftime('%H:%M')}）"
         notify_plan_with_chart(title, plans)
