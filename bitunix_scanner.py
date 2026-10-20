@@ -1678,7 +1678,7 @@ def poll_telegram_queries(
                 tw = now_tw().strftime("%m-%d %H:%M")
                 body = (
                     f"📋 <b>BTC／ETH 日內規劃</b>\n🕐 {tw}\n"
-                    f"BTC／ETH・今日高低＋亞／倫／紐時段（參考，非必進）\n\n"
+                    f"今日高低＋時段高低＋Fibo（參考，非必進）\n\n"
                     + "\n\n".join(format_telegram_plan_card(r) for r in plans)
                     + "\n\n⚠️ 收盤破箱勿追｜做多需日／4H同向｜自行確認槓桿與風險"
                 )
@@ -1862,6 +1862,46 @@ def _plan_day_hl_line(r: ChecklistResult, *, html: bool = True) -> str:
     if html:
         return f"今日高低（約{_esc(w)}） <code>{_esc(lo)}</code>–<code>{_esc(hi)}</code>"
     return f"今日高低（約{w}） {lo}–{hi}"
+
+
+def _plan_fibo_span(r: ChecklistResult) -> tuple[float, float] | None:
+    """日內 Fibo 用今日高低；沒有則用操作箱。"""
+    if r.plan_day_lo > 0 and r.plan_day_hi > r.plan_day_lo:
+        return r.plan_day_lo, r.plan_day_hi
+    if r.zone_lo > 0 and r.zone_hi > r.zone_lo:
+        return r.zone_lo, r.zone_hi
+    return None
+
+
+def _format_plan_fibo_lines(r: ChecklistResult, *, html: bool = True) -> list[str]:
+    """
+    以今日高低當推力：0=高、1=低（與手動大跌後回撤畫法一致）。
+    列出 0.382／0.5／0.618 作日內回測觀察位（參考，非必進）。
+    """
+    span = _plan_fibo_span(r)
+    if not span:
+        return []
+    lo, hi = span
+    w = hi - lo
+    if w <= 0:
+        return []
+    levels = (
+        ("0", hi),
+        ("0.382", hi - w * 0.382),
+        ("0.5", hi - w * 0.5),
+        ("0.618", hi - w * 0.618),
+        ("1", lo),
+    )
+    out: list[str] = []
+    if html:
+        out.append("—— Fibo（今日高低・0=高）——")
+        for name, px in levels:
+            out.append(f"{name} <code>{_esc(_px(px))}</code>")
+    else:
+        out.append("Fibo（今日高低・0=高）")
+        bits = "  ".join(f"{name}={_px(px)}" for name, px in levels)
+        out.append(bits)
+    return out
 
 
 def _plan_zone_line(r: ChecklistResult, *, html: bool = True) -> str:
@@ -2143,6 +2183,9 @@ def format_telegram_plan_card(r: ChecklistResult) -> str:
                 f"停損 <code>{_esc(_px(ss))}</code> "
                 f"止盈低 <code>{_esc(_px(st))}</code>"
             )
+        fibo = _format_plan_fibo_lines(r, html=True)
+        if fibo:
+            lines.extend(fibo)
         lines.append(f"高週期 {htf}")
         if any(
             tag in (r.note or "") or tag in (r.mtf_note or "")
@@ -2150,7 +2193,7 @@ def format_telegram_plan_card(r: ChecklistResult) -> str:
         ):
             lines.append("🚫 做多未齊日／4H・只看箱")
         lines.append("🚫 收盤破箱勿追｜依進行中時段高低操作")
-        lines.append("備註: 今日＋亞/倫/紐時段高低參考，非必進")
+        lines.append("備註: 今日＋時段高低＋Fibo參考，非必進")
         return "\n".join(lines)
 
     if r.side == "long" or r.structure == "偏多":
@@ -2179,6 +2222,9 @@ def format_telegram_plan_card(r: ChecklistResult) -> str:
     if sess:
         lines.append("—— 時段高低 ——")
         lines.extend(sess)
+    fibo = _format_plan_fibo_lines(r, html=True)
+    if fibo:
+        lines.extend(fibo)
     lines.append(f"高週期 {htf}")
 
     if full:
@@ -2266,6 +2312,8 @@ def format_console_plan_card(r: ChecklistResult) -> str:
             _mid, le, ls, lt, se, ss, st = edges
             lines.append(f"  │ 低點多 {_px(le)} / 停 {_px(ls)} / 盈高 {_px(lt)}")
             lines.append(f"  │ 高點空 {_px(se)} / 停 {_px(ss)} / 盈低 {_px(st)}")
+        for fl in _format_plan_fibo_lines(r, html=False):
+            lines.append(f"  │ {fl}")
         lines.append(f"  │ 高週期 {htf}")
         if any(
             tag in (r.note or "") or tag in (r.mtf_note or "")
@@ -2292,6 +2340,8 @@ def format_console_plan_card(r: ChecklistResult) -> str:
         lines.append(f"  │ {zone}")
     for sline in _format_session_hl_lines(r, html=False):
         lines.append(f"  │ {sline}")
+    for fl in _format_plan_fibo_lines(r, html=False):
+        lines.append(f"  │ {fl}")
     lines.append(f"  │ 高週期 {htf}")
     if full:
         risk_pct = abs(r.entry - r.stop) / r.entry * 100
@@ -3179,7 +3229,8 @@ def print_btc_eth_daily_plan(*, telegram: bool = False) -> list[ChecklistResult]
         )
     )
     print(
-        f"結構用 {SESSION_PLAN_INTERVAL.upper()}｜日內箱用今日高低（{SESSION_BOX_INTERVAL}）｜參考非必進"
+        f"結構用 {SESSION_PLAN_INTERVAL.upper()}｜日內箱用今日高低（{SESSION_BOX_INTERVAL}）"
+        f"｜附Fibo｜參考非必進"
     )
     plans = _build_btc_eth_plans()
     if not plans:
