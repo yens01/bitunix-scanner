@@ -1174,6 +1174,20 @@ _TG_CMD_ALIASES: dict[str, str] = {
     "日內規劃": "PLAN",
     "日内规划": "PLAN",
     "P": "PLAN",
+    # 小幣關注清單（多／空）
+    "ALTS": "ALTS",
+    "ALT": "ALTS",
+    "RECO": "ALTS",
+    "PICKS": "ALTS",
+    "WATCH": "ALTS",
+    "小幣推薦": "ALTS",
+    "小币推荐": "ALTS",
+    "小幣": "ALTS",
+    "小币": "ALTS",
+    "推薦": "ALTS",
+    "推荐": "ALTS",
+    "關注": "ALTS",
+    "关注": "ALTS",
 }
 
 
@@ -1202,6 +1216,10 @@ def normalize_query_symbol(text: str) -> str | None:
         return None
     if raw in _TG_CMD_ALIASES:
         return _TG_CMD_ALIASES[raw]
+    # 中文指令可能仍帶多餘字（例如「小幣推薦一下」）→ 子串對別名
+    for alias, key in _TG_CMD_ALIASES.items():
+        if not alias.isascii() and alias in raw:
+            return key
     # 只接受英數幣種，避免中文被誤加成 XXXUSDT
     base = raw[:-4] if raw.endswith("USDT") else raw
     # 指令誤加成幣種（舊版／別名漏網）一律擋下
@@ -1212,6 +1230,142 @@ def normalize_query_symbol(text: str) -> str | None:
     if not raw.endswith("USDT"):
         raw = base + "USDT"
     return raw
+
+
+def _alt_watch_bias(r: ChecklistResult) -> tuple[str, str] | None:
+    """
+    小幣關注方向。
+    回傳 (多|空, go|fade|wait|watch)；無法給方向則 None。
+    """
+    fade = bool(getattr(r, "fade_ready", False))
+    if r.trigger_ready and r.side == "long":
+        return "多", "go"
+    if r.trigger_ready and r.side == "short":
+        return "空", "go"
+    if fade and r.side == "short":
+        return "空", "fade"
+    if r.waiting_retest and r.mtf_aligned:
+        if r.structure == "偏多":
+            return "多", "wait"
+        if r.structure == "偏空":
+            return "空", "wait"
+    if r.mtf_aligned and r.structure == "偏多" and r.setup_score >= 45:
+        return "多", "watch"
+    if r.mtf_aligned and r.structure == "偏空" and r.setup_score >= 45:
+        return "空", "watch"
+    return None
+
+
+def build_alt_watchlist_message(
+    *,
+    pool_n: int = 48,
+    per_bucket: int = 6,
+    interval: str = "15m",
+) -> str:
+    """掃一輪山寨 Setup，整理可進／見頂／等回測／關注的多空清單。"""
+    cfg = SetupFilterConfig()
+    tw = now_tw().strftime("%m-%d %H:%M")
+    try:
+        signals = scan(min_vol=cfg.min_quote_vol)
+    except Exception as ex:
+        return f"❌ 掃描失敗：{_esc(str(ex))}"
+
+    pool = [s for s in signals if s.quote_vol >= cfg.min_quote_vol and not _is_major(s.symbol)]
+    pool = sorted(pool, key=lambda s: s.quote_vol, reverse=True)[:pool_n]
+    if not pool:
+        return f"⭐ <b>小幣關注</b>\n🕐 {tw}\n目前沒有通過成交額門檻的山寨。"
+
+    sig_map = {s.symbol: s for s in signals}
+    raw = scan_setups(
+        [s.symbol for s in pool],
+        interval=interval,
+        only_trigger=False,
+        with_mtf=True,
+    )
+    filtered, _ = filter_setups(raw, signals, cfg=cfg)
+    alts = [r for r in filtered if not _is_major(r.symbol)]
+
+    buckets: dict[str, list[tuple[ChecklistResult, str, float]]] = {
+        "go": [],
+        "fade": [],
+        "wait": [],
+        "watch": [],
+    }
+    for r in alts:
+        bias = _alt_watch_bias(r)
+        if not bias:
+            continue
+        direction, tier = bias
+        sig = sig_map.get(r.symbol)
+        q = quality_rank(
+            r,
+            sig.quote_vol if sig else 0.0,
+            cfg,
+            range_pct=sig.range_pct if sig else 0.0,
+        )
+        buckets[tier].append((r, direction, q))
+
+    for tier in buckets:
+        buckets[tier].sort(key=lambda x: x[2], reverse=True)
+        buckets[tier] = buckets[tier][:per_bucket]
+
+    def _line(r: ChecklistResult, direction: str, *, tag: str = "") -> str:
+        base = r.symbol.replace("USDT", "")
+        bits = [f"<b>{_esc(base)}</b>", f"{direction}"]
+        if tag:
+            bits.append(tag)
+        if r.rr > 0 and (r.trigger_ready or getattr(r, "fade_ready", False)):
+            bits.append(f"RR{r.rr:.1f}")
+        bits.append(f"分{r.setup_score:.0f}")
+        if r.waiting_retest and r.zone_lo and r.zone_hi:
+            gap = zone_distance_pct(r, sig_map[r.symbol].last if r.symbol in sig_map else r.entry)
+            if gap < 50:
+                bits.append(f"距區{gap:.1f}%")
+        return " · ".join(bits)
+
+    lines: list[str] = [
+        f"⭐ <b>小幣關注清單</b>",
+        f"🕐 {tw} ｜ {_esc(interval)} ｜ 池 {len(pool)} 檔",
+        "",
+    ]
+
+    go = buckets["go"]
+    fade = buckets["fade"]
+    wait = buckets["wait"]
+    watch = buckets["watch"]
+
+    if go:
+        lines.append("<b>✅ 可進</b>")
+        for r, d, _ in go:
+            emoji = "🟢" if d == "多" else "🔴"
+            lines.append(f"{emoji} {_line(r, f'做{d}', tag='可進')}")
+        lines.append("")
+    if fade:
+        lines.append("<b>🔻 日空見頂・空</b>")
+        for r, d, _ in fade:
+            lines.append(f"🔴 {_line(r, f'做{d}', tag='見頂')}")
+        lines.append("")
+    if wait:
+        lines.append("<b>⏳ 等回測</b>")
+        for r, d, _ in wait:
+            emoji = "🟢" if d == "多" else "🔴"
+            lines.append(f"{emoji} {_line(r, f'偏{d}', tag='等回測')}")
+        lines.append("")
+    if watch:
+        lines.append("<b>👀 方向關注</b>")
+        for r, d, _ in watch:
+            emoji = "🟢" if d == "多" else "🔴"
+            lines.append(f"{emoji} {_line(r, f'偏{d}', tag='關注')}")
+        lines.append("")
+
+    if not (go or fade or wait or watch):
+        lines.append("目前沒有明確多空關注（條件未齊或逆高週期）。")
+        lines.append("可稍後再傳 <code>小幣推薦</code>，或直接查幣種。")
+    else:
+        lines.append("傳幣名可看詳情（例 <code>MAGIC</code>）")
+        lines.append("⚠️ 關注清單非即時下單建議｜自行確認風險")
+
+    return "\n".join(lines).rstrip()
 
 
 def format_telegram_detail(info: dict[str, Any], meta: CoinSignal | None = None) -> str:
@@ -1488,6 +1642,7 @@ def poll_telegram_queries(
         if key is None:
             _telegram_send(
                 "用法：直接傳幣種，例如 <code>BTC</code> / <code>ETHUSDT</code>\n"
+                "小幣清單：<code>小幣推薦</code>\n"
                 "或 <code>/help</code>",
                 chat_id=from_chat,
             )
@@ -1498,10 +1653,21 @@ def poll_telegram_queries(
                 "📱 <b>幣種查詢</b>\n"
                 "傳 <code>BTC</code>、<code>MAGIC</code>、<code>AVAXUSDT</code>\n"
                 "會回傳類似 CMD <code>detail</code> 的摘要\n"
+                "小幣關注：傳 <code>小幣推薦</code>／<code>alts</code>\n"
                 "日內規劃：傳 <code>plan</code>／<code>規劃</code>／<code>日內</code>\n"
                 "統計：傳 <code>stats</code>",
                 chat_id=from_chat,
             )
+            handled += 1
+            continue
+        if key == "ALTS":
+            print("Telegram 查詢: 小幣推薦")
+            try:
+                body = build_alt_watchlist_message(interval=interval)
+            except Exception as ex:
+                body = f"❌ 小幣推薦失敗：{_esc(str(ex))}"
+            ok = _telegram_send(body, chat_id=from_chat)
+            print(f"  → {'已回覆' if ok else '回覆失敗'} 小幣推薦")
             handled += 1
             continue
         if key == "PLAN":
@@ -1618,7 +1784,7 @@ def telegram_bot_loop(*, interval: str = "15m") -> None:
         print("請先設定 TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID（telegram.local.env）")
         return
     print(color("Telegram 查詢 Bot 已啟動（Ctrl+C 停止）", "1;36"))
-    print("手機對 Bot 傳幣種，例如 BTC / ETHUSDT；回覆僅限你的 CHAT_ID")
+    print("手機傳幣種（BTC）／小幣推薦／plan／stats；回覆僅限你的 CHAT_ID")
     try:
         while True:
             n = poll_telegram_queries(timeout=25, interval=interval, max_msgs=10)
