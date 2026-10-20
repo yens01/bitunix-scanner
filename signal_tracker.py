@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 訊號日記與事後追蹤
-- YES：可進場訊號（入場／停損／止盈）→ 先碰 SL/TP 結算
-- 規劃：BTC／ETH 日內 4H 規劃 → 盤整看箱體是否成立；有方向則同 YES 結算
+- YES：可進場訊號 → 先碰 SL/TP；有利達 1R 後移動停損至成本
+- 規劃 v3：禁逆日線做多；盤整用 15m 收盤破箱（非影線）
 """
 
 from __future__ import annotations
@@ -20,17 +20,21 @@ TZ_TW = timezone(timedelta(hours=8))
 
 # 目前生效規則標籤（新訊號寫入此值；舊檔無欄位視為 legacy）
 CURRENT_RULESET = "v2"
+PLAN_RULESET = "v3"
 LEGACY_RULESET = "legacy"
 
 # 同一幣種同方向去重冷卻（秒）
 DEDUP_SECONDS = 4 * 3600
 # 同幣同規劃時段去重（避免同槽重複寫）
 PLAN_DEDUP_SECONDS = 2 * 3600
-# 結算最長觀察根數（15m × 96 ≈ 24h；4H 規劃另縮）
+# 結算最長觀察根數（15m × 96 ≈ 24h；規劃另縮）
 DEFAULT_MAX_BARS = 96
-PLAN_MAX_BARS_4H = 18  # 4H × 18 ≈ 3 天
+PLAN_MAX_BARS_15M = 32  # 15m × 32 ≈ 8 小時
+PLAN_MAX_BARS_4H = 18  # 舊版 4H 規劃
 # 同根同時碰到 SL/TP 時採保守：算停損
 CONSERVATIVE_SAME_BAR = True
+# YES：有利偏移達此 R 後，停損移到成本（減少先賺後吐）
+TRAIL_BE_AT_R = 1.0
 
 
 @dataclass
@@ -108,15 +112,41 @@ def _recent_duplicate(
     symbol: str,
     side: str,
     now_ms: int,
+    *,
+    kind: str = "yes",
     cooldown: int = DEDUP_SECONDS,
 ) -> bool:
     for r in reversed(rows):
+        if (r.kind or "yes") != kind:
+            continue
         if r.symbol != symbol or r.side != side:
             continue
         if now_ms - r.signal_time_ms < cooldown * 1000:
             return True
         break
     return False
+
+
+def _setup_trade_side(s: Any) -> str:
+    side = getattr(s, "side", "none")
+    if side in ("long", "short"):
+        return side
+    structure = str(getattr(s, "structure", "") or "")
+    if structure == "偏多":
+        return "long"
+    if structure == "偏空":
+        return "short"
+    return "none"
+
+
+def _blocks_long_vs_daily(s: Any) -> bool:
+    if _setup_trade_side(s) != "long":
+        return False
+    mtf = getattr(s, "mtf", None) or {}
+    if mtf.get("1D") == "偏空":
+        return True
+    blob = f"{getattr(s, 'mtf_note', '') or ''}｜{getattr(s, 'note', '') or ''}"
+    return "禁逆日線做多" in blob
 
 
 def record_yes_signals(
@@ -133,8 +163,10 @@ def record_yes_signals(
     for s in setups:
         if not getattr(s, "trigger_ready", False):
             continue
-        side = getattr(s, "side", "none")
+        side = _setup_trade_side(s)
         if side not in ("long", "short"):
+            continue
+        if _blocks_long_vs_daily(s):
             continue
         entry = float(getattr(s, "entry", 0) or 0)
         stop = float(getattr(s, "stop", 0) or 0)
@@ -144,7 +176,7 @@ def record_yes_signals(
         if abs(entry - stop) <= 0:
             continue
         symbol = getattr(s, "symbol", "")
-        if _recent_duplicate(rows + added, symbol, side, now_ms):
+        if _recent_duplicate(rows + added, symbol, side, now_ms, kind="yes"):
             continue
         je = JournalEntry(
             id=uuid.uuid4().hex[:12],
@@ -175,6 +207,72 @@ def record_yes_signals(
     return added
 
 
+def record_retest_signals(
+    setups: list[Any],
+    *,
+    interval: str = "15m",
+    path: Path = JOURNAL_PATH,
+    quiet: bool = False,
+) -> list[JournalEntry]:
+    """
+    記錄「靠近區・等回測」計畫單（尚未可扣板機）。
+    有完整入場／停損／止盈才入帳，結算方式同 YES（含 1R 保本）。
+    """
+    rows = load_journal(path)
+    now_ms = _now_ms()
+    added: list[JournalEntry] = []
+    for s in setups:
+        if getattr(s, "trigger_ready", False):
+            continue
+        if not getattr(s, "waiting_retest", False):
+            continue
+        if not bool(getattr(s, "mtf_aligned", True)):
+            continue
+        side = _setup_trade_side(s)
+        if side not in ("long", "short"):
+            continue
+        if _blocks_long_vs_daily(s):
+            continue
+        entry = float(getattr(s, "entry", 0) or 0)
+        stop = float(getattr(s, "stop", 0) or 0)
+        tp = float(getattr(s, "tp", 0) or 0)
+        if entry <= 0 or stop <= 0 or tp <= 0 or abs(entry - stop) <= 0:
+            continue
+        symbol = getattr(s, "symbol", "")
+        if not symbol:
+            continue
+        if _recent_duplicate(rows + added, symbol, side, now_ms, kind="retest"):
+            continue
+        je = JournalEntry(
+            id=uuid.uuid4().hex[:12],
+            ts=_now_iso(),
+            signal_time_ms=now_ms,
+            symbol=symbol,
+            side=side,
+            interval=interval,
+            entry=entry,
+            stop=stop,
+            tp=tp,
+            planned_rr=float(getattr(s, "rr", 0) or 0),
+            score=float(getattr(s, "setup_score", 0) or 0),
+            structure=str(getattr(s, "structure", "") or ""),
+            missing_steps=str(getattr(s, "missing_steps", "") or ""),
+            status="open",
+            note="等回測・計畫參考",
+            ruleset=CURRENT_RULESET,
+            kind="retest",
+            zone_lo=float(getattr(s, "zone_lo", 0) or 0),
+            zone_hi=float(getattr(s, "zone_hi", 0) or 0),
+            mtf_note=str(getattr(s, "mtf_note", "") or ""),
+        )
+        append_entry(je, path)
+        added.append(je)
+        rows.append(je)
+    if added and not quiet:
+        print(f"已記錄 {len(added)} 筆等回測 → {path.name}")
+    return added
+
+
 def _recent_plan_duplicate(
     rows: list[JournalEntry],
     symbol: str,
@@ -193,10 +291,42 @@ def _recent_plan_duplicate(
     return False
 
 
+def _plan_directional_side(s: Any) -> str:
+    """
+    只有高週期同向、且已到區／等回測／可進，才記成方向單。
+    禁逆日線做多；未到區改走箱體檢驗。
+    """
+    structure = str(getattr(s, "structure", "") or "")
+    if structure not in ("偏多", "偏空"):
+        return "none"
+    mtf = getattr(s, "mtf", None) or {}
+    mtf_note = str(getattr(s, "mtf_note", "") or "")
+    note = str(getattr(s, "note", "") or "")
+    if structure == "偏多" and (
+        mtf.get("1D") == "偏空"
+        or "禁逆日線做多" in mtf_note
+        or "禁逆日線做多" in note
+    ):
+        return "none"
+    if (not bool(getattr(s, "mtf_aligned", True))) or ("逆高週期" in mtf_note):
+        return "none"
+    ready = bool(
+        getattr(s, "trigger_ready", False)
+        or getattr(s, "at_zone", False)
+        or getattr(s, "waiting_retest", False)
+    )
+    if not ready:
+        return "none"
+    side = getattr(s, "side", "none")
+    if side not in ("long", "short"):
+        side = "long" if structure == "偏多" else "short"
+    return side if side in ("long", "short") else "none"
+
+
 def record_plan_signals(
     setups: list[Any],
     *,
-    interval: str = "4h",
+    interval: str = "15m",
     plan_label: str = "",
     note_extra: str = "",
     path: Path = JOURNAL_PATH,
@@ -213,27 +343,36 @@ def record_plan_signals(
         if _recent_plan_duplicate(rows + added, symbol, plan_label, now_ms):
             continue
         structure = str(getattr(s, "structure", "") or "")
-        side = getattr(s, "side", "none")
-        if side not in ("long", "short"):
-            if structure == "偏多":
-                side = "long"
-            elif structure == "偏空":
-                side = "short"
-            else:
-                side = "none"
         zone_lo = float(getattr(s, "zone_lo", 0) or 0)
         zone_hi = float(getattr(s, "zone_hi", 0) or 0)
         entry = float(getattr(s, "entry", 0) or 0)
         stop = float(getattr(s, "stop", 0) or 0)
         tp = float(getattr(s, "tp", 0) or 0)
-        # 盤整／無完整進出場：用箱體上下緣結算「盤整是否成立」
+        side = _plan_directional_side(s)
+        planned_rr = float(getattr(s, "rr", 0) or 0)
+        note = note_extra.strip()
+        # 非方向單：用真實今日高低檢驗箱體
         if side == "none" or stop <= 0 or tp <= 0 or abs(entry - stop) <= 0:
             side = "none"
+            planned_rr = 0.0
+            day_lo = float(getattr(s, "plan_day_lo", 0) or 0)
+            day_hi = float(getattr(s, "plan_day_hi", 0) or 0)
+            if day_hi > day_lo > 0:
+                zone_lo, zone_hi = day_lo, day_hi
             if zone_lo > 0 and zone_hi > zone_lo:
                 entry = (zone_lo + zone_hi) / 2
                 stop = zone_lo
                 tp = zone_hi
-        note = note_extra.strip()
+            src_note = str(getattr(s, "note", "") or "")
+            mtf_note = str(getattr(s, "mtf_note", "") or "")
+            if "禁逆日線" in src_note or "禁逆日線" in mtf_note:
+                extra = "禁逆日線做多，改看箱"
+            elif structure in ("偏多", "偏空"):
+                extra = "未到區，改以今日高低檢驗"
+            else:
+                extra = ""
+            if extra:
+                note = f"{note}｜{extra}" if note else extra
         mtf = str(getattr(s, "mtf_note", "") or "")
         je = JournalEntry(
             id=uuid.uuid4().hex[:12],
@@ -245,13 +384,13 @@ def record_plan_signals(
             entry=entry,
             stop=stop,
             tp=tp,
-            planned_rr=float(getattr(s, "rr", 0) or 0),
+            planned_rr=planned_rr,
             score=float(getattr(s, "setup_score", 0) or 0),
             structure=structure,
             missing_steps=str(getattr(s, "missing_steps", "") or ""),
             status="open",
             note=note,
-            ruleset=CURRENT_RULESET,
+            ruleset=PLAN_RULESET,
             kind="plan",
             zone_lo=zone_lo,
             zone_hi=zone_hi,
@@ -282,20 +421,26 @@ def _candle_accessors() -> tuple[Callable[[Any], int], Callable[[Any], float], C
     return _t, _h, _l, _c
 
 
+def _plan_box_break_pad(lo: float, hi: float) -> float:
+    mid = (lo + hi) / 2.0
+    width = hi - lo
+    return max(width * 0.12, mid * 0.0015)
+
+
 def resolve_plan_box(
     entry: JournalEntry,
     candles: list[Any],
     *,
-    max_bars: int = PLAN_MAX_BARS_4H,
+    max_bars: int = PLAN_MAX_BARS_15M,
 ) -> JournalEntry:
     """
-    盤整規劃結算：
-    - 觀察期內價格大致留在箱體 → win（盤整判斷成立）
-    - 提前向上／向下破箱 → loss（並註明方向）
+    盤整規劃結算（v3）：看收盤，不看影線。
+    收盤站出箱外（含緩衝）→ loss；走完仍在箱內 → win。
     """
     if entry.status != "open":
         return entry
     _t, _h, _l, _c = _candle_accessors()
+    del _h, _l
     after = [c for c in candles if _t(c) > entry.signal_time_ms]
     if not after:
         return entry
@@ -307,47 +452,38 @@ def resolve_plan_box(
         entry.note = ((entry.note + "｜") if entry.note else "") + "無有效箱體，無法結算規劃"
         return entry
 
-    pad = (hi - lo) * 0.02  # 允許 2% 箱寬緩衝，避免假突破
-    # 觀察期未滿：尚未破箱則繼續 open，勿提早算勝
+    pad = _plan_box_break_pad(lo, hi)
+
+    def _mark_break(i: int, c: Any, way: str) -> JournalEntry:
+        entry.status = "loss"
+        entry.exit_price = hi if way == "up" else lo
+        entry.exit_time_ms = _t(c)
+        entry.bars_held = i
+        entry.realized_r = 0.0
+        tag = "收盤向上破箱｜盤整規劃偏離" if way == "up" else "收盤向下破箱｜盤整規劃偏離"
+        entry.note = ((entry.note + "｜") if entry.note else "") + tag
+        return entry
+
+    def _broke(close: float) -> str:
+        if close > hi + pad:
+            return "up"
+        if close < lo - pad:
+            return "down"
+        return ""
+
     if len(after) < max_bars:
         for i, c in enumerate(after, 1):
-            if _h(c) > hi + pad:
-                entry.status = "loss"
-                entry.exit_price = hi
-                entry.exit_time_ms = _t(c)
-                entry.bars_held = i
-                entry.realized_r = 0.0
-                entry.note = ((entry.note + "｜") if entry.note else "") + "箱體向上突破｜盤整規劃偏離"
-                return entry
-            if _l(c) < lo - pad:
-                entry.status = "loss"
-                entry.exit_price = lo
-                entry.exit_time_ms = _t(c)
-                entry.bars_held = i
-                entry.realized_r = 0.0
-                entry.note = ((entry.note + "｜") if entry.note else "") + "箱體向下突破｜盤整規劃偏離"
-                return entry
+            way = _broke(_c(c))
+            if way:
+                return _mark_break(i, c, way)
         entry.bars_held = len(after)
         return entry
 
     window = after[:max_bars]
     for i, c in enumerate(window, 1):
-        if _h(c) > hi + pad:
-            entry.status = "loss"
-            entry.exit_price = hi
-            entry.exit_time_ms = _t(c)
-            entry.bars_held = i
-            entry.realized_r = 0.0
-            entry.note = ((entry.note + "｜") if entry.note else "") + "箱體向上突破｜盤整規劃偏離"
-            return entry
-        if _l(c) < lo - pad:
-            entry.status = "loss"
-            entry.exit_price = lo
-            entry.exit_time_ms = _t(c)
-            entry.bars_held = i
-            entry.realized_r = 0.0
-            entry.note = ((entry.note + "｜") if entry.note else "") + "箱體向下突破｜盤整規劃偏離"
-            return entry
+        way = _broke(_c(c))
+        if way:
+            return _mark_break(i, c, way)
 
     last = window[-1]
     entry.status = "win"
@@ -357,7 +493,7 @@ def resolve_plan_box(
     entry.realized_r = 0.0
     entry.note = (
         ((entry.note + "｜") if entry.note else "")
-        + f"觀察期內仍在箱體｜盤整規劃成立({len(window)}根)"
+        + f"觀察期內收盤仍在箱體｜盤整規劃成立({len(window)}根)"
     )
     return entry
 
@@ -371,6 +507,7 @@ def resolve_entry(
     """
     candles: 舊→新，需含 time/high/low/close（Candle 或 dict）
     只看訊號時間之後的 K 線。
+    YES：有利達 TRAIL_BE_AT_R 後，停損移到成本（保本出場不算 −1R）。
     """
     if entry.status != "open":
         return entry
@@ -382,7 +519,13 @@ def resolve_entry(
         or entry.structure == "盤整"
         or entry.risk() <= 0
     ):
-        bars = PLAN_MAX_BARS_4H if (entry.interval or "").lower() in {"4h", "1h"} else max_bars
+        iv = (entry.interval or "").lower()
+        if iv in {"4h", "1h"}:
+            bars = PLAN_MAX_BARS_4H
+        elif iv in {"15m", "5m"}:
+            bars = PLAN_MAX_BARS_15M
+        else:
+            bars = max_bars
         return resolve_plan_box(entry, candles, max_bars=bars)
 
     _t, _h, _l, _c = _candle_accessors()
@@ -397,37 +540,54 @@ def resolve_entry(
         entry.note = "風險距離為 0，無法結算"
         return entry
 
-    # 觀察期未滿且尚未觸及 SL/TP → 保持 open（勿把「目前只有 N 根」當超時）
+    # 觀察期未滿且尚未觸及 SL/TP → 保持 open
     observing = after if len(after) < max_bars else after[:max_bars]
     mfe = 0.0
     mae = 0.0
+    # 動態停損：有利達 1R 後移到成本；R 仍用原始風險計算
+    cur_stop = entry.stop
+    trailed = False
+    use_trail = (kind or "yes") in ("yes", "retest") and TRAIL_BE_AT_R > 0
 
     for i, c in enumerate(observing, 1):
-        hi, lo, cl = _h(c), _l(c), _c(c)
+        hi, lo = _h(c), _l(c)
+        # 先用「進這根前」的停損結算，避免同根先創新高再回檔被誤殺
         if entry.side == "long":
             mfe = max(mfe, (hi - entry.entry) / risk)
             mae = max(mae, (entry.entry - lo) / risk)
-            hit_sl = lo <= entry.stop
+            hit_sl = lo <= cur_stop
             hit_tp = hi >= entry.tp
             if hit_sl and hit_tp:
-                if CONSERVATIVE_SAME_BAR:
+                if trailed:
+                    entry.status = "win"
+                    entry.exit_price = entry.tp
+                    entry.realized_r = (entry.tp - entry.entry) / risk
+                    entry.note = "同根觸及・已保本採止盈"
+                elif CONSERVATIVE_SAME_BAR:
                     entry.status = "loss"
                     entry.exit_price = entry.stop
                     entry.realized_r = -1.0
+                    entry.note = "同根觸及SL/TP，採保守停損"
                 else:
                     entry.status = "win"
                     entry.exit_price = entry.tp
                     entry.realized_r = (entry.tp - entry.entry) / risk
+                    entry.note = "同根觸及，採止盈"
                 entry.exit_time_ms = _t(c)
                 entry.bars_held = i
                 entry.mfe_r = round(mfe, 3)
                 entry.mae_r = round(mae, 3)
-                entry.note = "同根觸及SL/TP，採保守停損" if CONSERVATIVE_SAME_BAR else "同根觸及，採止盈"
                 return entry
             if hit_sl:
-                entry.status = "loss"
-                entry.exit_price = entry.stop
-                entry.realized_r = -1.0
+                if trailed:
+                    entry.status = "timeout"
+                    entry.exit_price = entry.entry
+                    entry.realized_r = 0.0
+                    entry.note = f"有利≥{TRAIL_BE_AT_R:g}R後移動停損至成本"
+                else:
+                    entry.status = "loss"
+                    entry.exit_price = entry.stop
+                    entry.realized_r = -1.0
                 entry.exit_time_ms = _t(c)
                 entry.bars_held = i
                 entry.mfe_r = round(mfe, 3)
@@ -445,27 +605,39 @@ def resolve_entry(
         else:  # short
             mfe = max(mfe, (entry.entry - lo) / risk)
             mae = max(mae, (hi - entry.entry) / risk)
-            hit_sl = hi >= entry.stop
+            hit_sl = hi >= cur_stop
             hit_tp = lo <= entry.tp
             if hit_sl and hit_tp:
-                if CONSERVATIVE_SAME_BAR:
+                if trailed:
+                    entry.status = "win"
+                    entry.exit_price = entry.tp
+                    entry.realized_r = (entry.entry - entry.tp) / risk
+                    entry.note = "同根觸及・已保本採止盈"
+                elif CONSERVATIVE_SAME_BAR:
                     entry.status = "loss"
                     entry.exit_price = entry.stop
                     entry.realized_r = -1.0
+                    entry.note = "同根觸及SL/TP，採保守停損"
                 else:
                     entry.status = "win"
                     entry.exit_price = entry.tp
                     entry.realized_r = (entry.entry - entry.tp) / risk
+                    entry.note = "同根觸及，採止盈"
                 entry.exit_time_ms = _t(c)
                 entry.bars_held = i
                 entry.mfe_r = round(mfe, 3)
                 entry.mae_r = round(mae, 3)
-                entry.note = "同根觸及SL/TP，採保守停損" if CONSERVATIVE_SAME_BAR else "同根觸及，採止盈"
                 return entry
             if hit_sl:
-                entry.status = "loss"
-                entry.exit_price = entry.stop
-                entry.realized_r = -1.0
+                if trailed:
+                    entry.status = "timeout"
+                    entry.exit_price = entry.entry
+                    entry.realized_r = 0.0
+                    entry.note = f"有利≥{TRAIL_BE_AT_R:g}R後移動停損至成本"
+                else:
+                    entry.status = "loss"
+                    entry.exit_price = entry.stop
+                    entry.realized_r = -1.0
                 entry.exit_time_ms = _t(c)
                 entry.bars_held = i
                 entry.mfe_r = round(mfe, 3)
@@ -481,9 +653,17 @@ def resolve_entry(
                 entry.mae_r = round(mae, 3)
                 return entry
 
+        # 這根走完仍在場，有利已達門檻 → 下一根起保本
+        if use_trail and (not trailed) and mfe >= TRAIL_BE_AT_R:
+            cur_stop = entry.entry
+            trailed = True
+
     entry.mfe_r = round(mfe, 3)
     entry.mae_r = round(mae, 3)
     entry.bars_held = len(observing)
+    if trailed and "移動停損" not in (entry.note or "") and "停損移至成本" not in (entry.note or ""):
+        tag = f"已達{TRAIL_BE_AT_R:g}R・停損移至成本"
+        entry.note = f"{entry.note}｜{tag}" if entry.note else tag
 
     # 觀察期未滿：維持未結算
     if len(after) < max_bars:
@@ -526,12 +706,14 @@ def resolve_all(
         if e.status != "open":
             continue
         try:
-            iv = e.interval or "15m"
-            use_bars = (
-                PLAN_MAX_BARS_4H
-                if (e.kind or "yes") == "plan" and iv.lower() in {"4h", "1h"}
-                else max_bars
-            )
+            iv = (e.interval or "15m").lower()
+            kind = e.kind or "yes"
+            if kind == "plan" and iv in {"4h", "1h"}:
+                use_bars = PLAN_MAX_BARS_4H
+            elif kind == "plan" and iv in {"15m", "5m"}:
+                use_bars = PLAN_MAX_BARS_15M
+            else:
+                use_bars = max_bars
             # 多抓一些以覆蓋訊號後時間
             raw = fetch_klines_fn(e.symbol, iv, min(use_bars + 50, 200))
             candles = parse_fn(raw)
@@ -636,13 +818,29 @@ def rows_by_ruleset(rows: list[JournalEntry], ruleset: str) -> list[JournalEntry
 
 
 def print_stats_by_ruleset(rows: list[JournalEntry] | None = None, path: Path = JOURNAL_PATH) -> None:
-    """YES／規劃分開；v2 為主（legacy 僅在有資料時對照）。"""
+    """YES 用現行規則；規劃用 v3。舊規劃僅在有資料時對照。"""
     rows = rows if rows is not None else load_journal(path)
-    v2 = rows_by_ruleset(rows, CURRENT_RULESET)
-    yes_v2 = [r for r in v2 if (r.kind or "yes") == "yes"]
-    plan_v2 = [r for r in v2 if (r.kind or "yes") == "plan"]
-    print_stats(compute_stats(yes_v2), f"YES · {CURRENT_RULESET}")
-    print_stats(compute_stats(plan_v2), f"規劃 · {CURRENT_RULESET}（盤整勝=箱體成立）")
+    yes_rows = [
+        r for r in rows_by_ruleset(rows, CURRENT_RULESET) if (r.kind or "yes") == "yes"
+    ]
+    retest_rows = [
+        r for r in rows_by_ruleset(rows, CURRENT_RULESET) if (r.kind or "") == "retest"
+    ]
+    plan_rows = [
+        r for r in rows_by_ruleset(rows, PLAN_RULESET) if (r.kind or "yes") == "plan"
+    ]
+    print_stats(compute_stats(yes_rows), f"YES · {CURRENT_RULESET}（1R後保本）")
+    print_stats(compute_stats(retest_rows), f"等回測 · {CURRENT_RULESET}")
+    print_stats(
+        compute_stats(plan_rows),
+        f"規劃 · {PLAN_RULESET}（禁逆日線做多｜收盤破箱）",
+    )
+    if PLAN_RULESET != CURRENT_RULESET:
+        old_plans = [
+            r for r in rows_by_ruleset(rows, CURRENT_RULESET) if (r.kind or "yes") == "plan"
+        ]
+        if old_plans:
+            print_stats(compute_stats(old_plans), f"規劃 · {CURRENT_RULESET}（舊，對照）")
     legacy = rows_by_ruleset(rows, LEGACY_RULESET)
     if legacy:
         print_stats(compute_stats(legacy), f"舊規則 {LEGACY_RULESET}（對照）")
@@ -670,14 +868,26 @@ def print_journal(rows: list[JournalEntry] | None = None, limit: int = 30) -> No
         rr = f"{r.planned_rr:.1f}" if r.planned_rr else "-"
         real = f"{r.realized_r:+.2f}" if r.status != "open" else "-"
         rs = (r.ruleset or LEGACY_RULESET)[:6]
-        kind = "規劃" if (r.kind or "yes") == "plan" else "YES"
+        k = r.kind or "yes"
+        if k == "plan":
+            kind = "規劃"
+        elif k == "retest":
+            kind = "等回"
+        else:
+            kind = "YES"
         print(
             f"{r.ts:<19} {kind:<4} {r.symbol:<12} {side:<4} {st:<8} "
             f"{rs:<6} {rr:>6} {real:>7}"
         )
-        if (r.kind or "yes") == "plan" and (r.plan_label or r.zone_lo):
+        if k == "plan" and (r.plan_label or r.zone_lo):
             z = ""
             if r.zone_lo and r.zone_hi:
                 z = f" 箱{r.zone_lo:.4g}-{r.zone_hi:.4g}"
             print(f"{'':19}  └ {r.plan_label or '規劃'} {r.structure}{z}")
+        elif k == "retest" and (r.zone_lo or r.missing_steps):
+            z = ""
+            if r.zone_lo and r.zone_hi:
+                z = f" 區{r.zone_lo:.4g}-{r.zone_hi:.4g}"
+            miss = (r.missing_steps or "").replace("缺：", "").replace("缺:", "")
+            print(f"{'':19}  └ 等回測 {r.structure}{z}" + (f"｜{miss}" if miss else ""))
     print()

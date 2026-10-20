@@ -1079,6 +1079,10 @@ def check_mtf_alignment(structure: str, mtf: dict[str, str]) -> tuple[bool, str]
 
     detail = ",".join(f"{k}:{mtf[k]}" for k in htf_keys)
 
+    # 硬規則：日線偏空時禁止做多（日記顯示偏多在逆日線時勝率≈0）
+    if structure == "偏多" and mtf.get("1D") == "偏空":
+        return False, f"禁逆日線做多｜{detail}"
+
     # 任一關鍵高週期（4H/1D）逆向 → 不對齊
     critical = [k for k in ("4H", "1D") if k in mtf and mtf[k] == opposite]
     if critical:
@@ -1918,6 +1922,11 @@ def evaluate_setup(
     if one_h_conflict and not level_block_reason:
         level_block_reason = "1H 逆向"
 
+    # 日線偏空 → 不做多（YES／規劃皆擋）
+    daily_long_block = bool(side == "long" and mtf.get("1D") == "偏空")
+    if daily_long_block and not level_block_reason:
+        level_block_reason = "禁逆日線做多"
+
     # 結構：清晰 HH/HL／LH/LL，或（BOS/CHOCH + 同向 MA）二擇一
     # 避免「必須同時有完整擺動＋BOS」疊到幾乎沒單
     bos_ok = bool(
@@ -1977,6 +1986,7 @@ def evaluate_setup(
         and level_ok
         and not impulse_fade
         and not one_h_conflict
+        and not daily_long_block
         and swing_struct_ok
         and stop_vs_atr_ok
         and close_dir_ok

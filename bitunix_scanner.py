@@ -55,6 +55,7 @@ from signal_tracker import (
     print_journal,
     print_stats_by_ruleset,
     record_plan_signals,
+    record_retest_signals,
     record_yes_signals,
     resolve_all,
 )
@@ -116,9 +117,10 @@ SESSION_PLAN_SYMBOLS = ("BTCUSDT", "ETHUSDT")
 SESSION_PLAN_COOLDOWN_PREFIX = "__session_btc_eth_plan__"
 # 日內規劃箱體：台灣日「今日高低」（15m）；過寬時再裁近端目標波段
 SESSION_BOX_INTERVAL = "15m"
+# 目標寬度：舊 BTC 500／ETH 12 太窄，下一根影線就破，盤整勝率被拖垮
 SESSION_BOX_TARGET_WIDTH = {
-    "BTCUSDT": 500.0,   # 近端可做波段參考（今日高低過寬時裁用）
-    "ETHUSDT": 12.0,
+    "BTCUSDT": 1500.0,
+    "ETHUSDT": 40.0,
 }
 # 三大盤高低（UTC 小時區間 → 台灣時間參考）
 # 亞洲 00–08 UTC＝台 08:00–16:00｜倫敦 07–16 UTC＝台 15:00–00:00｜紐約 12–21 UTC＝台 20:00–05:00
@@ -1465,19 +1467,30 @@ def poll_telegram_queries(
                     f"📋 <b>BTC／ETH 日內規劃</b>\n🕐 {tw}\n"
                     f"BTC／ETH・今日高低＋亞／倫／紐時段（參考，非必進）\n\n"
                     + "\n\n".join(format_telegram_plan_card(r) for r in plans)
-                    + "\n\n⚠️ 破箱勿追｜自行確認槓桿與風險"
+                    + "\n\n⚠️ 收盤破箱勿追｜禁逆日線做多｜自行確認槓桿與風險"
                 )
                 _telegram_send(body, chat_id=from_chat)
             handled += 1
             continue
         if key == "STATS":
             # 簡短統計文字（雲端 Reply 會載入 cloud-journal 快照）
-            from signal_tracker import compute_stats, load_journal, CURRENT_RULESET
+            from signal_tracker import (
+                CURRENT_RULESET,
+                PLAN_RULESET,
+                compute_stats,
+                load_journal,
+            )
 
             rows = load_journal()
             yes = [r for r in rows if (r.ruleset or "") == CURRENT_RULESET and (r.kind or "yes") == "yes"]
-            plan = [r for r in rows if (r.ruleset or "") == CURRENT_RULESET and (r.kind or "yes") == "plan"]
-            sy, sp = compute_stats(yes), compute_stats(plan)
+            retest = [r for r in rows if (r.ruleset or "") == CURRENT_RULESET and (r.kind or "") == "retest"]
+            plan = [r for r in rows if (r.ruleset or "") == PLAN_RULESET and (r.kind or "yes") == "plan"]
+            sy, sr, sp = compute_stats(yes), compute_stats(retest), compute_stats(plan)
+            old_plan = [
+                r for r in rows
+                if (r.ruleset or "") == CURRENT_RULESET and (r.kind or "yes") == "plan"
+            ]
+            so = compute_stats(old_plan) if old_plan else None
             # 最近規劃時段（避免以為沒記錄）
             plan_hint = ""
             if plan:
@@ -1495,8 +1508,15 @@ def poll_telegram_queries(
                 f"📊 <b>日記統計</b>（雲端）\n"
                 f"YES {sy.total}｜勝{sy.win_n} 負{sy.loss_n} 未結{sy.open_n}"
                 + (f"｜勝率{sy.win_rate:.1f}%" if sy.win_n + sy.loss_n else "")
-                + f"\n規劃 {sp.total}｜勝{sp.win_n} 負{sp.loss_n} 未結{sp.open_n}"
+                + f"\n等回測 {sr.total}｜勝{sr.win_n} 負{sr.loss_n} 未結{sr.open_n}"
+                + (f"｜勝率{sr.win_rate:.1f}%" if sr.win_n + sr.loss_n else "")
+                + f"\n規劃 {PLAN_RULESET} {sp.total}｜勝{sp.win_n} 負{sp.loss_n} 未結{sp.open_n}"
                 + (f"｜勝率{sp.win_rate:.1f}%" if sp.win_n + sp.loss_n else "")
+                + (
+                    f"\n舊規劃 {CURRENT_RULESET} {so.total}｜勝率{so.win_rate:.1f}%"
+                    if so is not None and so.win_n + so.loss_n
+                    else ""
+                )
                 + plan_hint,
                 chat_id=from_chat,
             )
@@ -1693,17 +1713,43 @@ def _format_session_hl_lines(r: ChecklistResult, *, html: bool = False) -> list[
     return out
 
 
+def _plan_blocks_long_vs_daily(r: ChecklistResult) -> bool:
+    """日線偏空時，4H 偏多不當方向規劃。"""
+    if r.structure != "偏多" and r.side != "long":
+        return False
+    if (r.mtf or {}).get("1D") == "偏空":
+        return True
+    note = f"{r.mtf_note or ''}｜{r.note or ''}"
+    return "禁逆日線做多" in note or (
+        "逆高週期" in note and "1D" in note and r.structure == "偏多"
+    )
+
+
+def _downgrade_plan_to_box(r: ChecklistResult, reason: str) -> None:
+    """方向規劃改看箱，避免逆勢方向被記 −1R。"""
+    r.structure = "盤整"
+    r.side = "none"
+    r.trigger_ready = False
+    r.waiting_retest = False
+    r.at_zone = False
+    if reason and reason not in (r.note or ""):
+        r.note = f"{r.note}｜{reason}" if r.note else reason
+
+
 def _apply_session_intraday_box(r: ChecklistResult) -> ChecklistResult:
     """
     BTC／ETH 規劃改套「台灣日今日高低」（15m），供日內高拋低吸。
     並附亞洲／倫敦／紐約盤高低；結構／高週期仍用 4H。
+    禁逆日線做多：改成箱體規劃。
     """
     if r.symbol.upper() not in SESSION_BOX_TARGET_WIDTH:
         return r
     target = SESSION_BOX_TARGET_WIDTH[r.symbol.upper()]
-    # 有明確方向且區已合理 → 不覆蓋支撐／壓力（仍補三大盤高低）
+    block_long = _plan_blocks_long_vs_daily(r)
+    # 有明確方向、非禁多、區已合理 → 不覆蓋支撐／壓力（仍補三大盤高低）
     keep_zone = (
-        r.structure in ("偏多", "偏空")
+        not block_long
+        and r.structure in ("偏多", "偏空")
         and r.zone_hi > r.zone_lo
         and (r.zone_hi - r.zone_lo) <= target * 1.6
     )
@@ -1711,6 +1757,8 @@ def _apply_session_intraday_box(r: ChecklistResult) -> ChecklistResult:
         raw = fetch_klines(r.symbol, SESSION_BOX_INTERVAL, limit=288)
         candles = parse_klines(raw)
     except Exception:
+        if block_long:
+            _downgrade_plan_to_box(r, "禁逆日線做多，改看箱")
         return r
 
     _fill_trading_session_hl(r, candles)
@@ -1723,6 +1771,8 @@ def _apply_session_intraday_box(r: ChecklistResult) -> ChecklistResult:
     if day_box is None:
         day_box = build_adaptive_range_box(candles, target_width=target)
     if day_box is None:
+        if block_long:
+            _downgrade_plan_to_box(r, "禁逆日線做多，改看箱")
         return r
 
     # 保留真實今日高低（給卡片對照；進出場箱可另裁近端）
@@ -1749,6 +1799,8 @@ def _apply_session_intraday_box(r: ChecklistResult) -> ChecklistResult:
     r.zone_hi = trade_box.hi
     r.zone_kind = "range"
     r.note = f"{r.note}｜{tag}" if r.note else tag
+    if block_long:
+        _downgrade_plan_to_box(r, "禁逆日線做多，改看箱")
     if r.structure == "盤整":
         edges = _session_box_edge_levels(r)
         if edges:
@@ -1860,7 +1912,9 @@ def format_telegram_plan_card(r: ChecklistResult) -> str:
                 f"止盈低 <code>{_esc(_px(st))}</code>"
             )
         lines.append(f"高週期 {htf}")
-        lines.append("🚫 破箱勿追｜依進行中時段高低操作")
+        if "禁逆日線" in (r.note or "") or "禁逆日線" in (r.mtf_note or ""):
+            lines.append("🚫 日線偏空・不做多，只看箱")
+        lines.append("🚫 收盤破箱勿追｜依進行中時段高低操作")
         lines.append("備註: 今日＋亞/倫/紐時段高低參考，非必進")
         return "\n".join(lines)
 
@@ -1974,7 +2028,9 @@ def format_console_plan_card(r: ChecklistResult) -> str:
             lines.append(f"  │ 低點多 {_px(le)} / 停 {_px(ls)} / 盈高 {_px(lt)}")
             lines.append(f"  │ 高點空 {_px(se)} / 停 {_px(ss)} / 盈低 {_px(st)}")
         lines.append(f"  │ 高週期 {htf}")
-        lines.append("  └ 破箱勿追｜依進行中時段高低操作")
+        if "禁逆日線" in (r.note or "") or "禁逆日線" in (r.mtf_note or ""):
+            lines.append("  │ 日線偏空・不做多，只看箱")
+        lines.append("  └ 收盤破箱勿追｜依進行中時段高低操作")
         return "\n".join(lines)
 
     side_txt = (
@@ -2655,10 +2711,13 @@ def run_filtered_setup(
     if show:
         print_setup_table(filtered, top=top, rejected=rejected)
     if AUTO_RECORD_YES:
-        # 日記：過篩的全部 YES（不受同波推播上限／倉位風控影響）
+        # 日記：過篩的全部 YES／等回測（不受同波推播上限／倉位風控影響）
         yes = [x for x in filtered if x.trigger_ready]
         if yes:
             record_yes_signals(yes, interval=interval)
+        waits = [x for x in filtered if x.waiting_retest and not x.trigger_ready]
+        if waits:
+            record_retest_signals(waits, interval=interval)
     return filtered
 
 
@@ -2914,7 +2973,6 @@ def send_session_major_plans(
             telegram=telegram,
         )
         print(f"日內規劃：「{label}」無變化（短訊）｜{brief}")
-        note_extra = "無變化"
     else:
         notify_alert(
             title,
@@ -2925,15 +2983,13 @@ def send_session_major_plans(
             telegram=telegram,
         )
         print(f"日內規劃：已推「{label}」{', '.join(r.symbol for r in plans)}")
-        note_extra = ""
-
-    # 規劃一律入日記，事後可檢驗箱體／方向準否（與 YES 分開統計）
-    record_plan_signals(
-        plans,
-        interval=SESSION_PLAN_INTERVAL,
-        plan_label=label,
-        note_extra=note_extra,
-    )
+        # 內容沒變不重寫日記；結算用 15m 收盤破箱，不用 4H 影線
+        record_plan_signals(
+            plans,
+            interval=SESSION_BOX_INTERVAL,
+            plan_label=label,
+            note_extra="",
+        )
 
     cooldown[_session_plan_slot_key(day, hour, minute)] = time.time()
     save_session_plan_state(
@@ -3046,9 +3102,11 @@ def watch_once(
             # 剛寫入的冷卻撤回，避免「沒推卻冷卻」
             del cooldown[r.symbol]
 
-    # 日記先記本輪全部 YES（推播仍只推同波前 N）
+    # 日記先記本輪全部 YES／靠近等回測（推播仍只推同波前 N）
     if AUTO_RECORD_YES and yes_now:
         record_yes_signals(yes_now, interval="15m")
+    if AUTO_RECORD_YES and near_now:
+        record_retest_signals(near_now, interval="15m")
 
     if new_yes:
         notify_alert(
@@ -3171,6 +3229,8 @@ def watch_loop(
 
             if AUTO_RECORD_YES and yes_now:
                 record_yes_signals(list(yes_now.values()), interval="15m")
+            if AUTO_RECORD_YES and near_now:
+                record_retest_signals(list(near_now.values()), interval="15m")
 
             if new_yes:
                 notify_alert(
