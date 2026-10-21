@@ -56,6 +56,7 @@ from signal_tracker import (
     collect_breakeven_hints,
     print_journal,
     print_stats_by_ruleset,
+    record_base_signals,
     record_fade_signals,
     record_plan_signals,
     record_retest_signals,
@@ -772,6 +773,8 @@ def quality_rank(
         q += 50
     elif getattr(r, "fade_ready", False):
         q += 42  # 見頂空訊略低於標準 YES
+    elif getattr(r, "base_ready", False):
+        q += 42  # 見底多訊略低於標準 YES
     # RR 甜區
     if r.rr > 0:
         if cfg.ideal_rr_lo <= r.rr <= cfg.ideal_rr_hi:
@@ -799,8 +802,8 @@ def quality_rank(
         q += 8
     if r.mtf_aligned:
         q += 5
-    elif getattr(r, "fade_ready", False):
-        q += 2  # fade 本就不要求對齊，略給分
+    elif getattr(r, "fade_ready", False) or getattr(r, "base_ready", False):
+        q += 2  # 見頂／見底本就不要求對齊，略給分
     return q
 
 
@@ -858,7 +861,8 @@ def filter_setups(
                 reasons.append(f"上市{age_days:.1f}天")
 
         fade = bool(getattr(r, "fade_ready", False))
-        actionable = bool(r.trigger_ready or fade)
+        base = bool(getattr(r, "base_ready", False))
+        actionable = bool(r.trigger_ready or fade or base)
 
         # RR 鎖 1.5～2.5：YES／見頂硬擋；計畫單超過上限也擋
         if r.rr > 0 and r.rr > cfg.max_rr:
@@ -884,9 +888,9 @@ def filter_setups(
         # 硬規則：結構與方向不得相反（fade 見頂空例外）
         if r.structure == "偏多" and r.side == "short" and not fade:
             reasons.append("逆結構禁空")
-        if r.structure == "偏空" and r.side == "long":
+        if r.structure == "偏空" and r.side == "long" and not base:
             reasons.append("逆結構禁多")
-        if r.structure == "盤整" and r.side in ("long", "short") and not fade:
+        if r.structure == "盤整" and r.side in ("long", "short") and not fade and not base:
             reasons.append("盤整禁方向單")
         if r.trigger_ready and r.structure == "偏多" and r.side != "long":
             reasons.append("YES非順勢多")
@@ -894,6 +898,8 @@ def filter_setups(
             reasons.append("YES非順勢空")
         if fade and r.side != "short":
             reasons.append("見頂僅允空")
+        if base and r.side != "long":
+            reasons.append("見底僅允多")
 
         if reasons:
             rejected.append(f"{r.symbol}({','.join(reasons[:2])})")
@@ -940,7 +946,12 @@ def filter_setups(
 
     # 最終仍以品質分排序輸出（可進／見頂優先）
     limited.sort(
-        key=lambda x: (x.trigger_ready or getattr(x, "fade_ready", False), _q(x)),
+        key=lambda x: (
+            x.trigger_ready
+            or getattr(x, "fade_ready", False)
+            or getattr(x, "base_ready", False),
+            _q(x),
+        ),
         reverse=True,
     )
     return limited, rejected
@@ -951,13 +962,20 @@ def pick_wave_alerts(
     near: list[ChecklistResult],
     *,
     fade: list[ChecklistResult] | None = None,
+    base: list[ChecklistResult] | None = None,
     max_n: int = DEFAULT_MAX_ALERTS_PER_WAVE,
     signals: list[CoinSignal] | None = None,
     cfg: SetupFilterConfig | None = None,
-) -> tuple[list[ChecklistResult], list[ChecklistResult], list[ChecklistResult]]:
-    """同波最多推 max_n 檔：先 YES → 見頂 → 靠近區，皆依品質分排序。"""
+) -> tuple[
+    list[ChecklistResult],
+    list[ChecklistResult],
+    list[ChecklistResult],
+    list[ChecklistResult],
+]:
+    """同波最多推 max_n 檔：先 YES → 見頂 → 見底 → 靠近區，皆依品質分排序。"""
     cfg = cfg or SetupFilterConfig()
     fade = fade or []
+    base = base or []
     vol_map = {s.symbol: s.quote_vol for s in (signals or [])}
     rng_map = {s.symbol: s.range_pct for s in (signals or [])}
 
@@ -971,14 +989,17 @@ def pick_wave_alerts(
 
     yes_s = sorted(yes, key=_q, reverse=True)
     fade_s = sorted(fade, key=_q, reverse=True)
+    base_s = sorted(base, key=_q, reverse=True)
     near_s = sorted(near, key=_q, reverse=True)
     budget = max(0, max_n)
     take_yes = yes_s[:budget]
     budget -= len(take_yes)
     take_fade = fade_s[:budget]
     budget -= len(take_fade)
+    take_base = base_s[:budget]
+    budget -= len(take_base)
     take_near = near_s[:budget]
-    return take_yes, take_fade, take_near
+    return take_yes, take_fade, take_base, take_near
 
 
 def load_alert_cooldown(path: str = COOLDOWN_PATH) -> dict[str, float]:
@@ -1553,15 +1574,18 @@ def normalize_query_symbol(text: str) -> str | None:
 def _alt_watch_bias(r: ChecklistResult) -> tuple[str, str] | None:
     """
     小幣關注方向。
-    回傳 (多|空, go|fade|wait|watch)；無法給方向則 None。
+    回傳 (多|空, go|fade|base|wait|watch)；無法給方向則 None。
     """
     fade = bool(getattr(r, "fade_ready", False))
+    base = bool(getattr(r, "base_ready", False))
     if r.trigger_ready and r.side == "long":
         return "多", "go"
     if r.trigger_ready and r.side == "short":
         return "空", "go"
     if fade and r.side == "short":
         return "空", "fade"
+    if base and r.side == "long":
+        return "多", "base"
     if r.waiting_retest and r.mtf_aligned:
         if r.structure == "偏多":
             return "多", "wait"
@@ -1606,6 +1630,7 @@ def build_alt_watchlist_message(
     buckets: dict[str, list[tuple[ChecklistResult, str, float]]] = {
         "go": [],
         "fade": [],
+        "base": [],
         "wait": [],
         "watch": [],
     }
@@ -1635,6 +1660,7 @@ def build_alt_watchlist_message(
         if r.rr > 0 and (
             r.trigger_ready
             or getattr(r, "fade_ready", False)
+            or getattr(r, "base_ready", False)
             or r.waiting_retest
         ):
             bits.append(f"RR{r.rr:.1f}")
@@ -1696,6 +1722,7 @@ def build_alt_watchlist_message(
 
     go = buckets["go"]
     fade = buckets["fade"]
+    base = buckets["base"]
     wait = buckets["wait"]
     watch = buckets["watch"]
 
@@ -1710,6 +1737,11 @@ def build_alt_watchlist_message(
         for r, d, _ in fade:
             _emit("🔴", r, f"做{d}", tag="見頂")
         lines.append("")
+    if base:
+        lines.append("<b>🔺 日多見底・多</b>")
+        for r, d, _ in base:
+            _emit("🟢", r, f"做{d}", tag="見底")
+        lines.append("")
     if wait:
         lines.append("<b>⏳ 等回測</b>（價為計畫參考，到區再確認）")
         for r, d, _ in wait:
@@ -1723,7 +1755,7 @@ def build_alt_watchlist_message(
             _emit(emoji, r, f"偏{d}", tag="關注", plan_only=True)
         lines.append("")
 
-    if not (go or fade or wait or watch):
+    if not (go or fade or base or wait or watch):
         lines.append("無明確多空（條件未齊／逆高週期）· 稍後再傳 <code>小幣推薦</code>")
     else:
         lines.append("傳幣名看詳情｜等回測到區再進｜自行控風險")
@@ -1759,8 +1791,11 @@ def format_telegram_detail(info: dict[str, Any], meta: CoinSignal | None = None)
     if setup:
         gap = _zone_gap_pct(setup, float(live or 0))
         fade = bool(getattr(setup, "fade_ready", False))
+        base = bool(getattr(setup, "base_ready", False))
         if setup.trigger_ready:
             status = "✅ 可扣板機"
+        elif base:
+            status = "🔺 日多回檔見底・可多"
         elif fade:
             status = "🔻 日空反抽見頂・可空"
         elif setup.waiting_retest:
@@ -1772,7 +1807,9 @@ def format_telegram_detail(info: dict[str, Any], meta: CoinSignal | None = None)
             status = "📋 盤整觀望"
         else:
             status = "📋 條件未齊"
-        if fade:
+        if base:
+            ban = "📌 見底多（不要求4H已轉多）"
+        elif fade:
             ban = "📌 見頂空（不要求4H已轉空）"
         elif not setup.mtf_aligned and setup.structure in ("偏多", "偏空"):
             ban = f"🚫 {setup.interval}本地{setup.structure}，逆高週期 → 觀望"
@@ -1813,7 +1850,7 @@ def format_telegram_detail(info: dict[str, Any], meta: CoinSignal | None = None)
                 zline += "  ·  在區內"
             lines.append(zline)
         # 遠處等回測：不展開 15m 進出場，避免誤以為可現價進
-        show_levels = setup.trigger_ready or fade or (
+        show_levels = setup.trigger_ready or fade or base or (
             setup.side in ("long", "short")
             and setup.entry
             and setup.stop
@@ -2056,11 +2093,13 @@ def poll_telegram_queries(
             yes = [r for r in rows if (r.ruleset or "") == CURRENT_RULESET and (r.kind or "yes") == "yes"]
             retest = [r for r in rows if (r.ruleset or "") == CURRENT_RULESET and (r.kind or "") == "retest"]
             fade = [r for r in rows if (r.ruleset or "") == CURRENT_RULESET and (r.kind or "") == "fade"]
+            base = [r for r in rows if (r.ruleset or "") == CURRENT_RULESET and (r.kind or "") == "base"]
             plan = [r for r in rows if (r.ruleset or "") == PLAN_RULESET and (r.kind or "yes") == "plan"]
-            sy, sr, sf, sp = (
+            sy, sr, sf, sb, sp = (
                 compute_stats(yes),
                 compute_stats(retest),
                 compute_stats(fade),
+                compute_stats(base),
                 compute_stats(plan),
             )
             old_plan = [
@@ -2087,6 +2126,8 @@ def poll_telegram_queries(
                 + (f"｜勝率{sy.win_rate:.1f}%" if sy.win_n + sy.loss_n else "")
                 + f"\n見頂 {sf.total}｜勝{sf.win_n} 負{sf.loss_n} 未結{sf.open_n}"
                 + (f"｜勝率{sf.win_rate:.1f}%" if sf.win_n + sf.loss_n else "")
+                + f"\n見底 {sb.total}｜勝{sb.win_n} 負{sb.loss_n} 未結{sb.open_n}"
+                + (f"｜勝率{sb.win_rate:.1f}%" if sb.win_n + sb.loss_n else "")
                 + f"\n等回測 {sr.total}｜勝{sr.win_n} 負{sr.loss_n} 未結{sr.open_n}"
                 + (f"｜勝率{sr.win_rate:.1f}%" if sr.win_n + sr.loss_n else "")
                 + f"\n規劃 {PLAN_RULESET} {sp.total}｜勝{sp.win_n} 負{sp.loss_n} 未結{sp.open_n}"
@@ -2446,7 +2487,7 @@ def _apply_session_intraday_box(r: ChecklistResult) -> ChecklistResult:
 def format_telegram_card(r: ChecklistResult, *, kind: str) -> str:
     """
     Telegram HTML 卡片。
-    kind: yes | retest | retest_summary | plan | fade
+    kind: yes | retest | retest_summary | plan | fade | base
     """
     if kind == "plan":
         return format_telegram_plan_card(r)
@@ -2465,12 +2506,20 @@ def format_telegram_card(r: ChecklistResult, *, kind: str) -> str:
     risk_pct = abs(r.entry - r.stop) / r.entry * 100 if r.entry and r.stop else 0
     reward_pct = abs(r.tp - r.entry) / r.entry * 100 if r.entry and r.tp else 0
     group = "大幣" if _is_major(r.symbol) else "山寨"
-    fade = kind == "fade" or getattr(r, "fade_ready", False)
+    fade = kind == "fade" or (
+        getattr(r, "fade_ready", False) and kind not in ("base", "yes", "retest")
+    )
+    base = kind == "base" or (
+        getattr(r, "base_ready", False) and kind not in ("fade", "yes", "retest")
+    )
 
     if kind == "yes":
         status = "✅ 可扣板機"
         note = "可扣板機（仍非投資建議）"
-    elif kind == "fade":
+    elif kind == "base" or base:
+        status = "🔺 日多回檔見底"
+        note = "日線偏多＋4H仍偏空＋15m低位多方反應（非標準YES）"
+    elif kind == "fade" or fade:
         status = "🔻 日空反抽見頂"
         note = "日線偏空＋4H仍偏多＋15m高位空方反應（非標準YES）"
     else:
@@ -2478,15 +2527,18 @@ def format_telegram_card(r: ChecklistResult, *, kind: str) -> str:
         note = _esc(r.missing_steps or "等價格確認反應後再進")
 
     ban = ""
-    if not fade:
-        if r.structure == "偏多":
-            ban = "🚫 結構偏多・禁止做空"
-        elif r.structure == "偏空":
-            ban = "🚫 結構偏空・禁止做多"
-        elif r.structure == "盤整":
-            ban = "🚫 盤整・禁止方向單"
-    else:
+    if base:
+        ban = "📌 允許逆4H見底多（日線偏多）"
+    elif fade:
         ban = "📌 允許逆4H見頂空（日線偏空）"
+    elif r.structure == "偏多":
+        ban = "🚫 結構偏多・禁止做空"
+    elif r.structure == "偏空":
+        ban = "🚫 結構偏空・禁止做多"
+    elif r.structure == "盤整":
+        ban = "🚫 盤整・禁止方向單"
+    else:
+        ban = ""
 
     zone = _plan_zone_line(r, html=True)
     mtf = _esc(r.mtf_note) if r.mtf_note else ("高週期對齊" if r.mtf_aligned else "高週期未對齊")
@@ -2506,7 +2558,7 @@ def format_telegram_card(r: ChecklistResult, *, kind: str) -> str:
     )
     if ban:
         lines.append(ban)
-    if kind in ("yes", "fade") and r.entry and r.stop:
+    if kind in ("yes", "fade", "base") and r.entry and r.stop:
         rl = format_risk_line(r.entry, r.stop)
         if rl:
             lines.append(_esc(rl))
@@ -2633,12 +2685,16 @@ def format_console_card(r: ChecklistResult, *, kind: str) -> str:
         status = "可扣板機"
     elif kind == "fade":
         status = "日空反抽見頂"
+    elif kind == "base":
+        status = "日多回檔見底"
     else:
         status = "靠近區・等回測"
     group = "大幣" if _is_major(r.symbol) else "山寨"
     mtf = (r.mtf_note or ("對齊" if r.mtf_aligned else "未對齊"))[:60]
     if kind == "fade":
         ban = "見頂空"
+    elif kind == "base":
+        ban = "見底多"
     elif r.structure == "偏多":
         ban = "禁空"
     elif r.structure == "偏空":
@@ -2653,7 +2709,7 @@ def format_console_card(r: ChecklistResult, *, kind: str) -> str:
         f"  │ RR {r.rr:.1f} ｜ 流程 {r.workflow_passed}/11 ｜ 分 {r.setup_score:.0f}",
         f"  │ MTF: {mtf}",
     ]
-    if kind in ("yes", "fade") and r.entry and r.stop:
+    if kind in ("yes", "fade", "base") and r.entry and r.stop:
         rl = format_risk_line(r.entry, r.stop)
         if rl:
             lines.append(f"  │ {rl}")
@@ -2766,6 +2822,10 @@ def build_telegram_message(title: str, setups: list[ChecklistResult], *, kind: s
             f"🔻 <b>{_esc(title)}</b>\n🕐 {now} ｜ 共 {len(setups)} 檔\n"
             "日空＋4H反抽未破＋15m高位見頂（獨立空訊）"
         ),
+        "base": (
+            f"🔺 <b>{_esc(title)}</b>\n🕐 {now} ｜ 共 {len(setups)} 檔\n"
+            "日多＋4H回檔未破＋15m低位見底（獨立多訊）"
+        ),
         "retest": (
             f"👀 <b>{_esc(title)}</b>\n🕐 {now} ｜ 共 {len(setups)} 檔\n"
             f"僅推距區 ≤{DEFAULT_NEAR_ZONE_PCT}% 的靠近訊號"
@@ -2793,7 +2853,12 @@ def notify_breakeven_hints(hints: list[Any], *, telegram: bool = True) -> None:
     for e in hints:
         side = "多" if e.side == "long" else "空"
         ek = e.kind or "yes"
-        kind = "等回測" if ek == "retest" else ("見頂" if ek == "fade" else "YES")
+        kind = (
+            "等回測" if ek == "retest"
+            else "見頂" if ek == "fade"
+            else "見底" if ek == "base"
+            else "YES"
+        )
         lines.append(
             f"{e.symbol} {side}（{kind}）MFE {e.mfe_r:.2f}R｜"
             f"請把停損移到成本 {_px(e.entry)}"
@@ -2836,6 +2901,8 @@ def notify_alert(
             card_kind = "yes"
         elif kind == "fade":
             card_kind = "fade"
+        elif kind == "base":
+            card_kind = "base"
         elif kind == "plan":
             card_kind = "plan"
         else:
@@ -3041,7 +3108,11 @@ def print_checklist(setup: ChecklistResult, *, full: bool = False) -> None:
     print()
     print(color("── 結論 ──", "1;32"))
     fade = bool(getattr(setup, "fade_ready", False))
-    if fade:
+    base = bool(getattr(setup, "base_ready", False))
+    if base:
+        print(color("【見底多】日多＋4H回檔未破＋15m低位反應 → 可多（非標準YES）", "1;36"))
+        conclude = "做多（日多回檔見底）"
+    elif fade:
         print(color("【見頂空】日空＋4H反抽未破＋15m高位反應 → 可空（非標準YES）", "1;35"))
         conclude = "做空（日空反抽見頂）"
     elif not setup.mtf_aligned and setup.structure in ("偏多", "偏空"):
@@ -3070,6 +3141,8 @@ def print_checklist(setup: ChecklistResult, *, full: bool = False) -> None:
 
     if setup.trigger_ready:
         trig = color("可扣板機", "1;32")
+    elif base:
+        trig = color("見底可多", "1;36")
     elif fade:
         trig = color("見頂可空", "1;35")
     else:
@@ -3079,7 +3152,7 @@ def print_checklist(setup: ChecklistResult, *, full: bool = False) -> None:
         f"{color(conclude, '1;33')} ｜ {trig}{wait} ｜ "
         f"流程 {setup.workflow_passed}/11 ｜ 分 {setup.setup_score:.0f}"
     )
-    if setup.missing_steps and not setup.trigger_ready and not fade:
+    if setup.missing_steps and not setup.trigger_ready and not fade and not base:
         miss = setup.missing_steps.replace("缺：", "").replace("缺:", "").strip()
         print(f"缺 {miss}")
     if setup.zone_lo and setup.zone_hi:
@@ -3290,11 +3363,15 @@ def print_setup_table(
         1 for r in rows
         if getattr(r, "fade_ready", False) and not r.trigger_ready
     )
+    base_n = sum(
+        1 for r in rows
+        if getattr(r, "base_ready", False) and not r.trigger_ready
+    )
     wait_n = sum(1 for r in rows if r.waiting_retest and not r.trigger_ready)
     print()
     print(
         color("══ Setup ══", "1;35")
-        + f"  {now}  · 顯示 {len(rows)}  · YES {yes_n}  · 見頂 {fade_n}  · 等回測 {wait_n}"
+        + f"  {now}  · 顯示 {len(rows)}  · YES {yes_n}  · 見頂 {fade_n}  · 見底 {base_n}  · 等回測 {wait_n}"
     )
 
     if not rows:
@@ -3346,8 +3423,11 @@ def print_setup_table(
     for i, r in enumerate(rows, 1):
         # 狀態欄不用 ANSI（避免對齊跑掉）；YES 整列再上色
         fade = bool(getattr(r, "fade_ready", False))
+        base = bool(getattr(r, "base_ready", False))
         if r.trigger_ready:
             status = "YES"
+        elif base:
+            status = "見底"
         elif fade:
             status = "見頂"
         elif r.waiting_retest:
@@ -3359,7 +3439,7 @@ def print_setup_table(
             side = "多*"
         elif side == "-" and r.structure == "偏空":
             side = "空*"
-        if r.trigger_ready or fade:
+        if r.trigger_ready or fade or base:
             e_s, s_s, t_s = _px_or_dash(r.entry), _px_or_dash(r.stop), _px_or_dash(r.tp)
             rr = f"{r.rr:.1f}" if r.rr else "-"
         elif r.waiting_retest:
@@ -3395,6 +3475,8 @@ def print_setup_table(
         )
         if r.trigger_ready:
             print(color(row, "32"))
+        elif base:
+            print(color(row, "36"))
         elif fade:
             print(color(row, "35"))
         else:
@@ -3403,6 +3485,10 @@ def print_setup_table(
         bits: list[str] = []
         if r.trigger_ready:
             bits.append(color("可扣板機", "32"))
+            if r.entry and r.stop:
+                bits.append(f"風險{abs(r.entry - r.stop) / r.entry * 100:.2f}%")
+        elif base:
+            bits.append(color("日多回檔見底", "36"))
             if r.entry and r.stop:
                 bits.append(f"風險{abs(r.entry - r.stop) / r.entry * 100:.2f}%")
         elif fade:
@@ -3455,7 +3541,7 @@ def run_filtered_setup(
     if only_trigger:
         filtered = [
             x for x in filtered
-            if x.trigger_ready or getattr(x, "fade_ready", False)
+            if x.trigger_ready or getattr(x, "fade_ready", False) or getattr(x, "base_ready", False)
         ]
     if show:
         print_setup_table(filtered, top=top, rejected=rejected)
@@ -3470,6 +3556,14 @@ def run_filtered_setup(
         ]
         if fades:
             record_fade_signals(fades, interval=interval)
+        bases = [
+            x for x in filtered
+            if getattr(x, "base_ready", False)
+            and not x.trigger_ready
+            and not getattr(x, "fade_ready", False)
+        ]
+        if bases:
+            record_base_signals(bases, interval=interval)
         waits = [x for x in filtered if x.waiting_retest and not x.trigger_ready]
         if waits:
             record_retest_signals(waits, interval=interval)
@@ -3868,6 +3962,12 @@ def watch_once(
         r for r in setups
         if getattr(r, "fade_ready", False) and not r.trigger_ready
     ]
+    base_now = [
+        r for r in setups
+        if getattr(r, "base_ready", False)
+        and not r.trigger_ready
+        and not getattr(r, "fade_ready", False)
+    ]
     wait_list = [r for r in setups if r.waiting_retest]
     near_now = [
         r
@@ -3878,37 +3978,43 @@ def watch_once(
 
     cand_yes, cooldown = filter_cooldown(yes_now, cooldown, minutes=cooldown_min)
     cand_fade, cooldown = filter_cooldown(fade_now, cooldown, minutes=cooldown_min)
+    cand_base, cooldown = filter_cooldown(base_now, cooldown, minutes=cooldown_min)
     cand_near: list[ChecklistResult] = []
     if alert_retest:
         cand_near, cooldown = filter_cooldown(near_now, cooldown, minutes=cooldown_min)
 
-    # 同波最多 N 檔（先 YES → 見頂 → 靠近）
-    new_yes, new_fade, new_near = pick_wave_alerts(
+    # 同波最多 N 檔（先 YES → 見頂 → 見底 → 靠近）
+    new_yes, new_fade, new_base, new_near = pick_wave_alerts(
         cand_yes,
         cand_near,
         fade=cand_fade,
+        base=cand_base,
         max_n=cfg.max_alerts_per_wave,
         signals=signals,
         cfg=cfg,
     )
     new_yes = _apply_yes_risk_gate(new_yes)
     new_fade = _apply_yes_risk_gate(new_fade)
+    new_base = _apply_yes_risk_gate(new_base)
     # 沒被選上的不寫進冷卻時間戳（允許下一波再競爭）— 需把未選的從 cooldown 撤回
     sent_syms = (
         {r.symbol for r in new_yes}
         | {r.symbol for r in new_fade}
+        | {r.symbol for r in new_base}
         | {r.symbol for r in new_near}
     )
-    for r in cand_yes + cand_fade + cand_near:
+    for r in cand_yes + cand_fade + cand_base + cand_near:
         if r.symbol not in sent_syms and r.symbol in cooldown:
             # 剛寫入的冷卻撤回，避免「沒推卻冷卻」
             del cooldown[r.symbol]
 
-    # 日記先記本輪全部 YES／見頂／靠近等回測（推播仍只推同波前 N）
+    # 日記先記本輪全部 YES／見頂／見底／靠近等回測（推播仍只推同波前 N）
     if AUTO_RECORD_YES and yes_now:
         record_yes_signals(yes_now, interval="15m")
     if AUTO_RECORD_YES and fade_now:
         record_fade_signals(fade_now, interval="15m")
+    if AUTO_RECORD_YES and base_now:
+        record_base_signals(base_now, interval="15m")
     if AUTO_RECORD_YES and near_now:
         record_retest_signals(near_now, interval="15m")
 
@@ -3926,6 +4032,15 @@ def watch_once(
             "日空反抽見頂",
             setups=new_fade,
             kind="fade",
+            sound=False,
+            desktop=desktop,
+            telegram=True,
+        )
+    if new_base:
+        notify_alert(
+            "日多回檔見底",
+            setups=new_base,
+            kind="base",
             sound=False,
             desktop=desktop,
             telegram=True,
@@ -3971,6 +4086,7 @@ def watch_once(
         f"[{now_tw().strftime('%H:%M:%S')}] 完成｜"
         f"YES={len(yes_now)}(推{len(new_yes)}) "
         f"見頂={len(fade_now)}(推{len(new_fade)}) "
+        f"見底={len(base_now)}(推{len(new_base)}) "
         f"靠近={len(near_now)}(推{len(new_near)}) "
         f"同波上限{cfg.max_alerts_per_wave} 遠處等={len(far_now)}"
     )
@@ -3979,6 +4095,8 @@ def watch_once(
         "yes_sent": len(new_yes),
         "fade": len(fade_now),
         "fade_sent": len(new_fade),
+        "base": len(base_now),
+        "base_sent": len(new_base),
         "near": len(near_now),
         "near_sent": len(new_near),
         "far": len(far_now),
@@ -4023,6 +4141,13 @@ def watch_loop(
                 for r in setups
                 if getattr(r, "fade_ready", False) and not r.trigger_ready
             }
+            base_now = {
+                r.symbol: r
+                for r in setups
+                if getattr(r, "base_ready", False)
+                and not r.trigger_ready
+                and not getattr(r, "fade_ready", False)
+            }
             wait_list = [r for r in setups if r.waiting_retest]
             near_now = {
                 r.symbol: r
@@ -4033,6 +4158,7 @@ def watch_loop(
 
             cand_yes = [yes_now[s] for s in yes_now if s not in seen_yes]
             cand_fade = [fade_now[s] for s in fade_now if s not in seen_yes]
+            cand_base = [base_now[s] for s in base_now if s not in seen_yes]
             cand_near = (
                 [near_now[s] for s in near_now if s not in seen_near] if alert_retest else []
             )
@@ -4042,23 +4168,27 @@ def watch_loop(
 
             cand_yes, cooldown = filter_cooldown(cand_yes, cooldown, minutes=cooldown_min)
             cand_fade, cooldown = filter_cooldown(cand_fade, cooldown, minutes=cooldown_min)
+            cand_base, cooldown = filter_cooldown(cand_base, cooldown, minutes=cooldown_min)
             cand_near, cooldown = filter_cooldown(cand_near, cooldown, minutes=cooldown_min)
-            new_yes, new_fade, new_near = pick_wave_alerts(
+            new_yes, new_fade, new_base, new_near = pick_wave_alerts(
                 cand_yes,
                 cand_near,
                 fade=cand_fade,
+                base=cand_base,
                 max_n=cfg.max_alerts_per_wave,
                 signals=signals,
                 cfg=cfg,
             )
             new_yes = _apply_yes_risk_gate(new_yes)
             new_fade = _apply_yes_risk_gate(new_fade)
+            new_base = _apply_yes_risk_gate(new_base)
             sent_syms = (
                 {r.symbol for r in new_yes}
                 | {r.symbol for r in new_fade}
+                | {r.symbol for r in new_base}
                 | {r.symbol for r in new_near}
             )
-            for r in cand_yes + cand_fade + cand_near:
+            for r in cand_yes + cand_fade + cand_base + cand_near:
                 if r.symbol not in sent_syms and r.symbol in cooldown:
                     del cooldown[r.symbol]
 
@@ -4066,6 +4196,8 @@ def watch_loop(
                 record_yes_signals(list(yes_now.values()), interval="15m")
             if AUTO_RECORD_YES and fade_now:
                 record_fade_signals(list(fade_now.values()), interval="15m")
+            if AUTO_RECORD_YES and base_now:
+                record_base_signals(list(base_now.values()), interval="15m")
             if AUTO_RECORD_YES and near_now:
                 record_retest_signals(list(near_now.values()), interval="15m")
 
@@ -4083,6 +4215,15 @@ def watch_loop(
                     "日空反抽見頂",
                     setups=new_fade,
                     kind="fade",
+                    sound=False,
+                    desktop=desktop,
+                    telegram=True,
+                )
+            if new_base:
+                notify_alert(
+                    "日多回檔見底",
+                    setups=new_base,
+                    kind="base",
                     sound=False,
                     desktop=desktop,
                     telegram=True,
@@ -4111,15 +4252,15 @@ def watch_loop(
                     )
                     cooldown[far_key] = now_ts
 
-            if not new_yes and not new_fade and not new_near and not new_far:
+            if not new_yes and not new_fade and not new_base and not new_near and not new_far:
                 print(
                     f"[{now_tw().strftime('%H:%M:%S')}] 無新警報｜"
-                    f"YES={len(yes_now)} 見頂={len(fade_now)} "
+                    f"YES={len(yes_now)} 見頂={len(fade_now)} 見底={len(base_now)} "
                     f"靠近={len(near_now)} 遠處等={len(far_now)}"
                 )
 
-            seen_yes = (seen_yes | set(yes_now) | set(fade_now)) & (
-                set(yes_now) | set(fade_now)
+            seen_yes = (seen_yes | set(yes_now) | set(fade_now) | set(base_now)) & (
+                set(yes_now) | set(fade_now) | set(base_now)
             )
             seen_near = (seen_near | set(near_now)) & set(near_now)
             seen_far = (seen_far | set(far_now)) & set(far_now)

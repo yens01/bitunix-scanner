@@ -275,6 +275,65 @@ def record_fade_signals(
     return added
 
 
+def record_base_signals(
+    setups: list[Any],
+    *,
+    interval: str = "15m",
+    path: Path = JOURNAL_PATH,
+    quiet: bool = False,
+) -> list[JournalEntry]:
+    """日多＋4H 回檔＋15m 低位見底多訊（獨立 kind=base）。"""
+    rows = load_journal(path)
+    now_ms = _now_ms()
+    added: list[JournalEntry] = []
+    for s in setups:
+        if not getattr(s, "base_ready", False):
+            continue
+        if getattr(s, "trigger_ready", False) or getattr(s, "fade_ready", False):
+            continue
+        side = getattr(s, "side", "none")
+        if side != "long":
+            continue
+        entry = float(getattr(s, "entry", 0) or 0)
+        stop = float(getattr(s, "stop", 0) or 0)
+        tp = float(getattr(s, "tp", 0) or 0)
+        if entry <= 0 or stop <= 0 or tp <= 0 or abs(entry - stop) <= 0:
+            continue
+        symbol = getattr(s, "symbol", "")
+        if _recent_duplicate(rows + added, symbol, side, now_ms, kind="base"):
+            continue
+        if _recent_duplicate(rows + added, symbol, side, now_ms, kind="yes"):
+            continue
+        je = JournalEntry(
+            id=uuid.uuid4().hex[:12],
+            ts=_now_iso(),
+            signal_time_ms=now_ms,
+            symbol=symbol,
+            side=side,
+            interval=interval,
+            entry=entry,
+            stop=stop,
+            tp=tp,
+            planned_rr=float(getattr(s, "rr", 0) or 0),
+            score=float(getattr(s, "setup_score", 0) or 0),
+            structure=str(getattr(s, "structure", "")),
+            missing_steps=str(getattr(s, "missing_steps", "")),
+            status="open",
+            note="日多回檔見底",
+            ruleset=CURRENT_RULESET,
+            kind="base",
+            zone_lo=float(getattr(s, "zone_lo", 0) or 0),
+            zone_hi=float(getattr(s, "zone_hi", 0) or 0),
+            mtf_note=str(getattr(s, "mtf_note", "") or ""),
+        )
+        append_entry(je, path)
+        added.append(je)
+        rows.append(je)
+    if added and not quiet:
+        print(f"已記錄 {len(added)} 筆見底多訊 → {path.name}")
+    return added
+
+
 def record_retest_signals(
     setups: list[Any],
     *,
@@ -621,7 +680,7 @@ def resolve_entry(
     # 動態停損：有利達 0.8R 後移到成本；R 仍用原始風險計算
     cur_stop = entry.stop
     trailed = False
-    use_trail = (kind or "yes") in ("yes", "retest", "fade") and TRAIL_BE_AT_R > 0
+    use_trail = (kind or "yes") in ("yes", "retest", "fade", "base") and TRAIL_BE_AT_R > 0
 
     for i, c in enumerate(observing, 1):
         hi, lo = _h(c), _l(c)
@@ -840,7 +899,7 @@ def collect_breakeven_hints(
     for i, e in enumerate(rows):
         if e.status != "open":
             continue
-        if (e.kind or "yes") not in ("yes", "retest", "fade"):
+        if (e.kind or "yes") not in ("yes", "retest", "fade", "base"):
             continue
         if e.side not in ("long", "short"):
             continue
@@ -968,12 +1027,16 @@ def print_stats_by_ruleset(rows: list[JournalEntry] | None = None, path: Path = 
     fade_rows = [
         r for r in rows_by_ruleset(rows, CURRENT_RULESET) if (r.kind or "") == "fade"
     ]
+    base_rows = [
+        r for r in rows_by_ruleset(rows, CURRENT_RULESET) if (r.kind or "") == "base"
+    ]
     plan_rows = [
         r for r in rows_by_ruleset(rows, PLAN_RULESET) if (r.kind or "yes") == "plan"
     ]
     print_stats(compute_stats(yes_rows), f"YES · {CURRENT_RULESET}（0.8R後保本）")
     print_stats(compute_stats(retest_rows), f"等回測 · {CURRENT_RULESET}")
     print_stats(compute_stats(fade_rows), f"日空見頂 · {CURRENT_RULESET}")
+    print_stats(compute_stats(base_rows), f"日多見底 · {CURRENT_RULESET}")
     print_stats(
         compute_stats(plan_rows),
         f"規劃 · {PLAN_RULESET}（做多需日／4H｜收盤破箱）",
@@ -1018,6 +1081,8 @@ def print_journal(rows: list[JournalEntry] | None = None, limit: int = 30) -> No
             kind = "等回"
         elif k == "fade":
             kind = "見頂"
+        elif k == "base":
+            kind = "見底"
         else:
             kind = "YES"
         print(
