@@ -34,6 +34,8 @@ from typing import Any
 
 # 盈虧比門檻：低於此不建議扣板機
 MIN_RR = 1.5
+# YES 市價進場至少要留約半根 ATR，否則等回到區內，避免收盤追價被下一根掃掉
+YES_MIN_ROOM_ATR = 0.5
 
 
 def _f(x: Any, default: float = 0.0) -> float:
@@ -2040,6 +2042,43 @@ def evaluate_setup(
         and close_dir_ok
     )
 
+    # YES 不收盤市價追：離開區，或停損不到約 0.5×ATR → 不扣板機。
+    # 回到區緣仍留得住 0.5×ATR 時，改成等回測計畫價；否則這單直接不進。
+    yes_pullback_note = ""
+    if trigger_ready and active_zone and side in ("long", "short") and stop > 0:
+        room = abs(px - stop)
+        room_ok = atr_v <= 0 or room >= atr_v * YES_MIN_ROOM_ATR
+        left_zone = (side == "long" and px > active_zone.hi) or (
+            side == "short" and px < active_zone.lo
+        )
+        if side == "long":
+            zone_entry = active_zone.hi
+        else:
+            zone_entry = active_zone.lo
+        zone_room = abs(zone_entry - stop)
+        zone_room_ok = atr_v <= 0 or zone_room >= atr_v * YES_MIN_ROOM_ATR
+        if not room_ok:
+            trigger_ready = False
+            yes_pullback_note = (
+                f"停損僅 {room / atr_v:.2f}×ATR（需≥{YES_MIN_ROOM_ATR:g}），"
+                "不市價追。"
+                if atr_v > 0
+                else "停損過近，不市價追。"
+            )
+        elif left_zone and zone_room_ok and zone_entry > 0:
+            entry = zone_entry
+            tp, rr = compute_targets(side, entry, stop, supports, resists, atr_v)
+            rr_ok = rr >= MIN_RR
+            trigger_ready = False
+            waiting_retest = True
+            yes_pullback_note = (
+                "收盤已離開區，不市價追；等回到區內再進"
+                f"（計畫價 {fmt_short(entry)}）。"
+            )
+        elif left_zone:
+            trigger_ready = False
+            yes_pullback_note = "收盤已離開區且回到區緣停損仍過近，不進。"
+
     # ── 日空反抽見頂（fade）：與一般 YES 分開 ────────────────────────────
     # 1D 偏空 + 4H 仍偏多（反抽未破）+ 15m 高位空方硬反應 → 可推空，不要求 MTF 對齊
     fade_ready = False
@@ -2196,9 +2235,13 @@ def evaluate_setup(
             "03 等回測",
             retest_ok if stand_ok else False,
             (
-                "已回到關鍵區"
-                if at_zone
-                else ("等待回測，勿追價" if waiting_retest or chasing else "尚未形成回測")
+                yes_pullback_note
+                if yes_pullback_note
+                else (
+                    "已回到關鍵區"
+                    if at_zone
+                    else ("等待回測，勿追價" if waiting_retest or chasing else "尚未形成回測")
+                )
             ),
         ),
         (
@@ -2239,6 +2282,8 @@ def evaluate_setup(
     else:
         note = "盤整：不追假突破，等市場選邊；【硬規則】不給方向單。"
 
+    if yes_pullback_note:
+        note += " " + yes_pullback_note
     if chasing:
         note += " 偵測到追價/追突破，略過。"
     if level_block_reason and not trigger_ready:
