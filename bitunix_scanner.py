@@ -4465,18 +4465,21 @@ def interactive() -> None:
 
     def _menu_row(title: str, cells: list[str]) -> str:
         head = pad_l(title, 6)
-        body = "".join(pad_l(cell, 18) for cell in cells)
+        if title:
+            head = color(head, "36")
+        body = "".join(pad_l(cell, 16) for cell in cells)
         return f"  {head}{body}".rstrip()
 
+    print(color("── 指令 ──", "2"))
+    print(_menu_row("加密", ["h 熱度", "s Setup", "t 可進", "w 等回測"]))
+    print(_menu_row("", ["a 警報", "d 幣種", "小幣", "p 日內規劃"]))
+    print(_menu_row("", ["p tg 推送"]))
+    print(_menu_row("台股", ["tw 當沖", "th 熱度", "2330 查單股"]))
+    print(_menu_row("美股", ["uh 熱度", "uh AAPL 查單股"]))
+    print(_menu_row("新聞", ["news 財金新聞"]))
+    print(_menu_row("系統", ["j 日記", "jr 結算", "js 統計"]))
+    print(_menu_row("", ["r 重掃", "c 匯出", "q 離開"]))
     while True:
-        print(color("── 指令 ──", "2"))
-        print(_menu_row("加密", ["h 熱度", "s Setup", "t 可進", "w 等回測", "a 警報"]))
-        print(_menu_row("", ["p 日內規劃", "p tg 規劃並推送", "d 幣種"]))
-        print(_menu_row("台股", ["tw 當沖", "th 熱度", "2330 查單股"]))
-        print(_menu_row("美股", ["uh 熱度", "uh AAPL 查單股"]))
-        print(_menu_row("新聞", ["news 財金新聞"]))
-        print(_menu_row("系統", ["j 日記", "jr 結算", "js 統計"]))
-        print(_menu_row("", ["r 重掃", "c 匯出", "q 離開"]))
         try:
             cmd = input("> ").strip()
         except (EOFError, KeyboardInterrupt):
@@ -4504,6 +4507,16 @@ def interactive() -> None:
             print_table(signals, top=25, mode="volume")
         elif low in {"f", "funding"}:
             print_table(signals, top=25, mode="funding")
+        elif low in {"小幣", "小币", "alts", "小幣推薦", "小币推荐"}:
+            print("正在掃小幣…")
+            body = build_alt_watchlist_message()
+            body = re.sub(r"<[^>]+>", "", body)
+            body = (
+                body.replace("&amp;", "&")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+            )
+            print(body)
         elif low in {"s", "setup", "sr"}:
             setups = run_filtered_setup(signals, n=DEFAULT_SCAN_POOL, top=20)
         elif low in {"t", "trigger"}:

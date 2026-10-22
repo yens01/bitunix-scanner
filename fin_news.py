@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 import json
 import re
+import shutil
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -413,8 +414,6 @@ def _clean_title(title: str, source: str) -> str:
         head, tail = title.rsplit(" - ", 1)
         if len(tail) <= 18:
             title = head.strip()
-    if len(title) > 42:
-        title = title[:42].rstrip("，,、｜| ") + "…"
     return title
 
 
@@ -474,6 +473,46 @@ def collect_headlines(*, limit: int = 8) -> list[Headline]:
     order = {name: i for i, (name, _) in enumerate(_TOPICS)}
     kept.sort(key=lambda h: (order.get(h.topic, 9), -h.when.timestamp()))
     return kept
+
+
+def _disp_width(text: str) -> int:
+    return sum(2 if ord(ch) > 127 else 1 for ch in text)
+
+
+def _wrap_segments(text: str, width: int) -> list[str]:
+    width = max(8, width)
+    lines: list[str] = []
+    buf = ""
+    used = 0
+    for ch in text:
+        w = 2 if ord(ch) > 127 else 1
+        if buf and used + w > width:
+            lines.append(buf)
+            buf = ""
+            used = 0
+        buf += ch
+        used += w
+    if buf:
+        lines.append(buf)
+    return lines or [""]
+
+
+def _wrap_cmd(text: str) -> str:
+    """終端機依寬度換行。標題太長就縮排接下去，時間仍單獨一行。"""
+    width = max(40, shutil.get_terminal_size(fallback=(100, 24)).columns - 1)
+    out: list[str] = []
+    for line in text.splitlines():
+        if not line or _disp_width(line) <= width:
+            out.append(line)
+            continue
+        first = _wrap_segments(line, width)[0]
+        rest = line[len(first) :]
+        out.append(first)
+        hang = "　"
+        inner = max(8, width - _disp_width(hang))
+        for piece in _wrap_segments(rest, inner):
+            out.append(hang + piece)
+    return "\n".join(out)
 
 
 def _ansi(text: str, code: str) -> str:
@@ -612,7 +651,7 @@ def build_fin_news_message(*, html_mode: bool = True, limit: int = 8) -> str:
     text = "\n".join(lines).rstrip()
     heads = {name for name, _ in _TOPICS} | {"今天要注意", "亞洲盤", "熱度有新聞"}
     if not html_mode:
-        return _paint_cmd(text)
+        return _paint_cmd(_wrap_cmd(text))
     out = []
     for i, line in enumerate(text.splitlines()):
         if i == 0 or line in heads:
