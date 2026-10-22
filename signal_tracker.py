@@ -1052,6 +1052,36 @@ def print_stats_by_ruleset(rows: list[JournalEntry] | None = None, path: Path = 
         print_stats(compute_stats(legacy), f"舊規則 {LEGACY_RULESET}（對照）")
 
 
+def _fmt_journal_px(v: float) -> str:
+    if not v or v <= 0:
+        return "-"
+    if v >= 1000:
+        return f"{v:,.2f}"
+    if v >= 1:
+        return f"{v:.4f}".rstrip("0").rstrip(".")
+    return f"{v:.8f}".rstrip("0").rstrip(".")
+
+
+def plan_level_text(r: JournalEntry) -> str:
+    """規劃用：方向單給一組價；盤整給低多／高空。"""
+    if r.side in ("long", "short") and r.entry > 0 and r.stop > 0 and r.tp > 0:
+        return (
+            f"進{_fmt_journal_px(r.entry)} "
+            f"損{_fmt_journal_px(r.stop)} "
+            f"盈{_fmt_journal_px(r.tp)}"
+        )
+    lo = r.zone_lo if r.zone_lo > 0 else r.stop
+    hi = r.zone_hi if r.zone_hi > lo else r.tp
+    if lo <= 0 or hi <= lo:
+        return ""
+    mid = (lo + hi) / 2.0
+    pad = max((hi - lo) * 0.08, mid * 0.0006)
+    return (
+        f"低多 進{_fmt_journal_px(lo)} 損{_fmt_journal_px(lo - pad)} 盈{_fmt_journal_px(hi)}"
+        f"｜高空 進{_fmt_journal_px(hi)} 損{_fmt_journal_px(hi + pad)} 盈{_fmt_journal_px(lo)}"
+    )
+
+
 def print_journal(rows: list[JournalEntry] | None = None, limit: int = 30) -> None:
     rows = rows if rows is not None else load_journal()
     rows = list(reversed(rows))[:limit]
@@ -1089,11 +1119,14 @@ def print_journal(rows: list[JournalEntry] | None = None, limit: int = 30) -> No
             f"{r.ts:<19} {kind:<4} {r.symbol:<12} {side:<4} {st:<8} "
             f"{rs:<6} {rr:>6} {real:>7}"
         )
-        if k == "plan" and (r.plan_label or r.zone_lo):
+        if k == "plan" and (r.plan_label or r.zone_lo or r.entry):
             z = ""
             if r.zone_lo and r.zone_hi:
                 z = f" 箱{r.zone_lo:.4g}-{r.zone_hi:.4g}"
+            levels = plan_level_text(r)
             print(f"{'':19}  └ {r.plan_label or '規劃'} {r.structure}{z}")
+            if levels:
+                print(f"{'':19}    {levels}")
         elif k == "retest" and (r.zone_lo or r.missing_steps):
             z = ""
             if r.zone_lo and r.zone_hi:

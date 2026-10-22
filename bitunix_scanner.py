@@ -2267,16 +2267,19 @@ def poll_telegram_queries(
             # 最近規劃時段（避免以為沒記錄）
             plan_hint = ""
             if plan:
+                from signal_tracker import plan_level_text
+
                 latest = sorted(plan, key=lambda r: r.ts or "", reverse=True)
-                seen: list[str] = []
-                for r in latest:
+                lines_p: list[str] = []
+                for r in latest[:4]:
                     lab = (r.plan_label or "").strip() or "規劃"
-                    tag = f"{(r.ts or '')[5:16]} {lab}".strip()
-                    if tag not in seen:
-                        seen.append(tag)
-                    if len(seen) >= 3:
-                        break
-                plan_hint = "\n最近：" + "｜".join(seen)
+                    name = (r.symbol or "").replace("USDT", "")
+                    levels = plan_level_text(r)
+                    lines_p.append(
+                        f"{(r.ts or '')[5:16]} {lab} {name}"
+                        + (f"\n{levels}" if levels else "")
+                    )
+                plan_hint = "\n" + "\n".join(lines_p)
             _telegram_send(
                 f"📊 <b>日記統計</b>（雲端）\n"
                 f"YES {sy.total}｜勝{sy.win_n} 負{sy.loss_n} 未結{sy.open_n}"
