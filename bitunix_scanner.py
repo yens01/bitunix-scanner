@@ -137,9 +137,6 @@ TRADING_SESSION_HL: tuple[tuple[str, int, int, str], ...] = (
 SESSION_PLAN_STATE_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "session_plan_state.json"
 )
-# 相容舊常數名稱
-EVENING_PLAN_HOUR = 16
-EVENING_PLAN_INTERVAL = SESSION_PLAN_INTERVAL
 COOLDOWN_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "alert_cooldown.json")
 TELEGRAM_OFFSET_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "telegram_offset.json"
@@ -2376,16 +2373,6 @@ def _px(v: float) -> str:
     return f"{v:.8f}".rstrip("0").rstrip(".")
 
 
-def format_alert_line(r: ChecklistResult) -> str:
-    """終端機用一行摘要。"""
-    side = {"long": "多", "short": "空"}.get(r.side, r.structure)
-    return (
-        f"{r.symbol} {side} 入場{_px(r.entry)} "
-        f"停損{_px(r.stop)} 止盈{_px(r.tp)} "
-        f"RR={r.rr:.1f}｜{r.workflow_passed}/11"
-    )
-
-
 def _plan_htf_bias_line(r: ChecklistResult) -> str:
     """規劃用：即使 4H 盤整也顯示日／週／月偏向。"""
     mtf = r.mtf or {}
@@ -3823,12 +3810,6 @@ def scan(min_vol: float) -> list[CoinSignal]:
         funding = []
     print(f"ticker {len(tickers)} / 交易對 {len(pairs)} / 費率 {len(funding)}")
     return build_signals(tickers, pairs, funding, min_quote_vol=min_vol)
-
-
-def _pick_symbols(signals: list[CoinSignal], n: int = 60) -> list[str]:
-    """優先掃熱度高、成交量大的幣。"""
-    by_vol = sorted(signals, key=lambda s: s.quote_vol, reverse=True)
-    return [s.symbol for s in by_vol[:n]]
 
 
 def _session_plan_slot_key(day: str, hour: int, minute: int) -> str:

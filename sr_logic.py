@@ -223,16 +223,6 @@ def _sma(values: list[float], period: int) -> list[float]:
     return out
 
 
-def _ema(values: list[float], period: int) -> list[float]:
-    if not values:
-        return []
-    k = 2 / (period + 1)
-    out = [values[0]]
-    for v in values[1:]:
-        out.append(v * k + out[-1] * (1 - k))
-    return out
-
-
 def ma_alignment(closes: list[float]) -> tuple[str, str]:
     """第四章：MA5 / MA10 / MA30 輔助判斷方向。"""
     if len(closes) < 30:

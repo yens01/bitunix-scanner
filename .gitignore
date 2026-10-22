@@ -21,6 +21,9 @@ __pycache__/
 .venv/
 venv/
 
+# 日內規劃圖（指令當下產生）
+btc_eth_plan_chart.png
+
 # IDE / OS
 .idea/
 .vscode/
