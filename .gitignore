@@ -8,6 +8,10 @@ alert_cooldown.json
 yes_journal.jsonl
 session_plan_state.json
 telegram_offset.json
+coin_brief_cache.json
+ff_calendar_cache.json
+coin_list_cache.json
+company_brief_cache.json
 *.csv
 
 # Python

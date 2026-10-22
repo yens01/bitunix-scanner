@@ -1136,6 +1136,21 @@ def _telegram_api(method: str, payload: dict[str, Any] | None = None, *, timeout
         return None
 
 
+def _tg_reply_keyboard() -> str:
+    """手機底部按鈕。台股當沖、台股熱度、美股熱度、財金新聞。"""
+    return json.dumps(
+        {
+            "keyboard": [
+                [{"text": "台股當沖"}, {"text": "台股熱度"}],
+                [{"text": "美股熱度"}, {"text": "財金新聞"}],
+            ],
+            "resize_keyboard": True,
+            "is_persistent": True,
+        },
+        ensure_ascii=False,
+    )
+
+
 def _telegram_send(text: str, *, html: bool = True, chat_id: str | None = None) -> bool:
     token, default_chat = _telegram_token_chat()
     chat = (chat_id or default_chat).strip()
@@ -1148,6 +1163,7 @@ def _telegram_send(text: str, *, html: bool = True, chat_id: str | None = None) 
     }
     if html:
         payload["parse_mode"] = "HTML"
+    payload["reply_markup"] = _tg_reply_keyboard()
     result = _telegram_api("sendMessage", payload, timeout=20)
     if result is not None:
         return True
@@ -1527,6 +1543,26 @@ _TG_CMD_ALIASES: dict[str, str] = {
     "推荐": "ALTS",
     "關注": "ALTS",
     "关注": "ALTS",
+    "台股熱度": "TWHEAT",
+    "台股热度": "TWHEAT",
+    "美股熱度": "USHEAT",
+    "美股热度": "USHEAT",
+    "美股": "USHEAT",
+    "熱度": "TWHEAT",
+    "热度": "TWHEAT",
+    "台股當沖": "TW",
+    "台股当冲": "TW",
+    "台股": "TW",
+    "當沖": "TW",
+    "当冲": "TW",
+    "TW": "TW",
+    "TWSE": "TW",
+    "財金新聞": "NEWS",
+    "財經新聞": "NEWS",
+    "財金": "NEWS",
+    "財經": "NEWS",
+    "新聞": "NEWS",
+    "NEWS": "NEWS",
 }
 
 
@@ -1548,6 +1584,36 @@ def _telegram_cmd_token(text: str) -> str:
     return raw.replace("-", "").replace("/", "").replace(" ", "")
 
 
+def _us_query_symbol(raw: str) -> str | None:
+    """美股單股。美股AAPL／UHAAPL → AAPL。整榜不在這裡。"""
+    if raw.startswith("美股"):
+        rest = raw[2:]
+        if rest.isascii() and rest.isalpha() and 1 <= len(rest) <= 5:
+            return rest.upper()
+    if raw.startswith("UH") and len(raw) > 2:
+        rest = raw[2:]
+        if rest.isascii() and rest.isalpha() and 1 <= len(rest) <= 5:
+            return rest.upper()
+    return None
+
+
+def _tw_query_code(raw: str) -> str | None:
+    """台股指令。None=不是；空字串=掃整池；數字=單一代號。"""
+    if "熱度" in raw or "热度" in raw:
+        return None
+    if raw.startswith("TW") and raw[2:].isdigit() and len(raw[2:]) in {4, 5, 6}:
+        return raw[2:]
+    if any(k in raw for k in ("台股", "當沖", "当冲")) or (
+        raw.endswith("TW") and any(ch.isdigit() for ch in raw)
+    ):
+        digits = "".join(ch for ch in raw if ch.isdigit())
+        if len(digits) in {4, 5, 6}:
+            return digits
+        if any(k in raw for k in ("台股", "當沖", "当冲")):
+            return ""
+    return None
+
+
 def normalize_query_symbol(text: str) -> str | None:
     """把手機輸入轉成指令 key 或 XXXUSDT；無法辨識則 None。"""
     raw = _telegram_cmd_token(text)
@@ -1555,6 +1621,14 @@ def normalize_query_symbol(text: str) -> str | None:
         return None
     if raw in _TG_CMD_ALIASES:
         return _TG_CMD_ALIASES[raw]
+    tw_code = _tw_query_code(raw)
+    if tw_code is not None:
+        return "TW" if not tw_code else f"TW:{tw_code}"
+    if raw.isdigit() and len(raw) in {4, 5, 6}:
+        return f"TW:{raw}"
+    us_code = _us_query_symbol(raw)
+    if us_code:
+        return f"US:{us_code}"
     # 中文指令可能仍帶多餘字（例如「小幣推薦一下」）→ 子串對別名
     for alias, key in _TG_CMD_ALIASES.items():
         if not alias.isascii() and alias in raw:
@@ -1712,6 +1786,9 @@ def build_alt_watchlist_message(
         plan_only: bool = False,
     ) -> None:
         lines.append(f"{emoji} {_line(r, direction, tag=tag)}")
+        brief = briefs.get(r.symbol) or briefs.get(r.symbol.replace("USDT", ""))
+        if brief:
+            lines.append(f"　主要：{_esc(brief)}")
         lines.extend(_levels_block(r, plan_only=plan_only))
 
     lines: list[str] = [
@@ -1725,6 +1802,13 @@ def build_alt_watchlist_message(
     base = buckets["base"]
     wait = buckets["wait"]
     watch = buckets["watch"]
+    shown = [r.symbol for tier in (go, fade, base, wait, watch) for r, _, _ in tier]
+    try:
+        from coin_brief import coin_briefs
+
+        briefs = coin_briefs(shown)
+    except Exception:
+        briefs = {}
 
     if go:
         lines.append("<b>✅ 可進</b>")
@@ -1782,6 +1866,15 @@ def format_telegram_detail(info: dict[str, Any], meta: CoinSignal | None = None)
     else:
         head += f"\n現價 <code>{_esc(_px(live))}</code>"
     lines: list[str] = [head]
+    if not _is_major(str(info.get("symbol") or "")):
+        try:
+            from coin_brief import coin_brief
+
+            brief = coin_brief(str(info.get("symbol") or ""))
+        except Exception:
+            brief = ""
+        if brief:
+            lines.append(f"主要：{_esc(brief)}")
     if k_close > 0 and live > 0 and abs(live - k_close) / live >= 0.002:
         lines.append(f"K收 <code>{_esc(_px(k_close))}</code>（與現價偏離）")
 
@@ -2043,6 +2136,10 @@ def poll_telegram_queries(
             _telegram_send(
                 "用法：直接傳幣種，例如 <code>BTC</code> / <code>ETHUSDT</code>\n"
                 "小幣清單：<code>小幣推薦</code>\n"
+                "台股當沖：按下方按鈕，或傳 <code>台股</code>／<code>台股2330</code>\n"
+                "台股熱度：按 <code>台股熱度</code>\n"
+                "美股熱度：按 <code>美股熱度</code>；查單股傳 <code>美股AAPL</code>\n"
+                "財金新聞：按 <code>財金新聞</code>\n"
                 "或 <code>/help</code>",
                 chat_id=from_chat,
             )
@@ -2054,6 +2151,10 @@ def poll_telegram_queries(
                 "傳 <code>BTC</code>、<code>MAGIC</code>、<code>AVAXUSDT</code>\n"
                 "會回傳類似 CMD <code>detail</code> 的摘要\n"
                 "小幣關注：傳 <code>小幣推薦</code>／<code>alts</code>\n"
+                "台股當沖：按 <code>台股當沖</code>，或傳 <code>台股</code>／<code>台股2330</code>\n"
+                "台股熱度：按 <code>台股熱度</code>\n"
+                "美股熱度：按 <code>美股熱度</code>；查單股傳 <code>美股AAPL</code>\n"
+                "財金新聞：按 <code>財金新聞</code>\n"
                 "日內規劃：傳 <code>plan</code>／<code>規劃</code>／<code>日內</code>\n"
                 "統計：傳 <code>stats</code>",
                 chat_id=from_chat,
@@ -2068,6 +2169,69 @@ def poll_telegram_queries(
                 body = f"❌ 小幣推薦失敗：{_esc(str(ex))}"
             ok = _telegram_send(body, chat_id=from_chat)
             print(f"  → {'已回覆' if ok else '回覆失敗'} 小幣推薦")
+            handled += 1
+            continue
+        if key == "TW" or key.startswith("TW:"):
+            code = key.split(":", 1)[1] if key.startswith("TW:") else ""
+            label = code or "整池"
+            print(f"Telegram 查詢: 台股當沖 {label}")
+            _telegram_send("正在掃台股當沖…", chat_id=from_chat, html=False)
+            try:
+                from tw_daytrade import build_tw_daytrade_message
+
+                body = build_tw_daytrade_message(code=code or None)
+            except Exception as ex:
+                body = f"❌ 台股當沖失敗：{_esc(str(ex))}"
+            ok = _telegram_send(body, chat_id=from_chat)
+            print(f"  → {'已回覆' if ok else '回覆失敗'} 台股當沖 {label}")
+            handled += 1
+            continue
+        if key == "TWHEAT":
+            print("Telegram 查詢: 台股熱度")
+            _telegram_send("正在排台股熱度…", chat_id=from_chat, html=False)
+            try:
+                from tw_heat import build_tw_heat_message
+
+                body = build_tw_heat_message()
+            except Exception as ex:
+                body = f"❌ 台股熱度失敗：{_esc(str(ex))}"
+            ok = _telegram_send(body, chat_id=from_chat)
+            print(f"  → {'已回覆' if ok else '回覆失敗'} 台股熱度")
+            handled += 1
+            continue
+        if key == "USHEAT" or key.startswith("US:"):
+            symbol = key.split(":", 1)[1] if key.startswith("US:") else ""
+            label = symbol or "整榜"
+            print(f"Telegram 查詢: 美股 {label}")
+            if symbol:
+                try:
+                    from us_heat import build_us_stock_message
+
+                    body = build_us_stock_message(symbol)
+                except Exception as ex:
+                    body = f"❌ 美股 {symbol} 失敗：{_esc(str(ex))}"
+            else:
+                _telegram_send("正在排美股熱度…", chat_id=from_chat, html=False)
+                try:
+                    from us_heat import build_us_heat_message
+
+                    body = build_us_heat_message()
+                except Exception as ex:
+                    body = f"❌ 美股熱度失敗：{_esc(str(ex))}"
+            ok = _telegram_send(body, chat_id=from_chat)
+            print(f"  → {'已回覆' if ok else '回覆失敗'} 美股 {label}")
+            handled += 1
+            continue
+        if key == "NEWS":
+            print("Telegram 查詢: 財金新聞")
+            try:
+                from fin_news import build_fin_news_message
+
+                body = build_fin_news_message()
+            except Exception as ex:
+                body = f"❌ 財金新聞失敗：{_esc(str(ex))}"
+            ok = _telegram_send(body, chat_id=from_chat)
+            print(f"  → {'已回覆' if ok else '回覆失敗'} 財金新聞")
             handled += 1
             continue
         if key == "PLAN":
@@ -2183,7 +2347,7 @@ def telegram_bot_loop(*, interval: str = "15m") -> None:
         print("請先設定 TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID（telegram.local.env）")
         return
     print(color("Telegram 查詢 Bot 已啟動（Ctrl+C 停止）", "1;36"))
-    print("手機傳幣種（BTC）／小幣推薦／plan／stats；回覆僅限你的 CHAT_ID")
+    print("手機傳幣種（BTC）／小幣推薦／台股當沖／台股熱度／美股熱度／財金新聞／plan／stats；回覆僅限你的 CHAT_ID")
     try:
         while True:
             n = poll_telegram_queries(timeout=25, interval=interval, max_msgs=10)
@@ -3019,6 +3183,15 @@ def print_table(signals: list[CoinSignal], top: int = 30, mode: str = "hot") -> 
         )
 
     rows = rows[:top]
+    briefs: dict[str, str] = {}
+    if mode == "hot" and rows:
+        print("正在補主要內容…", flush=True)
+        try:
+            from coin_brief import coin_briefs
+
+            briefs = coin_briefs([s.symbol for s in rows])
+        except Exception:
+            briefs = {}
     now = now_tw().strftime("%m-%d %H:%M")
     title = {
         "hot": "綜合熱度排行",
@@ -3030,10 +3203,11 @@ def print_table(signals: list[CoinSignal], top: int = 30, mode: str = "hot") -> 
 
     # 欄寬以「顯示寬度」計（中文佔 2）
     w_i, w_sym, w_px, w_chg = 3, 14, 12, 9
-    w_rng, w_vol, w_fr, w_lev = 8, 9, 10, 4
+    w_rng, w_vol, w_fr, w_lev, w_tag = 8, 9, 10, 4, 36
     gap = "  "
     total_w = (
-        w_i + w_sym + w_px + w_chg + w_rng + w_vol + w_fr + w_lev + 7 * 2 + 16
+        w_i + w_sym + w_px + w_chg + w_rng + w_vol + w_fr + w_lev + w_tag + 8 * 2
+        + (2 + 26 if mode == "hot" else 0)
     )
 
     print()
@@ -3056,7 +3230,8 @@ def print_table(signals: list[CoinSignal], top: int = 30, mode: str = "hot") -> 
         + gap
         + pad_r("槓桿", w_lev)
         + gap
-        + "標籤"
+        + pad_l("標籤", w_tag)
+        + (gap + "主要" if mode == "hot" else "")
     )
     print(color(header, "1"))
     print("-" * total_w)
@@ -3065,6 +3240,7 @@ def print_table(signals: list[CoinSignal], top: int = 30, mode: str = "hot") -> 
         fr = f"{s.funding * 100:+.4f}%" if s.funding is not None else "-"
         lev = str(s.max_leverage) if s.max_leverage else "-"
         tags = ",".join(s.tags[:3]) if s.tags else "-"
+        what = briefs.get(s.symbol) or briefs.get(s.symbol.replace("USDT", "")) or "-"
         line = (
             pad_r(str(i), w_i)
             + gap
@@ -3082,7 +3258,8 @@ def print_table(signals: list[CoinSignal], top: int = 30, mode: str = "hot") -> 
             + gap
             + pad_r(lev, w_lev)
             + gap
-            + f"{tags} ({s.score:.0f})"
+            + pad_l(f"{tags} ({s.score:.0f})", w_tag)
+            + (gap + what if mode == "hot" else "")
         )
         print(line)
     print("-" * total_w)
@@ -4286,11 +4463,20 @@ def interactive() -> None:
         print(color("啟動掃描失敗，可稍後按 r 重試，或直接 d 幣種查詢。", "33"))
     setups: list[ChecklistResult] = []
 
+    def _menu_row(title: str, cells: list[str]) -> str:
+        head = pad_l(title, 6)
+        body = "".join(pad_l(cell, 18) for cell in cells)
+        return f"  {head}{body}".rstrip()
+
     while True:
         print(color("── 指令 ──", "2"))
-        print("  h 熱度   s Setup   t 可進   w 等回測   a 警報   p 日內規劃(BTC/ETH)")
-        print("  j 日記   jr 結算   js 統計  d 幣種   r 重掃   c 匯出   q 離開")
-        print(color("  （p tg = 日內規劃並推 Telegram）", "2"))
+        print(_menu_row("加密", ["h 熱度", "s Setup", "t 可進", "w 等回測", "a 警報"]))
+        print(_menu_row("", ["p 日內規劃", "p tg 規劃並推送", "d 幣種"]))
+        print(_menu_row("台股", ["tw 當沖", "th 熱度", "2330 查單股"]))
+        print(_menu_row("美股", ["uh 熱度", "uh AAPL 查單股"]))
+        print(_menu_row("新聞", ["news 財金新聞"]))
+        print(_menu_row("系統", ["j 日記", "jr 結算", "js 統計"]))
+        print(_menu_row("", ["r 重掃", "c 匯出", "q 離開"]))
         try:
             cmd = input("> ").strip()
         except (EOFError, KeyboardInterrupt):
@@ -4358,6 +4544,40 @@ def interactive() -> None:
                 low.startswith("p ") and "tg" in low.split()
             )
             print_btc_eth_daily_plan(telegram=want_tg)
+        elif low in {"tw", "台股", "當沖"} or low.startswith("tw ") or low.startswith("台股"):
+            parts = cmd.split()
+            code = ""
+            if len(parts) >= 2 and parts[-1].isdigit():
+                code = parts[-1]
+            from tw_daytrade import build_tw_daytrade_message
+
+            print(build_tw_daytrade_message(code=code or None, html=False))
+        elif low in {"th", "heat", "熱度", "台股熱度"}:
+            from tw_heat import print_tw_heat
+
+            print_tw_heat()
+        elif low.startswith("uh ") or low.startswith("us ") or (
+            low.startswith("美股") and low not in {"美股", "美股熱度"}
+        ):
+            token = cmd.strip().split()[-1]
+            if low.startswith("美股") and " " not in cmd.strip():
+                token = cmd.strip()[2:]
+            if token.isalpha() and 1 <= len(token) <= 5 and token.lower() not in {"熱度", "热度"}:
+                from us_heat import build_us_stock_message
+
+                print(build_us_stock_message(token, html=False))
+            else:
+                from us_heat import print_us_heat
+
+                print_us_heat()
+        elif low in {"uh", "usheat", "美股", "美股熱度"}:
+            from us_heat import print_us_heat
+
+            print_us_heat()
+        elif low in {"news", "新聞", "財金", "財經"}:
+            from fin_news import build_fin_news_message
+
+            print(build_fin_news_message(html_mode=False))
         elif low.startswith("d ") or low.startswith("detail "):
             parts = cmd.split()
             if len(parts) < 2:
@@ -4397,6 +4617,10 @@ def interactive() -> None:
             be_hints = collect_breakeven_hints(fetch_klines, parse_klines, max_bars=96)
             notify_breakeven_hints(be_hints, telegram=True)
             print_stats_by_ruleset()
+        elif cmd.strip().isdigit() and len(cmd.strip()) in {4, 5, 6}:
+            from tw_daytrade import build_tw_daytrade_message
+
+            print(build_tw_daytrade_message(code=cmd.strip(), html=False))
         else:
             print("未知指令")
 
@@ -4481,6 +4705,13 @@ def main() -> None:
 
     pl = sub.add_parser("plan", help="BTC／ETH 日內規劃（今日高低・高拋低吸）")
     pl.add_argument("--telegram", action="store_true", help="同時推送到 Telegram")
+
+    twp = sub.add_parser("tw", help="台股當沖（日線＋60分＋15分，13:25 前平倉）")
+    twp.add_argument("code", nargs="?", default="", help="代號，例如 2330；省略則掃整池")
+
+    sub.add_parser("heat", help="台股綜合熱度（流動性＋動能＋振幅）")
+    sub.add_parser("usheat", help="美股綜合熱度（流動性＋動能＋振幅）")
+    sub.add_parser("news", help="每日重要財金新聞")
 
     b = sub.add_parser("bot", help="Telegram 手機查幣（傳 BTC／MAGIC 回 detail 摘要）")
     b.add_argument("--interval", default="15m", help="分析週期")
@@ -4586,6 +4817,30 @@ def main() -> None:
 
     if args.cmd == "plan":
         print_btc_eth_daily_plan(telegram=bool(args.telegram))
+        return
+
+    if args.cmd == "tw":
+        from tw_daytrade import build_tw_daytrade_message
+
+        print(build_tw_daytrade_message(code=(args.code or "").strip() or None, html=False))
+        return
+
+    if args.cmd == "heat":
+        from tw_heat import print_tw_heat
+
+        print_tw_heat()
+        return
+
+    if args.cmd == "usheat":
+        from us_heat import print_us_heat
+
+        print_us_heat()
+        return
+
+    if args.cmd == "news":
+        from fin_news import build_fin_news_message
+
+        print(build_fin_news_message(html_mode=False))
         return
 
     if args.cmd == "bot":
