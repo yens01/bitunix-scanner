@@ -1134,12 +1134,14 @@ def _telegram_api(method: str, payload: dict[str, Any] | None = None, *, timeout
 
 
 def _tg_reply_keyboard() -> str:
-    """手機底部按鈕。台股當沖、台股熱度、美股熱度、財金新聞。"""
+    """手機底部按鈕。符號只做外觀，辨識時會去掉。"""
     return json.dumps(
         {
             "keyboard": [
-                [{"text": "台股當沖"}, {"text": "台股熱度"}],
-                [{"text": "美股熱度"}, {"text": "財金新聞"}],
+                [{"text": "📋 日內規劃"}, {"text": "📊 統計"}],
+                [{"text": "🪙 小幣推薦"}, {"text": "📰 財金新聞"}],
+                [{"text": "🇹🇼 台股當沖"}, {"text": "🔥 台股熱度"}],
+                [{"text": "🇺🇸 美股熱度"}],
             ],
             "resize_keyboard": True,
             "is_persistent": True,
@@ -1578,7 +1580,9 @@ def _telegram_cmd_token(text: str) -> str:
         if raw.startswith(prefix):
             raw = raw[len(prefix) :].strip()
             break
-    return raw.replace("-", "").replace("/", "").replace(" ", "")
+    raw = raw.replace("-", "").replace("/", "").replace(" ", "")
+    # 按鈕上的符號不參與指令判斷（📋 日內規劃 → 日內規劃）
+    return "".join(ch for ch in raw if ch.isalnum())
 
 
 def _us_query_symbol(raw: str) -> str | None:
@@ -2132,11 +2136,7 @@ def poll_telegram_queries(
         if key is None:
             _telegram_send(
                 "用法：直接傳幣種，例如 <code>BTC</code> / <code>ETHUSDT</code>\n"
-                "小幣清單：<code>小幣推薦</code>\n"
-                "台股當沖：按下方按鈕，或傳 <code>台股</code>／<code>台股2330</code>\n"
-                "台股熱度：按 <code>台股熱度</code>\n"
-                "美股熱度：按 <code>美股熱度</code>；查單股傳 <code>美股AAPL</code>\n"
-                "財金新聞：按 <code>財金新聞</code>\n"
+                "或按底部按鈕：📋日內規劃、📊統計、🪙小幣推薦、📰財金新聞、台股／美股\n"
                 "或 <code>/help</code>",
                 chat_id=from_chat,
             )
@@ -2147,13 +2147,9 @@ def poll_telegram_queries(
                 "📱 <b>幣種查詢</b>\n"
                 "傳 <code>BTC</code>、<code>MAGIC</code>、<code>AVAXUSDT</code>\n"
                 "會回傳類似 CMD <code>detail</code> 的摘要\n"
-                "小幣關注：傳 <code>小幣推薦</code>／<code>alts</code>\n"
-                "台股當沖：按 <code>台股當沖</code>，或傳 <code>台股</code>／<code>台股2330</code>\n"
-                "台股熱度：按 <code>台股熱度</code>\n"
-                "美股熱度：按 <code>美股熱度</code>；查單股傳 <code>美股AAPL</code>\n"
-                "財金新聞：按 <code>財金新聞</code>\n"
-                "日內規劃：傳 <code>plan</code>／<code>規劃</code>／<code>日內</code>\n"
-                "統計：傳 <code>stats</code>",
+                "底部按鈕：📋日內規劃、📊統計、🪙小幣推薦、📰財金新聞\n"
+                "台股：🇹🇼當沖、🔥熱度；單檔傳 <code>台股2330</code>\n"
+                "美股：🇺🇸熱度；單股傳 <code>美股AAPL</code>",
                 chat_id=from_chat,
             )
             handled += 1
