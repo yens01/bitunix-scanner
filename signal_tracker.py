@@ -1196,13 +1196,58 @@ def _row_tone(r: JournalEntry) -> str:
     return "open"
 
 
-def today_table_model(rows: list[JournalEntry], *, day: str) -> dict[str, Any]:
-    """統計表格：每一列開倉、平倉、方向、結果、進場、停損、止盈。"""
-    today = sorted(
-        (r for r in rows if (r.ts or "").startswith(day)),
-        key=lambda r: r.ts or "",
+# 統計上的「一天」：台灣時間早上 8 點到隔天早上 8 點
+DAY_START_HOUR = 8
+
+
+def trading_day_bounds(
+    day: str | None = None,
+    now: datetime | None = None,
+) -> tuple[str, str, str]:
+    """回傳 (起, 迄, 標籤)。起含、迄不含，格式 YYYY-MM-DD HH:MM:SS。"""
+    if day:
+        start = datetime.strptime(day, "%Y-%m-%d").replace(
+            hour=DAY_START_HOUR, tzinfo=TZ_TW
+        )
+    else:
+        current = now or datetime.now(TZ_TW)
+        if current.tzinfo is None:
+            current = current.replace(tzinfo=TZ_TW)
+        start = current.replace(
+            hour=DAY_START_HOUR, minute=0, second=0, microsecond=0
+        )
+        if current < start:
+            start -= timedelta(days=1)
+    end = start + timedelta(days=1)
+    return (
+        start.strftime("%Y-%m-%d %H:%M:%S"),
+        end.strftime("%Y-%m-%d %H:%M:%S"),
+        start.strftime("%m-%d"),
     )
-    title_day = day[5:] if len(day) >= 10 else day
+
+
+def _rows_in_trading_day(
+    rows: list[JournalEntry],
+    *,
+    day: str | None = None,
+    now: datetime | None = None,
+) -> tuple[list[JournalEntry], str]:
+    start, end, label = trading_day_bounds(day, now)
+    picked = [
+        r for r in rows if start <= (r.ts or "") < end
+    ]
+    picked.sort(key=lambda r: r.ts or "")
+    return picked, label
+
+
+def today_table_model(
+    rows: list[JournalEntry],
+    *,
+    day: str | None = None,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """統計表格：早上 8 點到隔天 8 點的開倉、平倉、方向、結果、價位。"""
+    today, title_day = _rows_in_trading_day(rows, day=day, now=now)
     title = f"今日紀錄 {title_day}"
     if not today:
         return {
@@ -1279,11 +1324,12 @@ def _html_text(text: str) -> str:
 def format_today_table_messages(
     rows: list[JournalEntry],
     *,
-    day: str,
+    day: str | None = None,
+    now: datetime | None = None,
     limit: int = 3500,
 ) -> list[str]:
-    """統計按鈕用：文字表格，不是圖片。"""
-    model = today_table_model(rows, day=day)
+    """統計按鈕用：文字表格。一天從早上 8 點算到隔天 8 點。"""
+    model = today_table_model(rows, day=day, now=now)
     title = f"📊 <b>{_html_text(model['title'])}</b>"
     if not model["records"]:
         return [f"{title}\n{_html_text(model['summary'])}"]
@@ -1334,18 +1380,15 @@ def format_today_table_messages(
 def format_today_record_messages(
     rows: list[JournalEntry],
     *,
-    day: str,
+    day: str | None = None,
+    now: datetime | None = None,
     limit: int = 3500,
 ) -> list[str]:
     """
-    統計按鈕用：某一天（台灣日期 YYYY-MM-DD）的開倉／平倉／價位。
+    統計用文字版。一天從台灣時間早上 8 點到隔天早上 8 點。
     超過 Telegram 長度就拆成多則。
     """
-    today = sorted(
-        (r for r in rows if (r.ts or "").startswith(day)),
-        key=lambda r: r.ts or "",
-    )
-    title_day = day[5:] if len(day) >= 10 else day
+    today, title_day = _rows_in_trading_day(rows, day=day, now=now)
     title = f"📊 <b>今日紀錄</b> {title_day}"
     if not today:
         return [f"{title}\n今天還沒有紀錄"]

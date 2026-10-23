@@ -2245,8 +2245,7 @@ def poll_telegram_queries(
             from signal_tracker import format_today_table_messages, load_journal
 
             rows = load_journal()
-            day = now_tw().strftime("%Y-%m-%d")
-            for body in format_today_table_messages(rows, day=day):
+            for body in format_today_table_messages(rows):
                 _telegram_send(body, chat_id=from_chat)
             handled += 1
             continue
