@@ -1168,6 +1168,94 @@ def format_trade_record_lines(r: JournalEntry) -> list[str]:
     return [line, levels] if levels else [line]
 
 
+def _fmt_table_px(v: float) -> str:
+    """表格用：位數收短，手機欄寬才放得下。"""
+    if not v or v <= 0:
+        return "—"
+    if v >= 1000:
+        return f"{v:,.2f}"
+    if v >= 10:
+        return f"{v:.2f}"
+    if v >= 1:
+        return f"{v:.4f}".rstrip("0").rstrip(".")
+    text = f"{v:.6g}"
+    if "e" in text or "E" in text:
+        text = f"{v:.8f}".rstrip("0").rstrip(".")
+    return text
+
+
+def _row_tone(r: JournalEntry) -> str:
+    if _awaiting_retest_fill(r):
+        return "wait"
+    if r.status == "win":
+        return "win"
+    if r.status == "loss":
+        return "loss"
+    if r.status == "timeout":
+        return "timeout"
+    return "open"
+
+
+def today_table_model(rows: list[JournalEntry], *, day: str) -> dict[str, Any]:
+    """統計表格：每一列開倉、平倉、方向、結果、進場、停損、止盈。"""
+    today = sorted(
+        (r for r in rows if (r.ts or "").startswith(day)),
+        key=lambda r: r.ts or "",
+    )
+    title_day = day[5:] if len(day) >= 10 else day
+    title = f"今日紀錄 {title_day}"
+    if not today:
+        return {
+            "title": title,
+            "summary": "今天還沒有紀錄",
+            "footnote": "",
+            "headers": [],
+            "records": [],
+        }
+    pending = [r for r in today if _awaiting_retest_fill(r)]
+    pending_ids = {r.id for r in pending}
+    closed = [r for r in today if r.status != "open" and r.id not in pending_ids]
+    holding = [r for r in today if r.status == "open" and r.id not in pending_ids]
+    total_r = sum(r.realized_r for r in closed)
+    summary = (
+        f"已平 {len(closed)} 筆 {total_r:+.2f}R｜持倉 {len(holding)}｜等回測未進 {len(pending)}"
+    )
+    records: list[dict[str, Any]] = []
+    for r in today:
+        planned = (r.kind or "") == "retest" and r.entry > 0
+        entry = _fmt_table_px(r.entry)
+        if planned:
+            entry = f"計{entry}"
+        elif r.side not in ("long", "short"):
+            entry = plan_level_text(r) or entry
+        records.append(
+            {
+                "cells": [
+                    (r.ts or "")[11:16] or "—",
+                    _exit_hhmm(r),
+                    (r.symbol or "").replace("USDT", ""),
+                    _trade_side_text(r.side),
+                    _trade_result_text(r),
+                    entry,
+                    _fmt_table_px(r.stop),
+                    _fmt_table_px(r.tp),
+                ],
+                "tone": _row_tone(r),
+                "planned": planned,
+            }
+        )
+    footnote = "進場前有「計」的是計畫價，不是當時成交價" if any(
+        rec["planned"] for rec in records
+    ) else ""
+    return {
+        "title": title,
+        "summary": summary,
+        "footnote": footnote,
+        "headers": ["開倉", "平倉", "幣", "向", "結果", "進場", "停損", "止盈"],
+        "records": records,
+    }
+
+
 def format_today_record_messages(
     rows: list[JournalEntry],
     *,
