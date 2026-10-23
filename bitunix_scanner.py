@@ -1150,6 +1150,23 @@ def _tg_reply_keyboard() -> str:
     )
 
 
+def _telegram_send_rich(html: str, *, chat_id: str | None = None) -> bool:
+    """原生表格。失敗時由呼叫端改回一般文字。"""
+    token, default_chat = _telegram_token_chat()
+    chat = (chat_id or default_chat).strip()
+    if not token or not chat or not html:
+        return False
+    payload = {
+        "chat_id": chat,
+        "rich_message": json.dumps(
+            {"html": html, "skip_entity_detection": True},
+            ensure_ascii=False,
+        ),
+        "reply_markup": _tg_reply_keyboard(),
+    }
+    return _telegram_api("sendRichMessage", payload, timeout=20) is not None
+
+
 def _telegram_send(text: str, *, html: bool = True, chat_id: str | None = None) -> bool:
     token, default_chat = _telegram_token_chat()
     chat = (chat_id or default_chat).strip()
@@ -2241,12 +2258,23 @@ def poll_telegram_queries(
             handled += 1
             continue
         if key == "STATS":
-            # 可複製的文字表。不用圖片，也不用程式碼區塊（區塊會整段變紅）。
-            from signal_tracker import format_today_table_messages, load_journal
+            # 原生表格：一般字、價格等寬字、獲利底色。送不出來才退回等寬文字。
+            from signal_tracker import (
+                format_today_rich_messages,
+                format_today_table_messages,
+                load_journal,
+            )
 
             rows = load_journal()
-            for body in format_today_table_messages(rows):
-                _telegram_send(body, chat_id=from_chat)
+            bodies = format_today_rich_messages(rows)
+            sent = 0
+            for body in bodies:
+                if not _telegram_send_rich(body, chat_id=from_chat):
+                    break
+                sent += 1
+            if sent == 0:
+                for body in format_today_table_messages(rows):
+                    _telegram_send(body, chat_id=from_chat)
             handled += 1
             continue
 

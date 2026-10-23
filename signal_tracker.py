@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+import re
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -1323,6 +1324,91 @@ def _pad_cell(text: str, width: int, align: str) -> str:
 
 def _is_range_plan(entry: str) -> bool:
     return "低多" in entry or "高空" in entry
+
+
+def _rich_result(text: str, tone: str) -> str:
+    """結果跟價格分開：獲利用底色，虧損用粗體，其餘一般字。"""
+    safe = _html_text(text)
+    if tone == "win":
+        return f"<mark>{safe}</mark>"
+    if tone == "loss":
+        return f"<b>{safe}</b>"
+    if tone in ("wait", "timeout"):
+        return f"<i>{safe}</i>"
+    return safe
+
+
+def _rich_px(text: str) -> str:
+    return f"<code>{_html_text(text)}</code>"
+
+
+def _rich_plan_line(text: str) -> str:
+    """區間單的價位也用等寬字，跟方向文字分開。"""
+    return re.sub(r"\d[\d,]*(?:\.\d+)?", lambda m: f"<code>{m.group(0)}</code>", _html_text(text))
+
+
+def format_today_rich_messages(
+    rows: list[JournalEntry],
+    *,
+    day: str | None = None,
+    now: datetime | None = None,
+    page_rows: int = 24,
+) -> list[str]:
+    """統計用原生表格。欄位分開，價格是等寬字，獲利有底色。"""
+    model = today_table_model(rows, day=day, now=now)
+    head = [f"<p><b>📊 {_html_text(model['title'])}</b></p>", f"<p>{_html_text(model['summary'])}</p>"]
+    if model["footnote"]:
+        head.append(f"<p>{_html_text(model['footnote'])}</p>")
+    if not model["records"]:
+        return ["\n".join(head)]
+
+    data_rows: list[str] = []
+    range_lines: list[str] = []
+    for rec in model["records"]:
+        cells = [str(cell).replace("—", "-") for cell in rec["cells"]]
+        if _is_range_plan(cells[5]):
+            opened, closed, name, side, result, entry = cells[:6]
+            range_lines.append(
+                f"<p><b>{_html_text(opened)} {_html_text(closed)} {_html_text(name)}</b> "
+                f"{_html_text(side)} {_rich_result(result, rec['tone'])}</p>"
+            )
+            for part in entry.split("｜"):
+                if part:
+                    range_lines.append(f"<p>{_rich_plan_line(part)}</p>")
+            continue
+        opened, closed, name, side, result, entry, stop, tp = cells
+        data_rows.append(
+            "<tr>"
+            f"<td>{_html_text(opened)}</td>"
+            f"<td>{_html_text(closed)}</td>"
+            f"<td>{_html_text(name)}</td>"
+            f'<td align="center">{_html_text(side)}</td>'
+            f'<td align="right">{_rich_result(result, rec["tone"])}</td>'
+            f'<td align="right">{_rich_px(entry)}</td>'
+            f'<td align="right">{_rich_px(stop)}</td>'
+            f'<td align="right">{_rich_px(tp)}</td>'
+            "</tr>"
+        )
+
+    header = (
+        "<tr>"
+        "<th>開倉</th><th>平倉</th><th>幣</th>"
+        '<th align="center">向</th><th align="right">結果</th>'
+        '<th align="right">進場</th><th align="right">停損</th><th align="right">止盈</th>'
+        "</tr>"
+    )
+    pages = [
+        data_rows[i : i + page_rows] for i in range(0, len(data_rows), page_rows)
+    ] or [[]]
+    messages: list[str] = []
+    for index, page in enumerate(pages):
+        parts = list(head) if index == 0 else [f"<p><b>{_html_text(model['title'])}</b>（續）</p>"]
+        if page:
+            parts.append("<table bordered striped compact>" + header + "".join(page) + "</table>")
+        if index == len(pages) - 1 and range_lines:
+            parts.extend(range_lines)
+        messages.append("\n".join(parts))
+    return messages
 
 
 def format_today_table_messages(
