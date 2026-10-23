@@ -1082,6 +1082,77 @@ def plan_level_text(r: JournalEntry) -> str:
     )
 
 
+def _exit_hhmm(r: JournalEntry) -> str:
+    """平倉時刻：觸發那根 K 的開盤（台灣時間）。未平為 —。"""
+    if r.status == "open" or not r.exit_time_ms:
+        return "—"
+    return datetime.fromtimestamp(r.exit_time_ms / 1000, TZ_TW).strftime("%H:%M")
+
+
+def _trade_result_text(r: JournalEntry) -> str:
+    if r.status == "open":
+        return "未平"
+    if r.status == "timeout":
+        return "超時 0R"
+    return f"{r.realized_r:+.2f}R"
+
+
+def _trade_side_text(side: str) -> str:
+    if side == "long":
+        return "多"
+    if side == "short":
+        return "空"
+    return "盤"
+
+
+def format_trade_record_lines(r: JournalEntry) -> list[str]:
+    """一筆日記：開倉→平倉、方向、結果，下一行進／損／盈。"""
+    opened = (r.ts or "")[11:16] or "—"
+    name = (r.symbol or "").replace("USDT", "")
+    line = (
+        f"{opened}→{_exit_hhmm(r)} {name} "
+        f"{_trade_side_text(r.side)} {_trade_result_text(r)}"
+    )
+    levels = plan_level_text(r)
+    return [line, levels] if levels else [line]
+
+
+def format_today_record_messages(
+    rows: list[JournalEntry],
+    *,
+    day: str,
+    limit: int = 3500,
+) -> list[str]:
+    """
+    統計按鈕用：某一天（台灣日期 YYYY-MM-DD）的開倉／平倉／價位。
+    超過 Telegram 長度就拆成多則。
+    """
+    today = sorted(
+        (r for r in rows if (r.ts or "").startswith(day)),
+        key=lambda r: r.ts or "",
+    )
+    title_day = day[5:] if len(day) >= 10 else day
+    title = f"📊 <b>今日紀錄</b> {title_day}"
+    if not today:
+        return [f"{title}\n今天還沒有紀錄"]
+    closed = [r for r in today if r.status != "open"]
+    open_n = len(today) - len(closed)
+    total_r = sum(r.realized_r for r in closed)
+    header = f"{title}\n已平 {len(closed)} 筆 {total_r:+.2f}R｜未平 {open_n}"
+    blocks = ["\n".join(format_trade_record_lines(r)) for r in today]
+    messages: list[str] = []
+    cur = header
+    for block in blocks:
+        piece = "\n" + block
+        if len(cur) + len(piece) > limit and cur != header:
+            messages.append(cur)
+            cur = f"📊 <b>今日紀錄</b> {title_day}（續）" + piece
+        else:
+            cur += piece
+    messages.append(cur)
+    return messages
+
+
 def print_journal(rows: list[JournalEntry] | None = None, limit: int = 30) -> None:
     rows = rows if rows is not None else load_journal()
     rows = list(reversed(rows))[:limit]

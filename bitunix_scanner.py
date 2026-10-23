@@ -2238,68 +2238,13 @@ def poll_telegram_queries(
             handled += 1
             continue
         if key == "STATS":
-            # 簡短統計文字（雲端 Reply 會載入 cloud-journal 快照）
-            from signal_tracker import (
-                CURRENT_RULESET,
-                PLAN_RULESET,
-                compute_stats,
-                load_journal,
-            )
+            # 今日每筆開倉／平倉／進損盈（雲端 Reply 會載入 cloud-journal 快照）
+            from signal_tracker import format_today_record_messages, load_journal
 
             rows = load_journal()
-            yes = [r for r in rows if (r.ruleset or "") == CURRENT_RULESET and (r.kind or "yes") == "yes"]
-            retest = [r for r in rows if (r.ruleset or "") == CURRENT_RULESET and (r.kind or "") == "retest"]
-            fade = [r for r in rows if (r.ruleset or "") == CURRENT_RULESET and (r.kind or "") == "fade"]
-            base = [r for r in rows if (r.ruleset or "") == CURRENT_RULESET and (r.kind or "") == "base"]
-            plan = [r for r in rows if (r.ruleset or "") == PLAN_RULESET and (r.kind or "yes") == "plan"]
-            sy, sr, sf, sb, sp = (
-                compute_stats(yes),
-                compute_stats(retest),
-                compute_stats(fade),
-                compute_stats(base),
-                compute_stats(plan),
-            )
-            old_plan = [
-                r for r in rows
-                if (r.ruleset or "") == CURRENT_RULESET and (r.kind or "yes") == "plan"
-            ]
-            so = compute_stats(old_plan) if old_plan else None
-            # 最近規劃時段（避免以為沒記錄）
-            plan_hint = ""
-            if plan:
-                from signal_tracker import plan_level_text
-
-                latest = sorted(plan, key=lambda r: r.ts or "", reverse=True)
-                lines_p: list[str] = []
-                for r in latest[:4]:
-                    lab = (r.plan_label or "").strip() or "規劃"
-                    name = (r.symbol or "").replace("USDT", "")
-                    levels = plan_level_text(r)
-                    lines_p.append(
-                        f"{(r.ts or '')[5:16]} {lab} {name}"
-                        + (f"\n{levels}" if levels else "")
-                    )
-                plan_hint = "\n" + "\n".join(lines_p)
-            _telegram_send(
-                f"📊 <b>日記統計</b>（雲端）\n"
-                f"YES {sy.total}｜勝{sy.win_n} 負{sy.loss_n} 未結{sy.open_n}"
-                + (f"｜勝率{sy.win_rate:.1f}%" if sy.win_n + sy.loss_n else "")
-                + f"\n見頂 {sf.total}｜勝{sf.win_n} 負{sf.loss_n} 未結{sf.open_n}"
-                + (f"｜勝率{sf.win_rate:.1f}%" if sf.win_n + sf.loss_n else "")
-                + f"\n見底 {sb.total}｜勝{sb.win_n} 負{sb.loss_n} 未結{sb.open_n}"
-                + (f"｜勝率{sb.win_rate:.1f}%" if sb.win_n + sb.loss_n else "")
-                + f"\n等回測 {sr.total}｜勝{sr.win_n} 負{sr.loss_n} 未結{sr.open_n}"
-                + (f"｜勝率{sr.win_rate:.1f}%" if sr.win_n + sr.loss_n else "")
-                + f"\n規劃 {PLAN_RULESET} {sp.total}｜勝{sp.win_n} 負{sp.loss_n} 未結{sp.open_n}"
-                + (f"｜勝率{sp.win_rate:.1f}%" if sp.win_n + sp.loss_n else "")
-                + (
-                    f"\n舊規劃 {CURRENT_RULESET} {so.total}｜勝率{so.win_rate:.1f}%"
-                    if so is not None and so.win_n + so.loss_n
-                    else ""
-                )
-                + plan_hint,
-                chat_id=from_chat,
-            )
+            day = now_tw().strftime("%Y-%m-%d")
+            for body in format_today_record_messages(rows, day=day):
+                _telegram_send(body, chat_id=from_chat)
             handled += 1
             continue
 
