@@ -1256,6 +1256,81 @@ def today_table_model(rows: list[JournalEntry], *, day: str) -> dict[str, Any]:
     }
 
 
+def _disp_width(text: str) -> int:
+    return sum(2 if ord(ch) > 0x2E80 else 1 for ch in text)
+
+
+def _pad_cell(text: str, width: int, align: str) -> str:
+    gap = width - _disp_width(text)
+    if gap <= 0:
+        return text
+    if align == "right":
+        return " " * gap + text
+    if align == "center":
+        left = gap // 2
+        return " " * left + text + " " * (gap - left)
+    return text + " " * gap
+
+
+def _html_text(text: str) -> str:
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def format_today_table_messages(
+    rows: list[JournalEntry],
+    *,
+    day: str,
+    limit: int = 3500,
+) -> list[str]:
+    """統計按鈕用：文字表格，不是圖片。"""
+    model = today_table_model(rows, day=day)
+    title = f"📊 <b>{_html_text(model['title'])}</b>"
+    if not model["records"]:
+        return [f"{title}\n{_html_text(model['summary'])}"]
+    headers = model["headers"]
+    aligns = ["left", "left", "left", "center", "right", "right", "right", "right"]
+    matrix = [
+        [cell.replace("—", "-") for cell in row]
+        for row in ([headers] + [list(rec["cells"]) for rec in model["records"]])
+    ]
+    widths = [
+        max(_disp_width(row[i]) for row in matrix) for i in range(len(headers))
+    ]
+
+    def line(cells: list[str]) -> str:
+        return " ".join(
+            _pad_cell(cells[i], widths[i], aligns[i]) for i in range(len(headers))
+        )
+
+    body = [line(row) for row in matrix]
+    head = f"{title}\n{_html_text(model['summary'])}"
+    if model["footnote"]:
+        head += f"\n{_html_text(model['footnote'])}"
+    messages: list[str] = []
+    chunk: list[str] = []
+    for row in body:
+        trial = "\n".join(chunk + [row])
+        block = f"{head}\n<pre>{_html_text(trial)}</pre>" if not messages else f"<pre>{_html_text(trial)}</pre>"
+        if chunk and len(block) > limit:
+            text = "\n".join(chunk)
+            messages.append(
+                f"{head}\n<pre>{_html_text(text)}</pre>"
+                if len(messages) == 0
+                else f"<pre>{_html_text(text)}</pre>"
+            )
+            chunk = [row]
+        else:
+            chunk.append(row)
+    if chunk:
+        text = "\n".join(chunk)
+        messages.append(
+            f"{head}\n<pre>{_html_text(text)}</pre>"
+            if not messages
+            else f"<pre>{_html_text(text)}</pre>"
+        )
+    return messages
+
+
 def format_today_record_messages(
     rows: list[JournalEntry],
     *,

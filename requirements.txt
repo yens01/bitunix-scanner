@@ -1,2 +1,1 @@
 matplotlib>=3.8,<4
-pillow>=10,<12

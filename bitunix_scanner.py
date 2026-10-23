@@ -2241,31 +2241,12 @@ def poll_telegram_queries(
             handled += 1
             continue
         if key == "STATS":
-            # 今日表格圖（雲端 Reply 會載入 cloud-journal 快照）
-            from journal_table import render_today_table_pngs
-            from signal_tracker import (
-                format_today_record_messages,
-                load_journal,
-                today_table_model,
-            )
+            # 今日文字表格（雲端 Reply 會載入 cloud-journal 快照）
+            from signal_tracker import format_today_table_messages, load_journal
 
             rows = load_journal()
             day = now_tw().strftime("%Y-%m-%d")
-            model = today_table_model(rows, day=day)
-            pngs = render_today_table_pngs(model)
-            if pngs:
-                caption = f"📊 <b>{_esc(model['title'])}</b>\n{_esc(model['summary'])}"
-                sent = False
-                for i, png in enumerate(pngs):
-                    cap = caption if i == 0 else f"📊 <b>{_esc(model['title'])}</b>（續）"
-                    if _telegram_send_photo(
-                        png, caption=cap, chat_id=from_chat, with_keyboard=True
-                    ):
-                        sent = True
-                if sent:
-                    handled += 1
-                    continue
-            for body in format_today_record_messages(rows, day=day):
+            for body in format_today_table_messages(rows, day=day):
                 _telegram_send(body, chat_id=from_chat)
             handled += 1
             continue
