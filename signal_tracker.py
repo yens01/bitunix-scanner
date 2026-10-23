@@ -1305,6 +1305,22 @@ def _html_text(text: str) -> str:
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+def _disp_width(text: str) -> int:
+    return sum(2 if ord(ch) > 0x2E80 else 1 for ch in text)
+
+
+def _pad_cell(text: str, width: int, align: str) -> str:
+    gap = width - _disp_width(text)
+    if gap <= 0:
+        return text
+    if align == "right":
+        return " " * gap + text
+    if align == "center":
+        left = gap // 2
+        return " " * left + text + " " * (gap - left)
+    return text + " " * gap
+
+
 def format_today_table_messages(
     rows: list[JournalEntry],
     *,
@@ -1312,7 +1328,7 @@ def format_today_table_messages(
     now: datetime | None = None,
     limit: int = 3500,
 ) -> list[str]:
-    """統計按鈕用。不用程式碼區塊，避免整段被上成紅色。"""
+    """統計按鈕用：可複製的文字表。不用程式碼區塊，字色跟一般訊息一樣。"""
     model = today_table_model(rows, day=day, now=now)
     title = f"📊 <b>{_html_text(model['title'])}</b>"
     head_lines = [title, _html_text(model["summary"])]
@@ -1321,29 +1337,34 @@ def format_today_table_messages(
     if not model["records"]:
         return ["\n".join(head_lines)]
 
-    blocks: list[str] = []
-    for rec in model["records"]:
-        opened, closed, name, side, result, entry, stop, tp = rec["cells"]
-        closed = closed.replace("—", "-")
-        blocks.append(
-            f"{_html_text(opened)}→{_html_text(closed)} "
-            f"{_html_text(name)} {_html_text(side)} {_html_text(result)}\n"
-            f"進 {_html_text(entry)} 損 {_html_text(stop)} 盈 {_html_text(tp)}"
+    headers = [cell.replace("—", "-") for cell in model["headers"]]
+    matrix = [headers] + [
+        [cell.replace("—", "-") for cell in rec["cells"]] for rec in model["records"]
+    ]
+    aligns = ["left", "left", "left", "center", "right", "right", "right", "right"]
+    widths = [
+        max(_disp_width(row[i]) for row in matrix) for i in range(len(headers))
+    ]
+
+    def line(cells: list[str]) -> str:
+        return " ".join(
+            _pad_cell(cells[i], widths[i], aligns[i]) for i in range(len(headers))
         )
 
+    body = [_html_text(line(row)) for row in matrix]
+    head = "\n".join(head_lines)
     messages: list[str] = []
     chunk: list[str] = []
-    head = "\n".join(head_lines)
-    for block in blocks:
-        trial = chunk + [block]
-        body = head + "\n\n" + "\n".join(trial) if not messages else "\n".join(trial)
-        if chunk and len(body) > limit:
-            messages.append(head + "\n\n" + "\n".join(chunk) if not messages else "\n".join(chunk))
-            chunk = [block]
+    for row in body:
+        trial = chunk + [row]
+        text = head + "\n" + "\n".join(trial) if not messages else "\n".join(trial)
+        if chunk and len(text) > limit:
+            messages.append(head + "\n" + "\n".join(chunk) if not messages else "\n".join(chunk))
+            chunk = [row]
         else:
-            chunk.append(block)
+            chunk.append(row)
     if chunk:
-        messages.append(head + "\n\n" + "\n".join(chunk) if not messages else "\n".join(chunk))
+        messages.append(head + "\n" + "\n".join(chunk) if not messages else "\n".join(chunk))
     return messages
 
 

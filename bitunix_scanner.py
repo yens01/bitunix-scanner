@@ -2241,29 +2241,10 @@ def poll_telegram_queries(
             handled += 1
             continue
         if key == "STATS":
-            # 今日表格圖。只有結果上色，其餘是一般深色字。
-            from journal_table import render_today_table_pngs
-            from signal_tracker import (
-                format_today_table_messages,
-                load_journal,
-                today_table_model,
-            )
+            # 可複製的文字表。不用圖片，也不用程式碼區塊（區塊會整段變紅）。
+            from signal_tracker import format_today_table_messages, load_journal
 
             rows = load_journal()
-            model = today_table_model(rows)
-            pngs = render_today_table_pngs(model)
-            if pngs:
-                caption = f"📊 <b>{_esc(model['title'])}</b>\n{_esc(model['summary'])}"
-                sent = False
-                for i, png in enumerate(pngs):
-                    cap = caption if i == 0 else f"📊 <b>{_esc(model['title'])}</b>（續）"
-                    if _telegram_send_photo(
-                        png, caption=cap, chat_id=from_chat, with_keyboard=True
-                    ):
-                        sent = True
-                if sent:
-                    handled += 1
-                    continue
             for body in format_today_table_messages(rows):
                 _telegram_send(body, chat_id=from_chat)
             handled += 1
