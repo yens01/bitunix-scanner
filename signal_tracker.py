@@ -677,6 +677,8 @@ def resolve_entry(
     observing = after if len(after) < max_bars else after[:max_bars]
     mfe = 0.0
     mae = 0.0
+    # 等回測的 entry 是區間中軸，不是訊號當下成交價。沒碰到就不算進場。
+    filled = kind != "retest"
     # 動態停損：有利達 0.8R 後移到成本；R 仍用原始風險計算
     cur_stop = entry.stop
     trailed = False
@@ -684,6 +686,14 @@ def resolve_entry(
 
     for i, c in enumerate(observing, 1):
         hi, lo = _h(c), _l(c)
+        if not filled:
+            touched = lo <= entry.entry if entry.side == "long" else hi >= entry.entry
+            if not touched:
+                continue
+            filled = True
+            if "已碰到計畫價" not in (entry.note or ""):
+                tag = "已碰到計畫價"
+                entry.note = f"{entry.note}｜{tag}" if entry.note else tag
         # 先用「進這根前」的停損結算，避免同根先創新高再回檔被誤殺
         if entry.side == "long":
             mfe = max(mfe, (hi - entry.entry) / risk)
@@ -790,6 +800,21 @@ def resolve_entry(
         if use_trail and (not trailed) and mfe >= TRAIL_BE_AT_R:
             cur_stop = entry.entry
             trailed = True
+
+    if kind == "retest" and not filled:
+        entry.mfe_r = 0.0
+        entry.mae_r = 0.0
+        entry.bars_held = len(observing)
+        if len(after) < max_bars:
+            return entry
+        last = observing[-1]
+        entry.status = "timeout"
+        entry.exit_price = 0.0
+        entry.exit_time_ms = _t(last)
+        entry.realized_r = 0.0
+        tag = "未回到計畫價，未進場"
+        entry.note = f"{entry.note}｜{tag}" if entry.note else tag
+        return entry
 
     entry.mfe_r = round(mfe, 3)
     entry.mae_r = round(mae, 3)
@@ -900,6 +925,8 @@ def collect_breakeven_hints(
         if e.status != "open":
             continue
         if (e.kind or "yes") not in ("yes", "retest", "fade", "base"):
+            continue
+        if (e.kind or "yes") == "retest" and "已碰到計畫價" not in (e.note or ""):
             continue
         if e.side not in ("long", "short"):
             continue
@@ -1089,7 +1116,21 @@ def _exit_hhmm(r: JournalEntry) -> str:
     return datetime.fromtimestamp(r.exit_time_ms / 1000, TZ_TW).strftime("%H:%M")
 
 
+def _awaiting_retest_fill(r: JournalEntry) -> bool:
+    """等回測且價格還沒碰到計畫進場。"""
+    if (r.kind or "") != "retest":
+        return False
+    note = r.note or ""
+    if "未進場" in note:
+        return True
+    if "已碰到計畫價" in note:
+        return False
+    return r.status == "open"
+
+
 def _trade_result_text(r: JournalEntry) -> str:
+    if _awaiting_retest_fill(r):
+        return "尚未進場"
     if r.status == "open":
         return "未平"
     if r.status == "timeout":
@@ -1106,13 +1147,23 @@ def _trade_side_text(side: str) -> str:
 
 
 def format_trade_record_lines(r: JournalEntry) -> list[str]:
-    """一筆日記：開倉→平倉、方向、結果，下一行進／損／盈。"""
+    """一筆日記：開倉→平倉、方向、結果，下一行進／損／盈。等回測標成計畫價。"""
     opened = (r.ts or "")[11:16] or "—"
     name = (r.symbol or "").replace("USDT", "")
-    line = (
-        f"{opened}→{_exit_hhmm(r)} {name} "
-        f"{_trade_side_text(r.side)} {_trade_result_text(r)}"
-    )
+    side = _trade_side_text(r.side)
+    result = _trade_result_text(r)
+    if (r.kind or "") == "retest" and r.entry > 0 and r.stop > 0 and r.tp > 0:
+        if _awaiting_retest_fill(r):
+            line = f"{opened} 等回測 {name} {side} {result}"
+        else:
+            line = f"{opened}→{_exit_hhmm(r)} 等回測 {name} {side} {result}"
+        levels = (
+            f"計畫進{_fmt_journal_px(r.entry)} "
+            f"損{_fmt_journal_px(r.stop)} "
+            f"盈{_fmt_journal_px(r.tp)}"
+        )
+        return [line, levels]
+    line = f"{opened}→{_exit_hhmm(r)} {name} {side} {result}"
     levels = plan_level_text(r)
     return [line, levels] if levels else [line]
 
@@ -1135,10 +1186,16 @@ def format_today_record_messages(
     title = f"📊 <b>今日紀錄</b> {title_day}"
     if not today:
         return [f"{title}\n今天還沒有紀錄"]
-    closed = [r for r in today if r.status != "open"]
-    open_n = len(today) - len(closed)
+    pending = [r for r in today if _awaiting_retest_fill(r)]
+    pending_ids = {r.id for r in pending}
+    closed = [r for r in today if r.status != "open" and r.id not in pending_ids]
+    holding = [r for r in today if r.status == "open" and r.id not in pending_ids]
     total_r = sum(r.realized_r for r in closed)
-    header = f"{title}\n已平 {len(closed)} 筆 {total_r:+.2f}R｜未平 {open_n}"
+    header = (
+        f"{title}\n"
+        f"已平 {len(closed)} 筆 {total_r:+.2f}R｜持倉 {len(holding)}｜等回測未進 {len(pending)}\n"
+        f"等回測的「計畫進」不是當時成交價"
+    )
     blocks = ["\n".join(format_trade_record_lines(r)) for r in today]
     messages: list[str] = []
     cur = header
