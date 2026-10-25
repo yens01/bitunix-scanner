@@ -24,7 +24,7 @@ import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 _ANSI_RE = re.compile(r"\033\[[0-9;]*m")
@@ -109,13 +109,8 @@ DEFAULT_NEAR_ZONE_PCT = 0.8          # 等回測：距區 ≤0.8% 才推卡片
 DEFAULT_ALERT_COOLDOWN_MIN = 45      # 同一幣冷卻分鐘
 DEFAULT_MAX_ALERTS_PER_WAVE = 4      # 同波最多推播檔數（YES+靠近合計；不含日記）
 DEFAULT_SCAN_POOL = 200              # 掃描池（成交額排序取前 N；雲端約可在 10～12 分內跑完）
-# BTC/ETH 日內規劃時段（台灣時間）：下午四點／晚上八點／美股開盤
-# 美股開盤：夏令約 21:30、冬令約 22:30；預設用 21:30（夏令），冬令可改 22:30
-SESSION_PLAN_SLOTS: tuple[tuple[int, int, str], ...] = (
-    (16, 0, "下午規劃"),
-    (20, 0, "晚盤規劃"),
-    (21, 30, "美股開盤規劃"),
-)
+# BTC/ETH 日內規劃：亞股 09:00 台灣、倫敦當地 08:00、美股紐約 09:30。各推一次。
+# 倫敦夏令 15:00／冬令 16:00；美股夏令 21:30／冬令 22:30（皆為台灣時間）
 SESSION_PLAN_INTERVAL = "4h"         # 日內規劃用 4H K 線（結構／高週期）
 SESSION_PLAN_MTF = ("1d", "1w", "1M")
 SESSION_PLAN_SYMBOLS = ("BTCUSDT", "ETHUSDT")
@@ -1477,10 +1472,14 @@ def notify_plan_with_chart(
     plans: list[ChecklistResult],
     *,
     chat_id: str | None = None,
+    slot_label: str | None = None,
 ) -> bool:
-    """一則重點數字＋一句讀圖 → 再推規劃圖。"""
+    """一則開通時間＋重點數字＋一句讀圖 → 再推規劃圖。"""
     tw = now_tw().strftime("%m-%d %H:%M")
-    head = f"📘 <b>{_esc(title)}</b>\n🕐 {tw}"
+    head = (
+        f"📘 <b>{_esc(title)}</b>\n🕐 {tw}\n"
+        f"{_session_open_banner(slot_label, html=True)}"
+    )
     sess_bits: list[str] = []
     for r in plans:
         name = r.symbol.replace("USDT", "")
@@ -3786,6 +3785,69 @@ def scan(min_vol: float) -> list[CoinSignal]:
     return build_signals(tickers, pairs, funding, min_quote_vol=min_vol)
 
 
+def _nth_sunday(year: int, month: int, n: int) -> date:
+    """n 為第幾個週日；-1 是該月最後一個週日。"""
+    if n > 0:
+        first = date(year, month, 1)
+        shift = (6 - first.weekday()) % 7
+        return date(year, month, 1 + shift + (n - 1) * 7)
+    if month == 12:
+        last = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        last = date(year, month + 1, 1) - timedelta(days=1)
+    return last - timedelta(days=(last.weekday() - 6) % 7)
+
+
+def _london_is_bst(day: date) -> bool:
+    """英國夏令：3 月最後一個週日起，到 10 月最後一個週日之前。"""
+    return _nth_sunday(day.year, 3, -1) <= day < _nth_sunday(day.year, 10, -1)
+
+
+def _new_york_is_edt(day: date) -> bool:
+    """美國夏令：3 月第二個週日起，到 11 月第一個週日之前。"""
+    return _nth_sunday(day.year, 3, 2) <= day < _nth_sunday(day.year, 11, 1)
+
+
+def session_plan_slots(day: date | None = None) -> tuple[tuple[int, int, str], ...]:
+    """今天三盤開通時刻（台灣時間）：亞股、倫敦、美股。"""
+    day = day or now_tw().date()
+    london_hour = 15 if _london_is_bst(day) else 16
+    if _new_york_is_edt(day):
+        us_hour, us_minute = 21, 30
+    else:
+        us_hour, us_minute = 22, 30
+    return (
+        (9, 0, "亞股開盤"),
+        (london_hour, 0, "倫敦開盤"),
+        (us_hour, us_minute, "美股開盤"),
+    )
+
+
+def _active_session_label(day: date | None = None) -> str | None:
+    """現在已經開了的最後一盤。09:00 前是 None。"""
+    tw = now_tw()
+    day = day or tw.date()
+    mins = tw.hour * 60 + tw.minute
+    active = None
+    for hour, minute, name in session_plan_slots(day):
+        if mins >= hour * 60 + minute:
+            active = name
+    return active
+
+
+def _session_open_banner(label: str | None = None, *, html: bool = True) -> str:
+    """寫出今天三個開通時間，並標出這一則是哪一盤。"""
+    if label is None:
+        label = _active_session_label()
+    lines = ["今天 BTC／ETH 開通（台灣時間）"]
+    for hour, minute, name in session_plan_slots():
+        mark = " ← 這一盤" if label == name else ""
+        lines.append(f"{name} {hour:02d}:{minute:02d}{mark}")
+    lines.append("開盤就可以看，碰到下面的價才進。")
+    text = "\n".join(lines)
+    return _esc(text) if html else text
+
+
 def _session_plan_slot_key(day: str, hour: int, minute: int) -> str:
     return f"{SESSION_PLAN_COOLDOWN_PREFIX}:{day}:{hour:02d}{minute:02d}"
 
@@ -3796,7 +3858,7 @@ def _due_session_plan_slots(cooldown: dict[str, float]) -> list[tuple[int, int, 
     mins_now = tw.hour * 60 + tw.minute
     day = tw.strftime("%Y-%m-%d")
     due: list[tuple[int, int, str]] = []
-    for hour, minute, label in SESSION_PLAN_SLOTS:
+    for hour, minute, label in session_plan_slots(tw.date()):
         if mins_now < hour * 60 + minute:
             continue
         key = _session_plan_slot_key(day, hour, minute)
@@ -3949,9 +4011,8 @@ def send_session_major_plans(
     telegram: bool = True,
 ) -> tuple[int, dict[str, float]]:
     """
-    到點推播 BTC／ETH 日內規劃：
-    16:00 下午／20:00 晚盤／21:30 美股開盤（各一次／天）。
-    同日內容指紋相同 → 只推「無變化」短訊，不重貼完整卡。
+    到點推播 BTC／ETH 日內規劃：亞股、倫敦、美股各一次。
+    同日價位沒變仍推開通時間與價位，不重貼圖、不重寫日記。
     """
     due = _due_session_plan_slots(cooldown)
     if not due:
@@ -3975,18 +4036,18 @@ def send_session_major_plans(
 
     if unchanged:
         brief = _plan_brief_summary(plans)
-        notify_alert(
-            title,
-            lines=[f"與上一時段相同，無變化｜{brief}"],
-            kind="plan",
-            sound=False,
-            desktop=False,
-            telegram=telegram,
+        body = (
+            f"📘 <b>{_esc(title)}</b>\n"
+            f"{_session_open_banner(label, html=True)}\n"
+            "價位跟上一盤相同。\n\n"
+            f"{_plan_levels_html(plans)}"
         )
-        print(f"日內規劃：「{label}」無變化（短訊）｜{brief}")
+        if telegram:
+            _telegram_send(body)
+        print(f"日內規劃：「{label}」價位相同，已再提醒開通時間｜{brief}")
     else:
         if telegram:
-            notify_plan_with_chart(title, plans)
+            notify_plan_with_chart(title, plans, slot_label=label)
         else:
             notify_alert(
                 title,
@@ -4202,7 +4263,7 @@ def watch_once(
             )
             cooldown[far_key] = now
 
-    # 16:00／20:00／美股開盤：BTC／ETH 日內規劃（各時段每天一次）
+    # 亞股 09:00／倫敦開盤／美股開盤：BTC／ETH 日內規劃（各一次）
     _, cooldown = send_session_major_plans(cooldown, telegram=True)
 
     # 處理手機傳給 Bot 的幣種查詢（對齊 CMD detail）
