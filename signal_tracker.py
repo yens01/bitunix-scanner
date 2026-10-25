@@ -335,6 +335,28 @@ def record_base_signals(
     return added
 
 
+# 同一天回測單出現這麼多筆完整 -1R，就不再記新的回測，直到隔天早上 8 點
+RETEST_DAY_LOSS_CAP = 4
+
+
+def _retest_full_losses_today(
+    rows: list[JournalEntry],
+    now: datetime | None = None,
+) -> int:
+    """本交易日已平、且是完整虧損的回測單。未進場的 0R 不算。"""
+    start, end, _label = trading_day_bounds(now=now)
+    count = 0
+    for row in rows:
+        if (row.kind or "") != "retest":
+            continue
+        if not (start <= (row.ts or "") < end):
+            continue
+        if row.status != "loss" or row.realized_r > -0.99:
+            continue
+        count += 1
+    return count
+
+
 def record_retest_signals(
     setups: list[Any],
     *,
@@ -345,8 +367,17 @@ def record_retest_signals(
     """
     記錄「靠近區・等回測」計畫單（尚未可扣板機）。
     有完整入場／停損／止盈才入帳，結算方式同 YES（含 0.8R 保本）。
+    本交易日回測完整虧損已達上限時，不再記新的回測。
     """
     rows = load_journal(path)
+    losses_today = _retest_full_losses_today(rows)
+    if losses_today >= RETEST_DAY_LOSS_CAP:
+        if not quiet:
+            print(
+                f"回測本日已 {losses_today} 筆完整虧損，"
+                f"停到早上 {DAY_START_HOUR} 點再記"
+            )
+        return []
     now_ms = _now_ms()
     added: list[JournalEntry] = []
     for s in setups:
@@ -1258,10 +1289,11 @@ def today_table_model(
             "headers": [],
             "records": [],
         }
-    pending = [r for r in today if _awaiting_retest_fill(r)]
+    scored = [r for r in today if (r.kind or "") != "plan"]
+    pending = [r for r in scored if _awaiting_retest_fill(r)]
     pending_ids = {r.id for r in pending}
-    closed = [r for r in today if r.status != "open" and r.id not in pending_ids]
-    holding = [r for r in today if r.status == "open" and r.id not in pending_ids]
+    closed = [r for r in scored if r.status != "open" and r.id not in pending_ids]
+    holding = [r for r in scored if r.status == "open" and r.id not in pending_ids]
     total_r = sum(r.realized_r for r in closed)
     summary = (
         f"已平 {len(closed)} 筆 {total_r:+.2f}R｜持倉 {len(holding)}｜等回測未進 {len(pending)}"
@@ -1497,10 +1529,11 @@ def format_today_record_messages(
     title = f"📊 <b>今日紀錄</b> {title_day}"
     if not today:
         return [f"{title}\n今天還沒有紀錄"]
-    pending = [r for r in today if _awaiting_retest_fill(r)]
+    scored = [r for r in today if (r.kind or "") != "plan"]
+    pending = [r for r in scored if _awaiting_retest_fill(r)]
     pending_ids = {r.id for r in pending}
-    closed = [r for r in today if r.status != "open" and r.id not in pending_ids]
-    holding = [r for r in today if r.status == "open" and r.id not in pending_ids]
+    closed = [r for r in scored if r.status != "open" and r.id not in pending_ids]
+    holding = [r for r in scored if r.status == "open" and r.id not in pending_ids]
     total_r = sum(r.realized_r for r in closed)
     header = (
         f"{title}\n"

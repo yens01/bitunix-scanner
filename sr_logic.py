@@ -2140,7 +2140,7 @@ def evaluate_setup(
             fade_stop_ok = (
                 fade_stop > fade_entry
                 and atr_v > 0
-                and abs(fade_entry - fade_stop) >= atr_v * 0.25
+                and abs(fade_entry - fade_stop) >= atr_v * YES_MIN_ROOM_ATR
             )
             fade_level_ok = True
             if fade_zone is not None and last.close > fade_zone.hi:
