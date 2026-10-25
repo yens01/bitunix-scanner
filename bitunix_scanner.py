@@ -4024,7 +4024,8 @@ def send_session_major_plans(
 ) -> tuple[int, dict[str, float]]:
     """
     到點推播 BTC／ETH 日內規劃：亞股、倫敦、美股各一次。
-    同日價位沒變仍推開通時間與價位，不重貼圖、不重寫日記。
+    每一盤都寫進日記，價位沒變也記，方便事後看這盤邏輯準不準。
+    價位沒變不重貼圖。手機手動規劃不寫日記。
     """
     due = _due_session_plan_slots(cooldown)
     if not due:
@@ -4056,7 +4057,13 @@ def send_session_major_plans(
         )
         if telegram:
             _telegram_send(body)
-        print(f"日內規劃：「{label}」價位相同，已再提醒開通時間｜{brief}")
+        print(f"日內規劃：「{label}」價位相同，已再提醒並寫入日記｜{brief}")
+        record_plan_signals(
+            plans,
+            interval=SESSION_BOX_INTERVAL,
+            plan_label=label,
+            note_extra="價位與上一盤相同",
+        )
     else:
         if telegram:
             notify_plan_with_chart(title, plans, slot_label=label)
@@ -4070,7 +4077,6 @@ def send_session_major_plans(
                 telegram=False,
             )
         print(f"日內規劃：已推「{label}」{', '.join(r.symbol for r in plans)}")
-        # 內容沒變不重寫日記；結算用 15m 收盤破箱，不用 4H 影線
         record_plan_signals(
             plans,
             interval=SESSION_BOX_INTERVAL,

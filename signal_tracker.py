@@ -1136,6 +1136,11 @@ def _trade_result_text(r: JournalEntry) -> str:
         return "未平"
     if r.status == "timeout":
         return "超時 0R"
+    if (r.kind or "") == "plan" and r.realized_r == 0:
+        if r.status == "win":
+            return "箱成立"
+        if r.status == "loss":
+            return "破箱"
     return f"{r.realized_r:+.2f}R"
 
 
