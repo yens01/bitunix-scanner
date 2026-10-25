@@ -3858,12 +3858,24 @@ def _due_session_plan_slots(cooldown: dict[str, float]) -> list[tuple[int, int, 
     mins_now = tw.hour * 60 + tw.minute
     day = tw.strftime("%Y-%m-%d")
     due: list[tuple[int, int, str]] = []
-    for hour, minute, label in session_plan_slots(tw.date()):
-        if mins_now < hour * 60 + minute:
+    slots = session_plan_slots(tw.date())
+    for index, (hour, minute, label) in enumerate(slots):
+        slot_mins = hour * 60 + minute
+        if mins_now < slot_mins:
             continue
         key = _session_plan_slot_key(day, hour, minute)
-        if key not in cooldown:
-            due.append((hour, minute, label))
+        if key in cooldown:
+            continue
+        later = [
+            h * 60 + m
+            for h, m, _name in slots[index + 1 :]
+        ]
+        next_mins = later[0] if later else 24 * 60
+        # 下一盤已到，或離這一盤超過 90 分鐘，就不再補發
+        if mins_now >= next_mins or mins_now > slot_mins + 90:
+            cooldown[key] = time.time()
+            continue
+        due.append((hour, minute, label))
     return due
 
 
