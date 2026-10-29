@@ -162,6 +162,8 @@ class ChecklistResult:
     fade_ready: bool = False
     # 日多＋4H 回檔未破＋15m 低位見底 → 獨立多訊（非一般 YES）
     base_ready: bool = False
+    # BTC／ETH 週節奏一句話（週一定方向、週二／三極點、週四沿方向、週五刷洗或極端）
+    week_rhythm: str = ""
 
 
 def parse_klines(raw: list[dict]) -> list[Candle]:

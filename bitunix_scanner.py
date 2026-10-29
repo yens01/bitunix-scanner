@@ -1386,12 +1386,17 @@ def _plan_coin_block(r: ChecklistResult, *, html: bool = False) -> list[str]:
     name = r.symbol.replace("USDT", "")
     bias = _plan_htf_bias_line(r)
     lines: list[str] = []
+    rhythm = (getattr(r, "week_rhythm", "") or "").strip()
     if html:
         lines.append(f"🪙 <b>{_esc(name)}</b> · {_esc(r.structure)}")
         lines.append(f"📡 {_esc(bias)}")
+        if rhythm:
+            lines.append(f"🗓 {_esc(rhythm)}")
     else:
         lines.append(f"🪙 {name} · {r.structure}")
         lines.append(f"📡 {bias}")
+        if rhythm:
+            lines.append(f"🗓 {rhythm}")
 
     edges = _session_box_edge_levels(r)
     if edges:
@@ -2520,6 +2525,172 @@ def _plan_blocks_long_htf(r: ChecklistResult) -> bool:
     )
 
 
+# 週節奏：早上或本週開盤要走出這個幅度，才算有方向。
+_WEEK_DIR_PCT = 0.003
+# 價在本週高低區間的這個比例以內，才算靠近極點。
+_WEEK_EDGE = 0.18
+
+
+def _candle_tw(c: Any) -> datetime:
+    t = int(getattr(c, "time", 0) or 0)
+    if t < 10**12:
+        t *= 1000
+    return datetime.fromtimestamp(t / 1000, tz=timezone.utc).astimezone(TZ_TW)
+
+
+def _week_open_monday(now: datetime) -> datetime:
+    monday = now.date() - timedelta(days=now.weekday())
+    return datetime(monday.year, monday.month, monday.day, 8, 0, tzinfo=TZ_TW)
+
+
+def _move_dir(open_px: float, px: float) -> str:
+    if open_px <= 0 or px <= 0:
+        return "flat"
+    chg = (px - open_px) / open_px
+    if chg >= _WEEK_DIR_PCT:
+        return "up"
+    if chg <= -_WEEK_DIR_PCT:
+        return "down"
+    return "flat"
+
+
+def describe_week_rhythm(now: datetime, candles: list) -> tuple[str, str | None]:
+    """
+    經典一週（只給 BTC／ETH 規劃用）。
+    回傳 (一句話, 不要追的邊)。
+    不要追的邊：long／short／breakout／None。不另造反向單。
+    """
+    week_open = _week_open_monday(now)
+    if now.weekday() >= 5 or now < week_open:
+        return "週末不套平日節奏", None
+    rows = [c for c in candles if _candle_tw(c) >= week_open]
+    if len(rows) < 2:
+        return "", None
+    monday_open = float(rows[0].open)
+    last = float(rows[-1].close)
+    if monday_open <= 0 or last <= 0:
+        return "", None
+    week_hi = max(float(c.high) for c in rows)
+    week_lo = min(float(c.low) for c in rows)
+    morning_end = week_open + timedelta(hours=8)
+    morning = [c for c in rows if _candle_tw(c) < morning_end]
+    morning_px = float(morning[-1].close) if morning else last
+    day_start = now.replace(hour=8, minute=0, second=0, microsecond=0)
+    if now.hour < 8:
+        day_start -= timedelta(days=1)
+    prior = [c for c in rows if _candle_tw(c) < day_start]
+    prior_hi = max((float(c.high) for c in prior), default=0.0)
+    prior_lo = min((float(c.low) for c in prior), default=0.0)
+    span = week_hi - week_lo
+    if span <= 0 or span / monday_open < _WEEK_DIR_PCT:
+        pos = 0.5
+    else:
+        pos = (last - week_lo) / span
+    near_high = pos >= 1 - _WEEK_EDGE
+    near_low = pos <= _WEEK_EDGE
+    side_word = {"up": "多", "down": "空"}
+
+    def week_dir() -> str:
+        morning_dir = _move_dir(monday_open, morning_px)
+        if morning_dir != "flat":
+            return morning_dir
+        return _move_dir(monday_open, last)
+
+    wd = now.weekday()
+    if wd == 0 and now < morning_end:
+        d = _move_dir(monday_open, last)
+        if d == "flat":
+            return "週一早上定方向，晚上沿同一邊", None
+        word = side_word[d]
+        return f"週一早上偏{word}，晚上沿{word}", None
+    if wd == 0:
+        d = _move_dir(monday_open, morning_px)
+        if d == "flat":
+            return "週一早上沒定方向，晚上不要預設同一邊", None
+        word = side_word[d]
+        return f"週一晚上沿早上的{word}", "short" if d == "up" else "long"
+    if wd in (1, 2):
+        day = "週二" if wd == 1 else "週三"
+        hi_s, lo_s = _px(week_hi), _px(week_lo)
+        if near_high:
+            return (
+                f"{day}極點：靠近本週高 {hi_s}（低 {lo_s}），抓反轉空，不追多",
+                "long",
+            )
+        if near_low:
+            return (
+                f"{day}極點：靠近本週低 {lo_s}（高 {hi_s}），抓反轉多，不追空",
+                "short",
+            )
+        return (
+            f"{day}常出極點。現價還沒靠近本週高 {hi_s}／低 {lo_s}，反轉先等",
+            None,
+        )
+    if wd == 3:
+        d = week_dir()
+        if d == "flat":
+            return "週四該走方向，這週還沒定邊，先看箱", None
+        word = side_word[d]
+        return f"週四走方向：沿{word}", "short" if d == "up" else "long"
+    broke_up = (
+        prior_hi > 0
+        and week_hi > prior_hi
+        and (week_hi - prior_hi) / monday_open >= 0.0015
+        and near_high
+    )
+    broke_dn = (
+        prior_lo > 0
+        and week_lo < prior_lo
+        and (prior_lo - week_lo) / monday_open >= 0.0015
+        and near_low
+    )
+    if broke_up and not broke_dn:
+        return "週五極端：沿多直走，不摸高空", "short"
+    if broke_dn and not broke_up:
+        return "週五極端：沿空直走，不摸低多", "long"
+    return "週五刷洗：上下洗，高拋低吸，不追突破", "breakout"
+
+
+def _soften_against_week_rhythm(r: ChecklistResult, forbid: str | None) -> None:
+    """節奏不允許的那一邊，拿掉可進／等回測，不改成反向單。"""
+    if forbid == "breakout":
+        if not r.trigger_ready:
+            return
+        r.trigger_ready = False
+    elif forbid in ("long", "short"):
+        chasing = (forbid == "long" and (r.side == "long" or r.structure == "偏多")) or (
+            forbid == "short" and (r.side == "short" or r.structure == "偏空")
+        )
+        if not chasing:
+            return
+        if not (r.trigger_ready or r.waiting_retest or r.at_zone):
+            return
+        r.trigger_ready = False
+        r.waiting_retest = False
+        r.at_zone = False
+        if r.side == forbid:
+            r.side = "none"
+    else:
+        return
+    tag = "週節奏不追"
+    if tag not in (r.note or ""):
+        r.note = f"{r.note}｜{tag}" if r.note else tag
+
+
+def _apply_btc_eth_week_rhythm(r: ChecklistResult) -> None:
+    if r.symbol.upper() not in SESSION_PLAN_SYMBOLS:
+        return
+    try:
+        candles = parse_klines(fetch_klines(r.symbol, "1h", limit=200))
+    except Exception:
+        return
+    line, forbid = describe_week_rhythm(now_tw(), candles)
+    if not line:
+        return
+    r.week_rhythm = line
+    _soften_against_week_rhythm(r, forbid)
+
+
 def _downgrade_plan_to_box(r: ChecklistResult, reason: str) -> None:
     """方向規劃改看箱，避免逆勢方向被記 −1R。"""
     r.structure = "盤整"
@@ -2732,6 +2903,8 @@ def format_telegram_plan_card(r: ChecklistResult, *, slim: bool = True) -> str:
             if fibo:
                 lines.extend(fibo)
         lines.append(f"高週期 {htf}")
+        if (getattr(r, "week_rhythm", "") or "").strip():
+            lines.append(f"週節奏 {_esc(r.week_rhythm)}")
         if any(
             tag in (r.note or "") or tag in (r.mtf_note or "")
             for tag in ("禁逆日線", "做多需日線", "做多需4H", "做多未齊")
@@ -2772,6 +2945,8 @@ def format_telegram_plan_card(r: ChecklistResult, *, slim: bool = True) -> str:
         if fibo:
             lines.extend(fibo)
     lines.append(f"高週期 {htf}")
+    if (getattr(r, "week_rhythm", "") or "").strip():
+        lines.append(f"週節奏 {_esc(r.week_rhythm)}")
 
     if slim:
         if ban:
@@ -2868,6 +3043,8 @@ def format_console_plan_card(r: ChecklistResult, *, slim: bool = True) -> str:
             for fl in _format_plan_fibo_lines(r, html=False):
                 lines.append(f"  │ {fl}")
         lines.append(f"  │ 高週期 {htf}")
+        if (getattr(r, "week_rhythm", "") or "").strip():
+            lines.append(f"  │ 週節奏 {r.week_rhythm}")
         if any(
             tag in (r.note or "") or tag in (r.mtf_note or "")
             for tag in ("禁逆日線", "做多需日線", "做多需4H", "做多未齊")
@@ -2900,6 +3077,8 @@ def format_console_plan_card(r: ChecklistResult, *, slim: bool = True) -> str:
         for fl in _format_plan_fibo_lines(r, html=False):
             lines.append(f"  │ {fl}")
     lines.append(f"  │ 高週期 {htf}")
+    if (getattr(r, "week_rhythm", "") or "").strip():
+        lines.append(f"  │ 週節奏 {r.week_rhythm}")
     if slim:
         lines[-1] = "  └" + lines[-1][3:] if lines[-1].startswith("  │") else lines[-1]
     elif full:
@@ -3889,7 +4068,9 @@ def _build_btc_eth_plans() -> list[ChecklistResult]:
             mtf_tfs=list(SESSION_PLAN_MTF),
         )
         if r:
-            plans.append(_apply_session_intraday_box(r))
+            planned = _apply_session_intraday_box(r)
+            _apply_btc_eth_week_rhythm(planned)
+            plans.append(planned)
     return plans
 
 
@@ -3982,6 +4163,7 @@ def _plan_fingerprint(plans: list[ChecklistResult]) -> str:
                     f"{r.stop:.4f}",
                     f"{r.tp:.4f}",
                     _plan_htf_bias_line(r),
+                    getattr(r, "week_rhythm", "") or "",
                 ]
             )
         )

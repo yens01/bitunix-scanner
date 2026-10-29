@@ -441,6 +441,8 @@ def _plan_directional_side(s: Any) -> str:
         return "none"
     if (not bool(getattr(s, "mtf_aligned", True))) or ("逆高週期" in mtf_note):
         return "none"
+    if "週節奏不追" in note:
+        return "none"
     ready = bool(
         getattr(s, "trigger_ready", False)
         or getattr(s, "at_zone", False)
@@ -507,6 +509,9 @@ def record_plan_signals(
                 extra = ""
             if extra:
                 note = f"{note}｜{extra}" if note else extra
+        rhythm = str(getattr(s, "week_rhythm", "") or "").strip()
+        if rhythm:
+            note = f"{note}｜{rhythm}" if note else rhythm
         mtf = str(getattr(s, "mtf_note", "") or "")
         je = JournalEntry(
             id=uuid.uuid4().hex[:12],
