@@ -38,6 +38,8 @@ CONSERVATIVE_SAME_BAR = True
 TRAIL_BE_AT_R = 0.8
 # 日記備註標記：已推過「請手動保本」提醒，避免重複刷屏
 BE_HINT_TAG = "已提示保本"
+# 等回測觀察期滿仍沒碰到計畫進場 → 略過，不進勝率／逾時
+UNFILLED_RETEST_TAG = "未回到計畫價，未進場"
 
 
 @dataclass
@@ -55,7 +57,7 @@ class JournalEntry:
     score: float
     structure: str
     missing_steps: str
-    status: str = "open"  # open / win / loss / timeout
+    status: str = "open"  # open / win / loss / timeout / skip
     exit_price: float = 0.0
     exit_time_ms: int = 0
     realized_r: float = 0.0  # 以風險為 1R 的實現倍數
@@ -637,6 +639,46 @@ def resolve_plan_box(
     return entry
 
 
+def _same_bar_outcome(
+    entry: JournalEntry,
+    *,
+    trailed: bool,
+    mfe: float,
+    risk: float,
+) -> tuple[str, float, float, str]:
+    """
+    同根同時碰到 SL／TP。
+    已保本，或等回測浮盈已達計畫 RR → 採止盈；其餘仍保守記停損。
+    回傳 (status, exit_price, realized_r, note)。
+    """
+    planned = float(entry.planned_rr or 0)
+    prefer_tp = trailed or (
+        (entry.kind or "") == "retest"
+        and (
+            (planned > 0 and mfe + 1e-9 >= planned)
+            or (planned <= 0 and mfe >= 1.5)
+        )
+    )
+    if prefer_tp:
+        if entry.side == "long":
+            realized = (entry.tp - entry.entry) / risk
+        else:
+            realized = (entry.entry - entry.tp) / risk
+        note = (
+            "同根觸及・已保本採止盈"
+            if trailed
+            else "同根觸及・浮盈已達計畫RR採止盈"
+        )
+        return "win", entry.tp, realized, note
+    if CONSERVATIVE_SAME_BAR:
+        return "loss", entry.stop, -1.0, "同根觸及SL/TP，採保守停損"
+    if entry.side == "long":
+        realized = (entry.tp - entry.entry) / risk
+    else:
+        realized = (entry.entry - entry.tp) / risk
+    return "win", entry.tp, realized, "同根觸及，採止盈"
+
+
 def resolve_entry(
     entry: JournalEntry,
     candles: list[Any],
@@ -707,21 +749,13 @@ def resolve_entry(
             hit_sl = lo <= cur_stop
             hit_tp = hi >= entry.tp
             if hit_sl and hit_tp:
-                if trailed:
-                    entry.status = "win"
-                    entry.exit_price = entry.tp
-                    entry.realized_r = (entry.tp - entry.entry) / risk
-                    entry.note = "同根觸及・已保本採止盈"
-                elif CONSERVATIVE_SAME_BAR:
-                    entry.status = "loss"
-                    entry.exit_price = entry.stop
-                    entry.realized_r = -1.0
-                    entry.note = "同根觸及SL/TP，採保守停損"
-                else:
-                    entry.status = "win"
-                    entry.exit_price = entry.tp
-                    entry.realized_r = (entry.tp - entry.entry) / risk
-                    entry.note = "同根觸及，採止盈"
+                st, px, rr, note = _same_bar_outcome(
+                    entry, trailed=trailed, mfe=mfe, risk=risk
+                )
+                entry.status = st
+                entry.exit_price = px
+                entry.realized_r = rr
+                entry.note = note
                 entry.exit_time_ms = _t(c)
                 entry.bars_held = i
                 entry.mfe_r = round(mfe, 3)
@@ -757,21 +791,13 @@ def resolve_entry(
             hit_sl = hi >= cur_stop
             hit_tp = lo <= entry.tp
             if hit_sl and hit_tp:
-                if trailed:
-                    entry.status = "win"
-                    entry.exit_price = entry.tp
-                    entry.realized_r = (entry.entry - entry.tp) / risk
-                    entry.note = "同根觸及・已保本採止盈"
-                elif CONSERVATIVE_SAME_BAR:
-                    entry.status = "loss"
-                    entry.exit_price = entry.stop
-                    entry.realized_r = -1.0
-                    entry.note = "同根觸及SL/TP，採保守停損"
-                else:
-                    entry.status = "win"
-                    entry.exit_price = entry.tp
-                    entry.realized_r = (entry.entry - entry.tp) / risk
-                    entry.note = "同根觸及，採止盈"
+                st, px, rr, note = _same_bar_outcome(
+                    entry, trailed=trailed, mfe=mfe, risk=risk
+                )
+                entry.status = st
+                entry.exit_price = px
+                entry.realized_r = rr
+                entry.note = note
                 entry.exit_time_ms = _t(c)
                 entry.bars_held = i
                 entry.mfe_r = round(mfe, 3)
@@ -814,12 +840,17 @@ def resolve_entry(
         if len(after) < max_bars:
             return entry
         last = observing[-1]
-        entry.status = "timeout"
+        # 沒碰到計畫價＝沒進場，略過，不計入勝率／逾時
+        entry.status = "skip"
         entry.exit_price = 0.0
         entry.exit_time_ms = _t(last)
         entry.realized_r = 0.0
-        tag = "未回到計畫價，未進場"
-        entry.note = f"{entry.note}｜{tag}" if entry.note else tag
+        if UNFILLED_RETEST_TAG not in (entry.note or ""):
+            entry.note = (
+                f"{entry.note}｜{UNFILLED_RETEST_TAG}"
+                if entry.note
+                else UNFILLED_RETEST_TAG
+            )
         return entry
 
     entry.mfe_r = round(mfe, 3)
@@ -968,7 +999,8 @@ class JournalStats:
     win_n: int = 0
     loss_n: int = 0
     timeout_n: int = 0
-    win_rate: float = 0.0  # 不含 open；timeout 算已結算
+    skip_n: int = 0  # 等回測未進場等略過，不進勝率
+    win_rate: float = 0.0  # 不含 open／skip；timeout 另計
     avg_planned_rr: float = 0.0
     avg_realized_r: float = 0.0
     expectancy_r: float = 0.0
@@ -976,6 +1008,18 @@ class JournalStats:
     avg_mfe: float = 0.0
     avg_mae: float = 0.0
     by_side: dict[str, dict[str, float]] = field(default_factory=dict)
+
+
+def is_unfilled_retest(r: JournalEntry) -> bool:
+    """等回測觀察期滿仍沒碰到計畫價（含舊日記寫成 timeout 的）。"""
+    if (r.kind or "") != "retest":
+        return False
+    if r.status == "skip":
+        return True
+    note = r.note or ""
+    return UNFILLED_RETEST_TAG in note or (
+        r.status == "timeout" and "未進場" in note
+    )
 
 
 def compute_stats(
@@ -991,14 +1035,20 @@ def compute_stats(
     if not rows:
         return st
 
-    closed = [r for r in rows if r.status in ("win", "loss", "timeout")]
     st.open_n = sum(1 for r in rows if r.status == "open")
+    st.skip_n = sum(1 for r in rows if is_unfilled_retest(r))
+    # 真正進場後的結算：略過未進場
+    closed = [
+        r
+        for r in rows
+        if r.status in ("win", "loss", "timeout") and not is_unfilled_retest(r)
+    ]
     st.win_n = sum(1 for r in closed if r.status == "win")
     st.loss_n = sum(1 for r in closed if r.status == "loss")
     st.timeout_n = sum(1 for r in closed if r.status == "timeout")
 
     if closed:
-        # 勝率：嚴格用 win/(win+loss)，timeout 另計；另給含 timeout 的結算勝率
+        # 勝率：嚴格用 win/(win+loss)，timeout 另計；未進場不進分母
         wl = st.win_n + st.loss_n
         st.win_rate = (st.win_n / wl * 100) if wl else 0.0
         st.avg_planned_rr = sum(r.planned_rr for r in closed) / len(closed)
@@ -1025,9 +1075,15 @@ def compute_stats(
 def print_stats(st: JournalStats, title: str = "YES 訊號追蹤統計") -> None:
     print()
     print(f"══ {title} ══")
-    print(f"總筆數 {st.total} ｜ 未結算 {st.open_n} ｜ 勝 {st.win_n} ｜ 負 {st.loss_n} ｜ 超時 {st.timeout_n}")
+    head = (
+        f"總筆數 {st.total} ｜ 未結算 {st.open_n} ｜ 勝 {st.win_n} ｜ "
+        f"負 {st.loss_n} ｜ 超時 {st.timeout_n}"
+    )
+    if st.skip_n:
+        head += f" ｜ 未進場 {st.skip_n}"
+    print(head)
     if st.win_n + st.loss_n > 0:
-        print(f"勝率(不含超時) {st.win_rate:.1f}%  （win/(win+loss)）")
+        print(f"勝率(不含超時／未進場) {st.win_rate:.1f}%  （win/(win+loss)）")
     closed_n = st.win_n + st.loss_n + st.timeout_n
     if closed_n:
         print(f"平均計畫 RR {st.avg_planned_rr:.2f}")
@@ -1116,25 +1172,26 @@ def plan_level_text(r: JournalEntry) -> str:
 
 
 def _exit_hhmm(r: JournalEntry) -> str:
-    """平倉時刻：觸發那根 K 的開盤（台灣時間）。未平為 —。"""
-    if r.status == "open" or not r.exit_time_ms:
+    """平倉時刻：觸發那根 K 的開盤（台灣時間）。未平／未進場為 —。"""
+    if r.status == "open" or is_unfilled_retest(r) or not r.exit_time_ms:
         return "—"
     return datetime.fromtimestamp(r.exit_time_ms / 1000, TZ_TW).strftime("%H:%M")
 
 
 def _awaiting_retest_fill(r: JournalEntry) -> bool:
-    """等回測且價格還沒碰到計畫進場。"""
-    if (r.kind or "") != "retest":
+    """等回測且價格還沒碰到計畫進場（仍 open）。"""
+    if (r.kind or "") != "retest" or r.status != "open":
         return False
-    note = r.note or ""
-    if "未進場" in note:
-        return True
-    if "已碰到計畫價" in note:
+    if is_unfilled_retest(r):
         return False
-    return r.status == "open"
+    if "已碰到計畫價" in (r.note or ""):
+        return False
+    return True
 
 
 def _trade_result_text(r: JournalEntry) -> str:
+    if is_unfilled_retest(r):
+        return "未進場"
     if _awaiting_retest_fill(r):
         return "尚未進場"
     if r.status == "open":
@@ -1196,7 +1253,7 @@ def _fmt_table_px(v: float) -> str:
 
 
 def _row_tone(r: JournalEntry) -> str:
-    if _awaiting_retest_fill(r):
+    if is_unfilled_retest(r) or _awaiting_retest_fill(r):
         return "wait"
     if r.status == "win":
         return "win"
@@ -1269,13 +1326,26 @@ def today_table_model(
             "records": [],
         }
     scored = [r for r in today if (r.kind or "") != "plan"]
+    skipped = [r for r in scored if is_unfilled_retest(r)]
+    skipped_ids = {r.id for r in skipped}
     pending = [r for r in scored if _awaiting_retest_fill(r)]
     pending_ids = {r.id for r in pending}
-    closed = [r for r in scored if r.status != "open" and r.id not in pending_ids]
-    holding = [r for r in scored if r.status == "open" and r.id not in pending_ids]
+    closed = [
+        r
+        for r in scored
+        if r.status not in ("open", "skip")
+        and r.id not in pending_ids
+        and r.id not in skipped_ids
+    ]
+    holding = [
+        r
+        for r in scored
+        if r.status == "open" and r.id not in pending_ids and r.id not in skipped_ids
+    ]
     total_r = sum(r.realized_r for r in closed)
     summary = (
-        f"已平 {len(closed)} 筆 {total_r:+.2f}R｜持倉 {len(holding)}｜等回測未進 {len(pending)}"
+        f"已平 {len(closed)} 筆 {total_r:+.2f}R｜持倉 {len(holding)}"
+        f"｜等回測未進 {len(pending)}｜略過未進場 {len(skipped)}"
     )
     records: list[dict[str, Any]] = []
     for r in today:
@@ -1509,14 +1579,27 @@ def format_today_record_messages(
     if not today:
         return [f"{title}\n今天還沒有紀錄"]
     scored = [r for r in today if (r.kind or "") != "plan"]
+    skipped = [r for r in scored if is_unfilled_retest(r)]
+    skipped_ids = {r.id for r in skipped}
     pending = [r for r in scored if _awaiting_retest_fill(r)]
     pending_ids = {r.id for r in pending}
-    closed = [r for r in scored if r.status != "open" and r.id not in pending_ids]
-    holding = [r for r in scored if r.status == "open" and r.id not in pending_ids]
+    closed = [
+        r
+        for r in scored
+        if r.status not in ("open", "skip")
+        and r.id not in pending_ids
+        and r.id not in skipped_ids
+    ]
+    holding = [
+        r
+        for r in scored
+        if r.status == "open" and r.id not in pending_ids and r.id not in skipped_ids
+    ]
     total_r = sum(r.realized_r for r in closed)
     header = (
         f"{title}\n"
-        f"已平 {len(closed)} 筆 {total_r:+.2f}R｜持倉 {len(holding)}｜等回測未進 {len(pending)}\n"
+        f"已平 {len(closed)} 筆 {total_r:+.2f}R｜持倉 {len(holding)}"
+        f"｜等回測未進 {len(pending)}｜略過未進場 {len(skipped)}\n"
         f"等回測的「計畫進」不是當時成交價"
     )
     blocks = ["\n".join(format_trade_record_lines(r)) for r in today]
@@ -1550,8 +1633,14 @@ def print_journal(rows: list[JournalEntry] | None = None, limit: int = 30) -> No
             side = "空"
         else:
             side = "整"
-        st_map = {"open": "未結算", "win": "勝", "loss": "負", "timeout": "超時"}
-        st = st_map.get(r.status, r.status)
+        st_map = {
+            "open": "未結算",
+            "win": "勝",
+            "loss": "負",
+            "timeout": "超時",
+            "skip": "未進場",
+        }
+        st = "未進場" if is_unfilled_retest(r) else st_map.get(r.status, r.status)
         rr = f"{r.planned_rr:.1f}" if r.planned_rr else "-"
         real = f"{r.realized_r:+.2f}" if r.status != "open" else "-"
         rs = (r.ruleset or LEGACY_RULESET)[:6]
