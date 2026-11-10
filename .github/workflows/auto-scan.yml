@@ -114,7 +114,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout --orphan cloud-journal
-          git add cloud/yes_journal.jsonl cloud/journal_stats.txt cloud/journal_analytics.json
+          git add cloud/yes_journal.jsonl cloud/journal_stats.txt
+          if [ -f cloud/journal_analytics.json ]; then git add cloud/journal_analytics.json; fi
           git commit -m "chore: sync cloud journal $(date -u +%Y-%m-%dT%H:%MZ)"
           git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           # Backup the previous snapshot before publishing a replacement.
