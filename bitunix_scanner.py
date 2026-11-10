@@ -1136,7 +1136,7 @@ def _tg_reply_keyboard() -> str:
                 [{"text": "📋 日內規劃"}, {"text": "📊 統計"}],
                 [{"text": "🪙 小幣推薦"}, {"text": "📰 財金新聞"}],
                 [{"text": "🇹🇼 台股當沖"}, {"text": "🔥 台股熱度"}],
-                [{"text": "🇺🇸 美股熱度"}],
+                [{"text": "🇺🇸 美股熱度"}, {"text": "🧪 模擬倉位"}],
             ],
             "resize_keyboard": True,
             "is_persistent": True,
@@ -1540,6 +1540,11 @@ _TG_CMD_ALIASES: dict[str, str] = {
     "START": "START",
     "HELP": "HELP",
     "STATS": "STATS",
+    "PAPER": "PAPER",
+    "POSITIONS": "PAPER",
+    "模擬倉位": "PAPER",
+    "模拟仓位": "PAPER",
+    "模擬持倉": "PAPER",
     "JOURNAL": "STATS",
     "JS": "STATS",
     "統計": "STATS",
@@ -2172,7 +2177,7 @@ def poll_telegram_queries(
                 "傳 <code>BTC</code>、<code>MAGIC</code>、<code>AVAXUSDT</code>\n"
                 "會回傳類似 CMD <code>detail</code> 的摘要\n"
                 "底部按鈕：📋日內規劃、📊統計、🪙小幣推薦、📰財金新聞\n"
-                "台股：🇹🇼當沖、🔥熱度；單檔傳 <code>台股2330</code>\n"
+                "🧪模擬倉位；台股：🇹🇼當沖、🔥熱度；單檔傳 <code>台股2330</code>\n"
                 "美股：🇺🇸熱度；單股傳 <code>美股AAPL</code>",
                 chat_id=from_chat,
             )
@@ -2259,6 +2264,11 @@ def poll_telegram_queries(
                 tw = now_tw().strftime("%m-%d %H:%M")
                 title = f"BTC／ETH 日內規劃 · {tw}"
                 notify_plan_with_chart(title, plans, chat_id=from_chat)
+            handled += 1
+            continue
+        if key == "PAPER":
+            from paper_status import build_paper_positions_message
+            _telegram_send(build_paper_positions_message(), chat_id=from_chat)
             handled += 1
             continue
         if key == "STATS":
