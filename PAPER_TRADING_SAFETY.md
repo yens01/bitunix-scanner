@@ -17,3 +17,11 @@
 5. 至少 30 筆模擬成交及異常測試通過，才評估真實小額交易。
 
 **安全警告：** 此模組的 `try_open` 僅修改傳入的記憶體狀態；呼叫者必須在可靠鎖下讀取並原子保存，否則多個排程仍可能突破限制。
+
+## 自動掃描與 Telegram（新）
+
+`auto-scan.yml` 先從 `cloud-journal` 取回 `cloud/paper_state.json`（首次以主分支明確種子檔初始化），模擬處理最近已收盤 15m K 線，並在 journal snapshot 一併發布持倉狀態。成功發布後才送 Telegram 開倉／平倉通知。
+
+預設仍停用：Repository Variables `PAPER_TRADING_ENABLED=true` 且 `TRADING_KILL_SWITCH=false` 才會模擬交易。永不發送真實交易委託。請先驗證 GitHub Actions 成功與 cloud snapshot 更新，再考慮切換兩個變數。
+
+限制：GitHub Actions 掃描為間歇性，僅取最近已收盤 K 線；不能保證捕捉所有盤中波動，模擬成交價非交易所實際成交。Telegram 通知可能因網路故障遺失，不能作為唯一的持倉紀錄。可靠紀錄以 cloud/paper_state.json 為準。若 snapshot 推送失敗，workflow 不會發出該輪通知。
