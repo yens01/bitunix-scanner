@@ -58,8 +58,25 @@ jobs:
 
       - name: Validate Python and regression tests
         run: |
-          python -m compileall -q signal_tracker.py risk_manager.py journal_analytics.py bitunix_scanner.py paper_trading.py paper_runner.py
+          python -m compileall -q signal_tracker.py risk_manager.py journal_analytics.py bitunix_scanner.py paper_trading.py paper_runner.py paper_auto.py paper_notify.py
           python -m unittest discover -s tests -v
+
+      # Durable state is sourced from the published cloud snapshot, not Actions cache.
+      # Existing snapshot always overrides the initial seed in main.
+      - name: Restore paper state from cloud journal
+        run: |
+          set -e
+          git fetch --depth=1 origin cloud-journal
+          if git cat-file -e FETCH_HEAD:cloud/paper_state.json 2>/dev/null; then
+            git show FETCH_HEAD:cloud/paper_state.json > paper_state.json
+          fi
+          python -m json.tool paper_state.json >/dev/null
+
+      - name: Paper trade simulation (no live orders)
+        env:
+          PAPER_TRADING_ENABLED: ${{ vars.PAPER_TRADING_ENABLED || 'false' }}
+          TRADING_KILL_SWITCH: ${{ vars.TRADING_KILL_SWITCH || 'true' }}
+        run: python paper_auto.py
 
       - name: Run scan
         env:
@@ -109,12 +126,13 @@ jobs:
           cp -f yes_journal.jsonl /tmp/journal-pub/cloud/yes_journal.jsonl
           python bitunix_scanner.py journal stats > /tmp/journal-pub/cloud/journal_stats.txt 2>&1 || true
           if [ -f journal_analytics.json ]; then cp journal_analytics.json /tmp/journal-pub/cloud/journal_analytics.json; fi
+          cp paper_state.json /tmp/journal-pub/cloud/paper_state.json
           cd /tmp/journal-pub
           git init
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout --orphan cloud-journal
-          git add cloud/yes_journal.jsonl cloud/journal_stats.txt
+          git add cloud/yes_journal.jsonl cloud/journal_stats.txt cloud/paper_state.json
           if [ -f cloud/journal_analytics.json ]; then git add cloud/journal_analytics.json; fi
           git commit -m "chore: sync cloud journal $(date -u +%Y-%m-%dT%H:%MZ)"
           git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
@@ -126,3 +144,10 @@ jobs:
           git push --force-with-lease origin cloud-journal
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Telegram paper open/close notifications
+        if: success()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python paper_notify.py
