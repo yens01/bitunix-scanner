@@ -71,6 +71,20 @@ class JournalEntry:
     zone_hi: float = 0.0
     plan_label: str = ""  # 下午規劃／晚盤規劃…
     mtf_note: str = ""
+    # Optional execution evidence; old records remain compatible.
+    entry_state: str = ""  # waiting_entry/triggered/filled/closed/expired/cancelled
+    entry_trigger_time_ms: int = 0
+    fill_time_ms: int = 0
+    fill_price: float = 0.0
+    fill_source: str = ""  # exchange_verified only with independently confirmed evidence
+    exit_reason: str = ""
+    fee_usdt: float = 0.0
+    slippage_usdt: float = 0.0
+    funding_usdt: float = 0.0
+    net_realized_r: float | None = None
+    quality_score: int = 0
+    quality_tier: str = ""
+    market_regime: str = ""  # unknown until independently classified
 
     def risk(self) -> float:
         return abs(self.entry - self.stop)
@@ -204,6 +218,7 @@ def record_yes_signals(
             structure=str(getattr(s, "structure", "")),
             missing_steps=str(getattr(s, "missing_steps", "")),
             status="open",
+            entry_state="signal_open",
             ruleset=CURRENT_RULESET,
             kind="yes",
             zone_lo=float(getattr(s, "zone_lo", 0) or 0),
@@ -263,6 +278,7 @@ def record_fade_signals(
             structure=str(getattr(s, "structure", "")),
             missing_steps=str(getattr(s, "missing_steps", "")),
             status="open",
+            entry_state="signal_open",
             note="日空反抽見頂",
             ruleset=CURRENT_RULESET,
             kind="fade",
@@ -322,6 +338,7 @@ def record_base_signals(
             structure=str(getattr(s, "structure", "")),
             missing_steps=str(getattr(s, "missing_steps", "")),
             status="open",
+            entry_state="signal_open",
             note="日多回檔見底",
             ruleset=CURRENT_RULESET,
             kind="base",
