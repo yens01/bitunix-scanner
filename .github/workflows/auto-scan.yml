@@ -5,8 +5,8 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: bitunix-auto-scan
-  cancel-in-progress: true
+  group: bitunix-shared-scan
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -64,6 +64,10 @@ jobs:
           RISK_PCT_PER_R: ${{ secrets.RISK_PCT_PER_R }}
           RISK_MAX_SAME_SIDE: ${{ secrets.RISK_MAX_SAME_SIDE }}
           RISK_MAX_TOTAL_OPEN: ${{ secrets.RISK_MAX_TOTAL_OPEN }}
+          RISK_MAX_LEVERAGE: ${{ vars.RISK_MAX_LEVERAGE || '3' }}
+          RISK_MAX_NOTIONAL_USDT: ${{ vars.RISK_MAX_NOTIONAL_USDT || '3000' }}
+          RISK_FEE_PCT_ROUNDTRIP: ${{ vars.RISK_FEE_PCT_ROUNDTRIP || '0.12' }}
+          RISK_SLIPPAGE_PCT_ROUNDTRIP: ${{ vars.RISK_SLIPPAGE_PCT_ROUNDTRIP || '0.10' }}
           PYTHONIOENCODING: utf-8
         # n=200：擴大山寨覆蓋；逾時 12 分鐘
         run: python bitunix_scanner.py watch-once --n 200
@@ -103,6 +107,11 @@ jobs:
           git add cloud/yes_journal.jsonl cloud/journal_stats.txt
           git commit -m "chore: sync cloud journal $(date -u +%Y-%m-%dT%H:%MZ)"
           git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git push -f origin cloud-journal
+          # Backup the previous snapshot before publishing a replacement.
+          git fetch origin cloud-journal:refs/remotes/origin/cloud-journal || true
+          if git rev-parse --verify refs/remotes/origin/cloud-journal >/dev/null 2>&1; then
+            git push origin refs/remotes/origin/cloud-journal:refs/heads/cloud-journal-backup
+          fi
+          git push --force-with-lease origin cloud-journal
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
