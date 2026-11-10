@@ -1037,11 +1037,13 @@ def compute_stats(
 
     st.open_n = sum(1 for r in rows if r.status == "open")
     st.skip_n = sum(1 for r in rows if is_unfilled_retest(r))
-    # 真正進場後的結算：略過未進場
+    # 僅統計有明確方向且已結算的交易；side=none 是觀察計畫，不是成交。
     closed = [
         r
         for r in rows
-        if r.status in ("win", "loss", "timeout") and not is_unfilled_retest(r)
+        if r.status in ("win", "loss", "timeout")
+        and r.side in ("long", "short")
+        and not is_unfilled_retest(r)
     ]
     st.win_n = sum(1 for r in closed if r.status == "win")
     st.loss_n = sum(1 for r in closed if r.status == "loss")
