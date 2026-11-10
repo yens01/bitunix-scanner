@@ -110,7 +110,7 @@ jobs:
           # Backup the previous snapshot before publishing a replacement.
           git fetch origin cloud-journal:refs/remotes/origin/cloud-journal || true
           if git rev-parse --verify refs/remotes/origin/cloud-journal >/dev/null 2>&1; then
-            git push origin refs/remotes/origin/cloud-journal:refs/heads/cloud-journal-backup
+            git push origin refs/remotes/origin/cloud-journal:refs/heads/cloud-journal-backup-${GITHUB_RUN_ID}
           fi
           git push --force-with-lease origin cloud-journal
         env:
