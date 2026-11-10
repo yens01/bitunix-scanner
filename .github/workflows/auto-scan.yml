@@ -58,7 +58,7 @@ jobs:
 
       - name: Validate Python and regression tests
         run: |
-          python -m compileall -q signal_tracker.py risk_manager.py journal_analytics.py bitunix_scanner.py
+          python -m compileall -q signal_tracker.py risk_manager.py journal_analytics.py bitunix_scanner.py paper_trading.py paper_runner.py
           python -m unittest discover -s tests -v
 
       - name: Run scan
