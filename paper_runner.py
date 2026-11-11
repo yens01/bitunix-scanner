@@ -54,7 +54,7 @@ def process(state, rows, candles):
             diagnostics["risk_rejected"][reason] = diagnostics["risk_rejected"].get(reason, 0) + 1
         if accepted:
             diagnostics["opened"] += 1
-            events.append({"type": "paper_open", "signal_id": row.id, "symbol": row.symbol})
+            events.append({"type": "paper_open", **state["position"]})
             break
     print("Paper entry diagnostics:", json.dumps(diagnostics, ensure_ascii=False))
     return events
