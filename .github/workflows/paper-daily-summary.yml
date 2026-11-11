@@ -1,0 +1,32 @@
+name: Paper Daily Summary
+
+on:
+  schedule:
+    - cron: "10 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: paper-daily-summary
+  cancel-in-progress: false
+
+jobs:
+  summary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Restore durable paper state
+        run: |
+          git fetch --depth=1 origin cloud-journal
+          git show FETCH_HEAD:cloud/paper_state.json > paper_state.json
+          python -m json.tool paper_state.json >/dev/null
+      - name: Send prior UTC day Telegram summary
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python paper_daily_notify.py
