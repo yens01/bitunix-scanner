@@ -89,26 +89,16 @@ jobs:
             telegram_offset.json
           key: state-v5-${{ github.run_id }}
 
-      - name: Publish journal snapshot branch
+      # IMPORTANT: Manual Scan must not replace cloud-journal.
+      # Auto Scan is the only publisher of durable paper_state and journal snapshots.
+      # Manual scans retain their own run artifacts/cache for diagnostics.
+      - name: Upload manual scan journal for inspection
         if: always()
-        run: |
-          set -e
-          mkdir -p /tmp/journal-pub/cloud
-          cp -f yes_journal.jsonl /tmp/journal-pub/cloud/yes_journal.jsonl
-          python bitunix_scanner.py journal stats > /tmp/journal-pub/cloud/journal_stats.txt 2>&1 || true
-          cd /tmp/journal-pub
-          git init
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout --orphan cloud-journal
-          git add cloud/yes_journal.jsonl cloud/journal_stats.txt
-          git commit -m "chore: sync cloud journal $(date -u +%Y-%m-%dT%H:%MZ)"
-          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          # Backup the previous snapshot before publishing a replacement.
-          git fetch origin cloud-journal:refs/remotes/origin/cloud-journal || true
-          if git rev-parse --verify refs/remotes/origin/cloud-journal >/dev/null 2>&1; then
-            git push origin refs/remotes/origin/cloud-journal:refs/heads/cloud-journal-backup-${GITHUB_RUN_ID}
-          fi
-          git push --force-with-lease origin cloud-journal
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: manual-scan-journal-${{ github.run_id }}
+          path: |
+            yes_journal.jsonl
+            alert_cooldown.json
+          if-no-files-found: warn
+          retention-days: 7
