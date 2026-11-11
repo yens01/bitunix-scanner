@@ -1602,6 +1602,9 @@ _TG_CMD_ALIASES: dict[str, str] = {
     "策略品質": "QUALITY",
     "SYSTEM": "SYSTEM",
     "系統狀態": "SYSTEM",
+    "TWHEAT": "TWHEAT",
+    "USHEAT": "USHEAT",
+    "STATS": "STATS",
     "市場總覽": "STATS",
     "模擬交易": "PAPER_MENU",
     "台美股": "STOCK_MENU",
@@ -2277,7 +2280,7 @@ def poll_telegram_queries(
             _telegram_send(
                 "用法：直接傳幣種，例如 <code>BTC</code> / <code>ETHUSDT</code>\n"
                 "或按底部按鈕：📋日內規劃、📊統計、🪙小幣推薦、📰財金新聞、台股／美股\n"
-                "其他功能請點「🧪 模擬交易」「📈 台美股」或「⚙️ 更多功能」\\n"
+                "其他功能請點「🧪 模擬交易」「📈 台美股」或「⚙️ 更多功能」\n"
                 "或 <code>/help</code>",
                 chat_id=from_chat,
             )
