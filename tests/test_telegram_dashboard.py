@@ -1,8 +1,9 @@
+import json
 import unittest
 from datetime import datetime, timezone
 from unittest.mock import patch
 
-from bitunix_scanner import _tg_reply_keyboard, normalize_query_symbol
+from bitunix_scanner import _tg_reply_keyboard, _tg_inline_menu, normalize_query_symbol
 from signal_tracker import JournalEntry
 from telegram_dashboard import (
     build_dashboard_message, equity_curve, latest_signals, performance,
@@ -19,16 +20,29 @@ def signal(id="sig1"):
 
 
 class TelegramDashboardTests(unittest.TestCase):
-    def test_keyboard_keeps_old_and_adds_six(self):
-        keyboard = _tg_reply_keyboard()
-        for name in ("📋 日內規劃", "📊 統計", "🪙 小幣推薦", "📰 財金新聞",
-                     "🇹🇼 台股當沖", "🔥 台股熱度", "🇺🇸 美股熱度", "🧪 模擬倉位",
-                     "🎯 最新訊號", "💰 交易績效", "📈 資金曲線",
-                     "🔎 訊號漏斗", "🧠 策略品質", "⚙️ 系統狀態"):
-            self.assertIn(name, keyboard)
+    def test_eight_home_buttons_and_submenus(self):
+        keyboard = json.loads(_tg_reply_keyboard())["keyboard"]
+        labels = [item["text"] for row in keyboard for item in row]
+        self.assertEqual(len(labels), 8)
+        self.assertEqual(len(keyboard), 4)
+        for name in ("📊 市場總覽", "🎯 最新訊號", "🧪 模擬交易",
+                     "📋 日內規劃", "🪙 小幣推薦", "📈 台美股",
+                     "📰 財金新聞", "⚙️ 更多功能"):
+            self.assertIn(name, labels)
+        callbacks = set()
+        for menu in ("PAPER_MENU", "STOCK_MENU", "MORE_MENU", "HOME_MENU"):
+            _, markup = _tg_inline_menu(menu)
+            callbacks.update(item["callback_data"] for row in
+                             json.loads(markup)["inline_keyboard"] for item in row)
+        for action in ("PAPER", "PERFORMANCE", "EQUITY", "FUNNEL", "QUALITY",
+                       "SYSTEM", "TW", "TWHEAT", "USHEAT", "STATS",
+                       "PLAN", "ALTS", "NEWS", "LATEST", "HOME_MENU"):
+            self.assertIn("menu:" + action, callbacks)
 
     def test_aliases(self):
         for label, command in (
+            ("📊 市場總覽", "STATS"), ("🧪 模擬交易", "PAPER_MENU"),
+            ("📈 台美股", "STOCK_MENU"), ("⚙️ 更多功能", "MORE_MENU"),
             ("🎯 最新訊號", "LATEST"), ("💰 交易績效", "PERFORMANCE"),
             ("📈 資金曲線", "EQUITY"), ("🔎 訊號漏斗", "FUNNEL"),
             ("🧠 策略品質", "QUALITY"), ("⚙️ 系統狀態", "SYSTEM"),
