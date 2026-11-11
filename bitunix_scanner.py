@@ -1137,6 +1137,9 @@ def _tg_reply_keyboard() -> str:
                 [{"text": "🪙 小幣推薦"}, {"text": "📰 財金新聞"}],
                 [{"text": "🇹🇼 台股當沖"}, {"text": "🔥 台股熱度"}],
                 [{"text": "🇺🇸 美股熱度"}, {"text": "🧪 模擬倉位"}],
+                [{"text": "🎯 最新訊號"}, {"text": "💰 交易績效"}],
+                [{"text": "📈 資金曲線"}, {"text": "🔎 訊號漏斗"}],
+                [{"text": "🧠 策略品質"}, {"text": "⚙️ 系統狀態"}],
             ],
             "resize_keyboard": True,
             "is_persistent": True,
@@ -1540,6 +1543,20 @@ _TG_CMD_ALIASES: dict[str, str] = {
     "START": "START",
     "HELP": "HELP",
     "STATS": "STATS",
+    "LATEST": "LATEST",
+    "最新訊號": "LATEST",
+    "最新信號": "LATEST",
+    "PERFORMANCE": "PERFORMANCE",
+    "交易績效": "PERFORMANCE",
+    "EQUITY": "EQUITY",
+    "資金曲線": "EQUITY",
+    "FUNNEL": "FUNNEL",
+    "訊號漏斗": "FUNNEL",
+    "信號漏斗": "FUNNEL",
+    "QUALITY": "QUALITY",
+    "策略品質": "QUALITY",
+    "SYSTEM": "SYSTEM",
+    "系統狀態": "SYSTEM",
     "PAPER": "PAPER",
     "POSITIONS": "PAPER",
     "模擬倉位": "PAPER",
@@ -2166,7 +2183,7 @@ def poll_telegram_queries(
             _telegram_send(
                 "用法：直接傳幣種，例如 <code>BTC</code> / <code>ETHUSDT</code>\n"
                 "或按底部按鈕：📋日內規劃、📊統計、🪙小幣推薦、📰財金新聞、台股／美股\n"
-                "或 <code>/help</code>",
+                "新增：🎯最新訊號、💰交易績效、📈資金曲線、🔎訊號漏斗、🧠策略品質、⚙️系統狀態\\n"\n                "或 <code>/help</code>",
                 chat_id=from_chat,
             )
             handled += 1
@@ -2264,6 +2281,16 @@ def poll_telegram_queries(
                 tw = now_tw().strftime("%m-%d %H:%M")
                 title = f"BTC／ETH 日內規劃 · {tw}"
                 notify_plan_with_chart(title, plans, chat_id=from_chat)
+            handled += 1
+            continue
+        if key in {"LATEST", "PERFORMANCE", "EQUITY", "FUNNEL", "QUALITY", "SYSTEM"}:
+            from telegram_dashboard import build_dashboard_message
+            try:
+                body = build_dashboard_message(key)
+            except Exception as exc:
+                print(f"Telegram dashboard query failed ({key}): {exc}")
+                body = "⚠️ 查詢暫時失敗，請稍後再試。"
+            _telegram_send(body, chat_id=from_chat)
             handled += 1
             continue
         if key == "PAPER":
