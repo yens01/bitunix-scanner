@@ -33,12 +33,9 @@ jobs:
             yes_journal.jsonl
             session_plan_state.json
             telegram_offset.json
-          key: state-v5-${{ github.run_id }}
+          key: manual-state-v1-${{ github.run_id }}
           restore-keys: |
-            state-v5-
-            state-v4-
-            state-v3-
-            cooldown-v2-
+            manual-state-v1-
 
       - name: Ensure state files
         run: |
