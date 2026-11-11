@@ -29,6 +29,8 @@ class PaperRunnerTests(unittest.TestCase):
             events=process(state,[row()],{"BTCUSDT":{"open_time_ms":2000,"low":99.9,"high":101,"closed":True}})
             self.assertEqual(len(events),1)
             self.assertEqual(state["position"]["signal_id"],"r1")
+            self.assertEqual(events[0]["side"], "long")
+            self.assertEqual(events[0]["quantity"], state["position"]["quantity"])
 
 if __name__=="__main__":
     unittest.main()
