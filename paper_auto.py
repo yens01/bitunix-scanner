@@ -35,13 +35,12 @@ def main():
     candles = {}
     for symbol in selected:
         try:
-            bars = parse_klines(fetch_klines(symbol, "15m", 5))
+            bars = parse_klines(fetch_klines(symbol, "15m", 200))
             # The newest bar may be incomplete. Use only confirmed closed bars.
             now = int(datetime.now(timezone.utc).timestamp()*1000)
             closed = [b for b in bars if b.time + 15*60*1000 <= now]
             if closed:
-                b = closed[-1]
-                candles[symbol] = {"open_time_ms":b.time, "high":b.high, "low":b.low, "closed":True}
+                candles[symbol] = [{"open_time_ms":b.time, "high":b.high, "low":b.low, "closed":True} for b in closed]
         except Exception as exc:
             # Fail closed: do not open if market observation failed.
             print(f"Paper candle unavailable for {symbol}: {exc}")
