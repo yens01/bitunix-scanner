@@ -1,0 +1,186 @@
+{
+  "day": "2026-11-11",
+  "orders_today": 2,
+  "realized_loss_today": 0.2502007534721906,
+  "position": null,
+  "events": [
+    {
+      "type": "open",
+      "signal_id": "93c9aad04348",
+      "symbol": "ONEUSDT",
+      "side": "short",
+      "entry": 0.0015594,
+      "stop": 0.0015729253571428571,
+      "tp": 0.0015308557142857144,
+      "quantity": 14744.011109064792,
+      "opened_at": "2026-11-11T14:45:34.243466+00:00"
+    },
+    {
+      "type": "close",
+      "signal_id": "93c9aad04348",
+      "reason": "tp",
+      "exit": 0.0015308557142857144,
+      "estimated_net_pnl_usdt": 0.37073822
+    },
+    {
+      "type": "open",
+      "signal_id": "5521c5e60341",
+      "symbol": "SOXSUSDT",
+      "side": "short",
+      "entry": 50.07,
+      "stop": 50.367842857142854,
+      "tp": 49.363485714285716,
+      "quantity": 0.6127498181008448,
+      "opened_at": "2026-11-11T15:00:54.025365+00:00"
+    },
+    {
+      "type": "close",
+      "signal_id": "5521c5e60341",
+      "symbol": "SOXSUSDT",
+      "side": "short",
+      "entry": 50.07,
+      "stop": 50.367842857142854,
+      "tp": 49.363485714285716,
+      "quantity": 0.6127498181008448,
+      "opened_at": "2026-11-11T15:00:54.025365+00:00",
+      "reason": "stop",
+      "exit": 50.367842857142854,
+      "estimated_net_pnl_usdt": -0.25020075
+    }
+  ],
+  "halted": false,
+  "entry_diagnostics": {
+    "scans": 68,
+    "counts": {
+      "retest_open": 1275,
+      "no_candle": 782,
+      "unclosed_candle": 0,
+      "candle_before_signal": 34,
+      "entry_not_touched": 405,
+      "opened": 0
+    },
+    "risk_rejected": {
+      "strategy/quality rejected": 50,
+      "daily order limit": 4
+    },
+    "unique_signals": {
+      "b2e3993771a9": {
+        "symbol": "AKEUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "9fee7eae8bc4": {
+        "symbol": "PIEVERSEUSDT",
+        "stage": "entry_not_touched"
+      },
+      "27d6deffa0a3": {
+        "symbol": "UAIUSDT",
+        "stage": "entry_not_touched"
+      },
+      "529e1fd94578": {
+        "symbol": "HUSDT",
+        "stage": "no_candle"
+      },
+      "efc4034f4a62": {
+        "symbol": "DASHUSDT",
+        "stage": "no_candle"
+      },
+      "28bb6eaf00c6": {
+        "symbol": "HUMAUSDT",
+        "stage": "no_candle"
+      },
+      "79307db35b7d": {
+        "symbol": "BRUSDT",
+        "stage": "no_candle"
+      },
+      "f2ed31e13681": {
+        "symbol": "PARTIUSDT",
+        "stage": "no_candle"
+      },
+      "8db932fad343": {
+        "symbol": "ARIAUSDT",
+        "stage": "no_candle"
+      },
+      "c9580136e7f0": {
+        "symbol": "ICNTUSDT",
+        "stage": "entry_not_touched"
+      },
+      "a566136c8507": {
+        "symbol": "BIRBUSDT",
+        "stage": "no_candle"
+      },
+      "2cd04040aef2": {
+        "symbol": "EDGEXUSDT",
+        "stage": "no_candle"
+      },
+      "1f1fb5d87c4c": {
+        "symbol": "ZECUSDT",
+        "stage": "no_candle"
+      },
+      "5c7114f0b44e": {
+        "symbol": "HUSDT",
+        "stage": "no_candle"
+      },
+      "48dbf091e206": {
+        "symbol": "ARIAUSDT",
+        "stage": "no_candle"
+      },
+      "6fa43d7ad8a2": {
+        "symbol": "CRVUSDT",
+        "stage": "no_candle"
+      },
+      "86330830d642": {
+        "symbol": "EVAAUSDT",
+        "stage": "no_candle"
+      },
+      "f8723b475930": {
+        "symbol": "RAYUSDT",
+        "stage": "no_candle"
+      },
+      "73dd95a4790d": {
+        "symbol": "GRASSUSDT",
+        "stage": "no_candle"
+      },
+      "303bef4f55a7": {
+        "symbol": "TTWOUSDT",
+        "stage": "no_candle"
+      },
+      "da78cc49a4ac": {
+        "symbol": "PIEVERSEUSDT",
+        "stage": "entry_not_touched"
+      },
+      "18bcd8bcf549": {
+        "symbol": "1000PEPEUSDT",
+        "stage": "entry_not_touched"
+      },
+      "c428ec4cda98": {
+        "symbol": "AKEUSDT",
+        "stage": "entry_not_touched"
+      },
+      "4ea3e0960d65": {
+        "symbol": "UAIUSDT",
+        "stage": "entry_not_touched"
+      },
+      "12829129b0c7": {
+        "symbol": "IRENUSDT",
+        "stage": "entry_not_touched"
+      },
+      "1b8a8d1d01d1": {
+        "symbol": "ICNTUSDT",
+        "stage": "entry_not_touched"
+      },
+      "33a2f5d610e7": {
+        "symbol": "HUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "b398644eaf6e": {
+        "symbol": "TQQQUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      }
+    }
+  },
+  "last_processed_bar_ms": {},
+  "notification_outbox": []
+}
