@@ -14,8 +14,8 @@ class WorkflowSafetyTests(unittest.TestCase):
         workflow = Path(".github/workflows/auto-scan.yml").read_text(encoding="utf-8")
         self.assertLess(workflow.index("Restore paper state from cloud journal"),
                         workflow.index("Paper trade simulation"))
-        self.assertLess(workflow.index("Publish journal snapshot branch"),
-                        workflow.index("Telegram paper open/close notifications"))
+        self.assertLess(workflow.index("Telegram paper open/close notifications"),
+                        workflow.index("Publish journal snapshot branch"))
 
 
 if __name__ == "__main__":
