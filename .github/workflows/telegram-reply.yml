@@ -54,7 +54,6 @@ jobs:
           key: tg-offset-v1-${{ github.run_id }}
           restore-keys: |
             tg-offset-v1-
-            state-v5-
 
       - name: Ensure offset file
         run: |
@@ -79,11 +78,11 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PYTHONIOENCODING: utf-8
-        run: python bitunix_scanner.py telegram-poll --seconds 28
-
-      - name: Save telegram offset
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: telegram_offset.json
-          key: tg-offset-v1-${{ github.run_id }}
+        run: |
+          set -o pipefail
+          python bitunix_scanner.py telegram-poll --seconds 28 | tee telegram-poll.log
+          echo '### Telegram Reply' >> "$GITHUB_STEP_SUMMARY"
+          grep 'Telegram 輪詢結束' telegram-poll.log >> "$GITHUB_STEP_SUMMARY" || echo 'Polling did not produce a summary' >> "$GITHUB_STEP_SUMMARY"
+          if grep -q 'Telegram API .*HTTP 409' telegram-poll.log; then
+            echo '⚠️ Telegram getUpdates conflict: check other pollers or an active webhook.' >> "$GITHUB_STEP_SUMMARY"
+          fi
