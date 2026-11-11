@@ -113,7 +113,12 @@ jobs:
             telegram_offset.json
           key: state-v5-${{ github.run_id }}
 
-      # 同步到 cloud-journal 分支（獨立 orphan，避免掃描殘檔擋 checkout）
+      - name: Telegram paper open/close notifications
+        if: always()\n        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python paper_notify.py\n\n      # 同步到 cloud-journal 分支（獨立 orphan，避免掃描殘檔擋 checkout）
       - name: Generate analytics report
         if: always()
         run: python journal_analytics.py --output journal_analytics.json || true
@@ -151,9 +156,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Telegram paper open/close notifications
-        if: success()
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python paper_notify.py
