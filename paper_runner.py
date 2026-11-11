@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from datetime import datetime
 from journal_analytics import quality
 from paper_trading import close_on_bar, load_state, save_state, try_open
 from signal_tracker import load_journal
@@ -32,9 +33,10 @@ def process(state, rows, candles):
     position = state.get("position")
     if position:
         symbol = position["symbol"]
+        opened_ms = int(datetime.fromisoformat(position["opened_at"]).timestamp() * 1000) if position.get("opened_at") else 0
         for bar in observations.get(symbol, []):
             stamp = int(bar.get("open_time_ms", 0))
-            if stamp <= last.get(symbol, -1):
+            if stamp <= last.get(symbol, -1) or stamp <= opened_ms:
                 continue
             event = close_on_bar(state, high=float(bar["high"]), low=float(bar["low"]))
             last[symbol] = stamp
