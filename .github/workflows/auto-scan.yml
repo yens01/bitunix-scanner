@@ -74,8 +74,8 @@ jobs:
 
       - name: Paper trade simulation (no live orders)
         env:
-          PAPER_TRADING_ENABLED: ${{ vars.PAPER_TRADING_ENABLED || 'false' }}
-          TRADING_KILL_SWITCH: ${{ vars.TRADING_KILL_SWITCH || 'true' }}
+          PAPER_TRADING_ENABLED: ${{ vars.PAPER_TRADING_ENABLED || 'true' }}
+          TRADING_KILL_SWITCH: ${{ vars.TRADING_KILL_SWITCH || 'false' }}
         run: python paper_auto.py
 
       - name: Run scan
