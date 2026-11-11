@@ -4,7 +4,7 @@ from bitunix_scanner import normalize_query_symbol, _tg_reply_keyboard
 
 class PaperStatusTests(unittest.TestCase):
     def test_keyboard_and_command(self):
-        self.assertIn("🧪 模擬倉位", _tg_reply_keyboard())
+        self.assertIn("🧪 模擬交易", _tg_reply_keyboard())
         self.assertEqual(normalize_query_symbol("🧪 模擬倉位"), "PAPER")
 
     def test_empty_state(self):
