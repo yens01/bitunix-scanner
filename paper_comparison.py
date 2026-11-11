@@ -37,7 +37,7 @@ def build_comparison_message(rows, state, *, now=None):
         "說明：包含計畫價追蹤，不能視為實際開倉。",
         "",
         "🧪 <b>B. 模擬倉位（非真實委託）</b>",
-        f"累積已平倉：{p['closed_trades']} 筆｜勝率：{p['win_rate_pct'] if p['win_rate_pct'] is not None else '—'}%",
+        f"累積已平倉：{p['closed_trades']} 筆｜勝率：{str(p['win_rate_pct']) + '%' if p['win_rate_pct'] is not None else '—'}",
         f"估算已實現淨損益：{p['estimated_net_pnl_usdt']:+.4f} USDT",
         f"Profit Factor：{p['profit_factor'] if p['profit_factor'] is not None else '—（無虧損或無交易）'}",
         f"最大已平倉回撤：{p['max_drawdown_usdt']:.4f} USDT",
