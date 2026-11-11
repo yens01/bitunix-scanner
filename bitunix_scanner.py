@@ -1122,9 +1122,15 @@ def _telegram_api(method: str, payload: dict[str, Any] | None = None, *, timeout
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             body = json.loads(resp.read().decode("utf-8"))
         if not body.get("ok"):
+            print(f"Telegram API {method} rejected request: code={body.get('error_code')}, description={str(body.get('description', ''))[:160]}", flush=True)
             return None
         return body.get("result")
-    except Exception:
+    except urllib.error.HTTPError as exc:
+        # Telegram 409 commonly means another poller or a webhook owns getUpdates.
+        print(f"Telegram API {method} HTTP {exc.code} (check webhook/competing pollers for 409)", flush=True)
+        return None
+    except Exception as exc:
+        print(f"Telegram API {method} failed: {type(exc).__name__}", flush=True)
         return None
 
 
@@ -2209,6 +2215,7 @@ def poll_telegram_queries(
     """
     token, chat = _telegram_token_chat()
     if not token or not chat:
+        print("Telegram polling skipped: missing token or chat ID", flush=True)
         return 0
     offset = load_telegram_offset()
     payload: dict[str, Any] = {"timeout": str(max(0, int(timeout)))}
