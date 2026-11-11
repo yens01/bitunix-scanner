@@ -5,14 +5,45 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+def _price(value):
+    return f"{float(value):.10f}".rstrip("0").rstrip(".") if value is not None else "未提供"
+
+
 def format_event(e):
-    if e.get("type") == "paper_open":
-        return "🧪 模擬開倉（非真實委託）\n幣種：" + e.get("symbol","") + "\n訊號：" + e.get("signal_id","")
-    if e.get("type") == "close":
-        return ("🧪 模擬平倉（非真實成交）\n訊號：" + e.get("signal_id","")
-                + "\n原因：" + e.get("reason","") + "\n估算淨損益："
-                + str(e.get("estimated_net_pnl_usdt")) + " USDT")
-    return None
+    kind = e.get("type")
+    if kind not in ("paper_open", "close"):
+        return None
+    side = {"long": "做多 LONG", "short": "做空 SHORT"}.get(e.get("side"), "未提供")
+    symbol = e.get("symbol") or "未提供"
+    lines = [
+        "🧪 模擬開倉｜非真實委託" if kind == "paper_open" else "🧪 模擬平倉｜非真實成交",
+        f"幣種：{symbol}",
+        f"方向：{side}",
+        f"進場價：{_price(e.get('entry'))} USDT",
+        f"停損價：{_price(e.get('stop'))} USDT",
+        f"停利價：{_price(e.get('tp'))} USDT",
+    ]
+    qty = e.get("quantity")
+    entry = e.get("entry")
+    if qty is not None:
+        lines.append(f"模擬數量：{float(qty):,.6f} {symbol.removesuffix('USDT')}")
+    if qty is not None and entry is not None:
+        lines.append(f"倉位名目價值：約 {float(qty) * float(entry):.4f} USDT")
+    if qty is not None and entry is not None and e.get("stop") is not None:
+        risk = abs(float(entry) - float(e["stop"])) * float(qty)
+        lines.append(f"預估停損損失（未含費用）：約 {risk:.4f} USDT")
+    if kind == "close":
+        lines.extend([
+            f"平倉原因：{'停損 SL' if e.get('reason') == 'stop' else '停利 TP' if e.get('reason') == 'tp' else e.get('reason', '未提供')}",
+            f"平倉價：{_price(e.get('exit'))} USDT",
+            f"估算淨損益：{e.get('estimated_net_pnl_usdt', '未提供')} USDT",
+        ])
+    if e.get("opened_at"):
+        lines.append(f"開倉時間（UTC）：{e['opened_at']}")
+    lines.append(f"訊號 ID：{e.get('signal_id', '未提供')}")
+    lines.append("⚠️ 僅供模擬紀錄，並非交易所成交證明")
+    return "\n".join(lines)
+
 
 def main():
     path=Path("paper_events_pending.json")
