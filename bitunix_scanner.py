@@ -2183,7 +2183,8 @@ def poll_telegram_queries(
             _telegram_send(
                 "用法：直接傳幣種，例如 <code>BTC</code> / <code>ETHUSDT</code>\n"
                 "或按底部按鈕：📋日內規劃、📊統計、🪙小幣推薦、📰財金新聞、台股／美股\n"
-                "新增：🎯最新訊號、💰交易績效、📈資金曲線、🔎訊號漏斗、🧠策略品質、⚙️系統狀態\\n"\n                "或 <code>/help</code>",
+                "新增：🎯最新訊號、💰交易績效、📈資金曲線、🔎訊號漏斗、🧠策略品質、⚙️系統狀態\\n"
+                "或 <code>/help</code>",
                 chat_id=from_chat,
             )
             handled += 1
