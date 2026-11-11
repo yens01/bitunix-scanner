@@ -1,0 +1,29 @@
+{
+  "day": "2026-11-11",
+  "orders_today": 1,
+  "realized_loss_today": 0.0,
+  "position": {
+    "signal_id": "93c9aad04348",
+    "symbol": "ONEUSDT",
+    "side": "short",
+    "entry": 0.0015594,
+    "stop": 0.0015729253571428571,
+    "tp": 0.0015308557142857144,
+    "quantity": 14744.011109064792,
+    "opened_at": "2026-11-11T14:45:34.243466+00:00"
+  },
+  "events": [
+    {
+      "type": "open",
+      "signal_id": "93c9aad04348",
+      "symbol": "ONEUSDT",
+      "side": "short",
+      "entry": 0.0015594,
+      "stop": 0.0015729253571428571,
+      "tp": 0.0015308557142857144,
+      "quantity": 14744.011109064792,
+      "opened_at": "2026-11-11T14:45:34.243466+00:00"
+    }
+  ],
+  "halted": false
+}
