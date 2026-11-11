@@ -14,6 +14,9 @@ from signal_tracker import load_journal
 def process(state, rows, candles):
     """Process exits first, then only fresh waiting retest signals with a touch."""
     events = []
+    diagnostics = {"retest_open": 0, "no_candle": 0, "unclosed_candle": 0,
+                   "candle_before_signal": 0, "entry_not_touched": 0,
+                   "risk_rejected": {}, "opened": 0}
     position = state.get("position")
     if position:
         candle = candles.get(position["symbol"])
@@ -27,22 +30,33 @@ def process(state, rows, candles):
     for row in sorted(rows, key=lambda x: x.signal_time_ms, reverse=True):
         if row.kind != "retest" or row.status != "open":
             continue
+        diagnostics["retest_open"] += 1
         candle = candles.get(row.symbol)
-        if not candle or not candle.get("closed", False):
+        if not candle:
+            diagnostics["no_candle"] += 1
+            continue
+        if not candle.get("closed", False):
+            diagnostics["unclosed_candle"] += 1
             continue
         # Candle must start after signal; otherwise this is look-ahead.
         if int(candle.get("open_time_ms", 0)) <= row.signal_time_ms:
+            diagnostics["candle_before_signal"] += 1
             continue
         if not (float(candle["low"]) <= row.entry <= float(candle["high"])):
+            diagnostics["entry_not_touched"] += 1
             continue
         score, _ = quality(row)
         accepted, reason = try_open(
             state, signal_id=row.id, symbol=row.symbol, side=row.side,
             entry=row.entry, stop=row.stop, tp=row.tp, quality_score=score,
             kind=row.kind)
+        if not accepted:
+            diagnostics["risk_rejected"][reason] = diagnostics["risk_rejected"].get(reason, 0) + 1
         if accepted:
+            diagnostics["opened"] += 1
             events.append({"type": "paper_open", "signal_id": row.id, "symbol": row.symbol})
             break
+    print("Paper entry diagnostics:", json.dumps(diagnostics, ensure_ascii=False))
     return events
 
 def main():
