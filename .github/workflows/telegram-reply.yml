@@ -4,10 +4,14 @@ name: Telegram Reply
 
 on:
   workflow_dispatch:
+  # Backup trigger if external cron-job.org dispatch stops working.
+  # GitHub scheduled workflows can be delayed; external 30s dispatch remains preferred.
+  schedule:
+    - cron: "*/5 * * * *"
 
 concurrency:
   group: bitunix-telegram-reply
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
