@@ -49,11 +49,20 @@ def report(state, *, starting_capital_usdt=50.0):
     opens = {}
     trades = []
     unmatched_closes = 0
+    duplicate_opens = 0
+    duplicate_closes = 0
+    seen_closes = set()
     for event in events:
         signal_id = event.get("signal_id")
         if event.get("type") == "open" and signal_id:
+            if signal_id in opens or signal_id in seen_closes:
+                duplicate_opens += 1
+                continue
             opens[signal_id] = event
         elif event.get("type") == "close":
+            if signal_id in seen_closes:
+                duplicate_closes += 1
+                continue
             opened = opens.pop(signal_id, None)
             if opened is None:
                 unmatched_closes += 1
@@ -63,10 +72,12 @@ def report(state, *, starting_capital_usdt=50.0):
             except (KeyError, ValueError, TypeError):
                 unmatched_closes += 1
                 continue
+            seen_closes.add(signal_id)
             trades.append({
                 "signal_id": signal_id, "symbol": opened.get("symbol", "unknown"),
                 "side": opened.get("side", "unknown"),
                 "opened_at": opened.get("opened_at"),
+                "closed_at": event.get("closed_at"),
                 "reason": event.get("reason"), "estimated_net_pnl_usdt": pnl,
             })
     grouped = defaultdict(list)
@@ -89,6 +100,9 @@ def report(state, *, starting_capital_usdt=50.0):
         "day_utc": state.get("day"), "orders_today": state.get("orders_today", 0),
         "open_position": state.get("position"),
         "unmatched_close_events": unmatched_closes,
+        "duplicate_open_events": duplicate_opens,
+        "duplicate_close_events": duplicate_closes,
+        "unmatched_open_events": len(opens),
         "overall": _summary(trades, starting_capital_usdt),
         "groups": by_group,
         "trades": trades,
