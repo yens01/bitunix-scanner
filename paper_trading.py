@@ -137,7 +137,7 @@ def close_on_bar(state, *, high, low, config=None):
     costs = (p["entry"] + price) * p["quantity"] * 0.0011
     pnl = gross - costs
     state["realized_loss_today"] = state.get("realized_loss_today", 0) + max(0, -pnl)
-    event = {"type": "close", "signal_id": p["signal_id"], "reason": "stop" if stop_hit else "tp",
+    event = {"type": "close", **p, "reason": "stop" if stop_hit else "tp",
              "exit": price, "estimated_net_pnl_usdt": round(pnl, 8)}
     state.setdefault("events", []).append(event)
     state["position"] = None
