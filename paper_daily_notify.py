@@ -10,20 +10,20 @@ from paper_performance import report
 
 
 def daily_message(state, day):
-    # Trades are attributed to the UTC day they were OPENED.
+    # Attribute realized PnL to UTC close day, not the open day.
     all_report = report(state)
     trades = [t for t in all_report["trades"]
-              if (t.get("opened_at") or "").startswith(day)]
+              if (t.get("closed_at") or "").startswith(day)]
     wins = sum(t["estimated_net_pnl_usdt"] > 0 for t in trades)
     pnl = sum(t["estimated_net_pnl_usdt"] for t in trades)
     win_rate = f"{wins / len(trades) * 100:.1f}%" if trades else "—"
     return ("📊 模擬交易每日摘要（非真實成交）\n"
             f"UTC 日期：{day}\n"
-            f"當日開倉且已平倉：{len(trades)} 筆\n"
+            f"當日平倉：{len(trades)} 筆\n"
             f"獲利筆數：{wins}\n"
             f"勝率：{win_rate}\n"
             f"估算淨損益：{pnl:+.6f} USDT\n"
-            "⚠️ 依開倉日歸屬，跨日未平倉不計入；模擬成本與成交價非交易所驗證。")
+            "⚠️ 依平倉日歸屬，歷史舊單若缺少平倉時間不計入；模擬成本與成交價非交易所驗證。")
 
 
 def main():
