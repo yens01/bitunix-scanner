@@ -38,7 +38,7 @@ def today_utc():
     return datetime.now(timezone.utc).date().isoformat()
 
 def default_state():
-    return {"day": today_utc(), "orders_today": 0, "realized_loss_today": 0.0,
+    return {"day": today_utc(), "orders_today": 0, "realized_loss_today": 0.0, "realized_net_today": 0.0,
             "position": None, "events": [], "halted": False}
 
 def load_state(path: Path):
@@ -49,6 +49,7 @@ def load_state(path: Path):
         state["day"] = today_utc()
         state["orders_today"] = 0
         state["realized_loss_today"] = 0.0
+        state["realized_net_today"] = 0.0
     return state
 
 def save_state(state, path: Path):
@@ -100,7 +101,8 @@ def try_open(state, *, signal_id, symbol, side, entry, stop, tp,
         return False, "position already open"
     if state.get("orders_today", 0) >= c.max_new_orders_per_day:
         return False, "daily order limit"
-    if state.get("realized_loss_today", 0) >= c.capital_usdt * c.daily_loss_fraction:
+    if (state.get("realized_loss_today", 0) >= c.capital_usdt * c.daily_loss_fraction
+            or state.get("realized_net_today", 0) <= -c.capital_usdt * c.daily_loss_fraction):
         return False, "daily loss limit"
     if any(e.get("signal_id") == signal_id and e.get("type") == "open" for e in state.get("events", [])):
         return False, "duplicate signal"
@@ -137,7 +139,8 @@ def close_on_bar(state, *, high, low, config=None):
     costs = (p["entry"] + price) * p["quantity"] * 0.0011
     pnl = gross - costs
     state["realized_loss_today"] = state.get("realized_loss_today", 0) + max(0, -pnl)
-    event = {"type": "close", **p, "reason": "stop" if stop_hit else "tp",
+    state["realized_net_today"] = state.get("realized_net_today", 0) + pnl
+    event = {"type": "close", **p, "closed_at": datetime.now(timezone.utc).isoformat(), "reason": "stop" if stop_hit else "tp",
              "exit": price, "estimated_net_pnl_usdt": round(pnl, 8)}
     state.setdefault("events", []).append(event)
     state["position"] = None

@@ -7,46 +7,65 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from datetime import datetime
 from journal_analytics import quality
 from paper_trading import close_on_bar, load_state, save_state, try_open
 from signal_tracker import load_journal
 
 def process(state, rows, candles):
-    """Process exits first, then only fresh waiting retest signals with a touch."""
+    """Replay all newly observed closed bars in chronological order.
+
+    Legacy callers may pass one candle per symbol. A position opened on a bar
+    cannot exit on that same bar because intrabar ordering is unknowable.
+    """
     events = []
+    stats = state.setdefault("entry_diagnostics", {"scans": 0, "counts": {}, "risk_rejected": {}})
+    stats["scans"] += 1
+    observations = {}
+    for symbol, bars in candles.items():
+        if isinstance(bars, dict):
+            bars = [bars]
+        observations[symbol] = sorted(
+            (b for b in bars if b.get("closed", False)),
+            key=lambda b: int(b.get("open_time_ms", 0)))
+    last = state.setdefault("last_processed_bar_ms", {})
+    # Existing position gets every available bar since the last processed one.
+    position = state.get("position")
+    if position:
+        symbol = position["symbol"]
+        opened_ms = int(datetime.fromisoformat(position["opened_at"]).timestamp() * 1000) if position.get("opened_at") else 0
+        for bar in observations.get(symbol, []):
+            stamp = int(bar.get("open_time_ms", 0))
+            if stamp <= last.get(symbol, -1) or stamp <= opened_ms:
+                continue
+            event = close_on_bar(state, high=float(bar["high"]), low=float(bar["low"]))
+            last[symbol] = stamp
+            if event:
+                events.append(event)
+                break
+        # Never open a replacement in the same run as a previously open position.
+        return events
+
     diagnostics = {"retest_open": 0, "no_candle": 0, "unclosed_candle": 0,
                    "candle_before_signal": 0, "entry_not_touched": 0,
                    "risk_rejected": {}, "opened": 0}
-    position = state.get("position")
-    # Count each scan observation, not unique signals; preserve across runs.
-    state.setdefault("entry_diagnostics", {"scans": 0, "counts": {}, "risk_rejected": {}})
-    stats = state["entry_diagnostics"]
-    stats["scans"] += 1
-    if position:
-        candle = candles.get(position["symbol"])
-        if candle:
-            event = close_on_bar(state, high=float(candle["high"]), low=float(candle["low"]))
-            if event:
-                events.append(event)
-    # Never open and close using the same candle: unknown intrabar ordering.
-    if position is not None:
-        return events
     for row in sorted(rows, key=lambda x: x.signal_time_ms, reverse=True):
         if row.kind != "retest" or row.status != "open":
             continue
         diagnostics["retest_open"] += 1
-        candle = candles.get(row.symbol)
-        if not candle:
+        bars = observations.get(row.symbol, [])
+        if not bars:
             diagnostics["no_candle"] += 1
             continue
-        if not candle.get("closed", False):
-            diagnostics["unclosed_candle"] += 1
-            continue
-        # Candle must start after signal; otherwise this is look-ahead.
-        if int(candle.get("open_time_ms", 0)) <= row.signal_time_ms:
+        future = [b for b in bars
+                  if int(b.get("open_time_ms", 0)) > row.signal_time_ms
+                  and int(b.get("open_time_ms", 0)) > last.get(row.symbol, -1)]
+        if not future:
             diagnostics["candle_before_signal"] += 1
             continue
-        if not (float(candle["low"]) <= row.entry <= float(candle["high"])):
+        touched = next((b for b in future
+                        if float(b["low"]) <= row.entry <= float(b["high"])), None)
+        if touched is None:
             diagnostics["entry_not_touched"] += 1
             continue
         score, _ = quality(row)
@@ -56,8 +75,9 @@ def process(state, rows, candles):
             kind=row.kind)
         if not accepted:
             diagnostics["risk_rejected"][reason] = diagnostics["risk_rejected"].get(reason, 0) + 1
-        if accepted:
+        else:
             diagnostics["opened"] += 1
+            last[row.symbol] = int(touched["open_time_ms"])
             events.append({"type": "paper_open", **state["position"]})
             break
     for key, value in diagnostics.items():

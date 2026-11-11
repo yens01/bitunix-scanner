@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import html
-from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 from paper_status import fetch_snapshot
