@@ -26,3 +26,9 @@
 
 限制：GitHub Actions 掃描為間歇性，僅取最近已收盤 K 線；不能保證捕捉所有盤中波動，模擬成交價非交易所實際成交。Telegram 通知可能因網路故障遺失，不能作為唯一的持倉紀錄。可靠紀錄以 cloud/paper_state.json 為準。若 snapshot 推送失敗，workflow 不會發出該輪通知。
 \n## 維運限制（2026-11）\n\n- 手動 Scan 不再寫入 cloud-journal，避免清除 paper_state；只保留短期 workflow artifact。\n- 模擬成交按可取得的已收盤 K 線順序補算，歷史資料仍受交易所 API 取樣上限影響；無法保證完整盤中路徑。\n- 每日摘要以 close_at (UTC) 歸屬；舊事件缺乏 close_at 不納入每日報表，但仍計入累積績效。\n- 訊號品質分數是規則評分，不代表實際勝率；不要用此分數直接估算報酬。\n
+## 可靠性與統計功能
+
+- 通知事件寫入 `paper_state.json.notification_outbox`，每次成功發送後記錄 `sent`，下次排程會重試未發送事件。若 Telegram 已收到但回覆遺失，仍可能重複發送；無法保證 exactly-once。
+- `entry_diagnostics.unique_signals` 以訊號 ID 記錄最後一次觀察階段；與累積掃描次數分開。既有舊紀錄不會自動補齊。
+- `paper_performance.json` 在有已收盤 K 線標記價時顯示 `estimated_unrealized_pnl_usdt` 和 `estimated_marked_equity_usdt`；沒有行情時回傳 null。已平倉回撤仍只計已平倉交易。
+- `quality_calibration.json` 以已完成的模擬交易與訊號日記比對品質層級。每層至少 20 筆才顯示觀察勝率；不會自動調整交易門檻，亦不代表預測機率。
