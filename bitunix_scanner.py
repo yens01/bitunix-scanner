@@ -1129,23 +1129,68 @@ def _telegram_api(method: str, payload: dict[str, Any] | None = None, *, timeout
 
 
 def _tg_reply_keyboard() -> str:
-    """手機底部按鈕。符號只做外觀，辨識時會去掉。"""
+    """Eight compact home buttons; secondary features live in inline menus."""
     return json.dumps(
-        {
-            "keyboard": [
-                [{"text": "📋 日內規劃"}, {"text": "📊 統計"}],
-                [{"text": "🪙 小幣推薦"}, {"text": "📰 財金新聞"}],
-                [{"text": "🇹🇼 台股當沖"}, {"text": "🔥 台股熱度"}],
-                [{"text": "🇺🇸 美股熱度"}, {"text": "🧪 模擬倉位"}],
-                [{"text": "🎯 最新訊號"}, {"text": "💰 交易績效"}],
-                [{"text": "📈 資金曲線"}, {"text": "🔎 訊號漏斗"}],
-                [{"text": "🧠 策略品質"}, {"text": "⚙️ 系統狀態"}],
-            ],
-            "resize_keyboard": True,
-            "is_persistent": True,
-        },
+        {"keyboard": [
+            [{"text": "📊 市場總覽"}, {"text": "🎯 最新訊號"}],
+            [{"text": "🧪 模擬交易"}, {"text": "📋 日內規劃"}],
+            [{"text": "🪙 小幣推薦"}, {"text": "📈 台美股"}],
+            [{"text": "📰 財金新聞"}, {"text": "⚙️ 更多功能"}],
+        ], "resize_keyboard": True, "is_persistent": True},
         ensure_ascii=False,
     )
+
+
+_TG_INLINE_MENUS = {
+    "PAPER_MENU": (
+        "🧪 <b>模擬交易</b>｜請選擇功能",
+        [("📌 目前持倉", "PAPER"), ("💰 交易績效", "PERFORMANCE"),
+         ("📈 資金曲線", "EQUITY"), ("🔎 訊號漏斗", "FUNNEL"),
+         ("🧠 策略品質", "QUALITY"), ("↩️ 返回首頁", "HOME_MENU")],
+    ),
+    "STOCK_MENU": (
+        "📈 <b>台美股</b>｜請選擇功能",
+        [("🇹🇼 台股當沖", "TW"), ("🔥 台股熱度", "TWHEAT"),
+         ("🇺🇸 美股熱度", "USHEAT"), ("↩️ 返回首頁", "HOME_MENU")],
+    ),
+    "MORE_MENU": (
+        "⚙️ <b>更多功能</b>｜請選擇功能",
+        [("⚙️ 系統狀態", "SYSTEM"), ("📊 原有統計", "STATS"),
+         ("🧪 模擬交易", "PAPER_MENU"), ("↩️ 返回首頁", "HOME_MENU")],
+    ),
+    "HOME_MENU": (
+        "🏠 <b>Bitunix Scanner</b>｜請選擇分類",
+        [("📊 市場總覽", "STATS"), ("🎯 最新訊號", "LATEST"),
+         ("🧪 模擬交易", "PAPER_MENU"), ("📋 日內規劃", "PLAN"),
+         ("🪙 小幣推薦", "ALTS"), ("📈 台美股", "STOCK_MENU"),
+         ("📰 財金新聞", "NEWS"), ("⚙️ 更多功能", "MORE_MENU")],
+    ),
+}
+
+
+def _tg_inline_menu(key: str) -> tuple[str, str]:
+    """Return menu text and Telegram inline keyboard JSON."""
+    title, items = _TG_INLINE_MENUS[key]
+    keyboard = [
+        [{"text": label, "callback_data": "menu:" + command}
+         for label, command in items[i:i + 2]]
+        for i in range(0, len(items), 2)
+    ]
+    return title, json.dumps({"inline_keyboard": keyboard}, ensure_ascii=False)
+
+
+def _tg_show_menu(key: str, *, chat_id: str, message_id: int | None = None) -> bool:
+    title, markup = _tg_inline_menu(key)
+    payload = {"chat_id": chat_id, "text": title,
+               "parse_mode": "HTML", "reply_markup": markup}
+    if message_id is not None:
+        payload["message_id"] = str(message_id)
+        result = _telegram_api("editMessageText", payload, timeout=20)
+        if result is not None:
+            return True
+        # Editing may fail for stale messages; send a new menu instead.
+        payload.pop("message_id", None)
+    return _telegram_api("sendMessage", payload, timeout=20) is not None
 
 
 def _telegram_send_rich(html: str, *, chat_id: str | None = None) -> bool:
@@ -1557,6 +1602,10 @@ _TG_CMD_ALIASES: dict[str, str] = {
     "策略品質": "QUALITY",
     "SYSTEM": "SYSTEM",
     "系統狀態": "SYSTEM",
+    "市場總覽": "STATS",
+    "模擬交易": "PAPER_MENU",
+    "台美股": "STOCK_MENU",
+    "更多功能": "MORE_MENU",
     "PAPER": "PAPER",
     "POSITIONS": "PAPER",
     "模擬倉位": "PAPER",
@@ -2171,6 +2220,51 @@ def poll_telegram_queries(
     for upd in updates:
         uid = int(upd.get("update_id", 0) or 0)
         next_offset = max(next_offset, uid + 1)
+        callback = upd.get("callback_query") or {}
+        if callback:
+            callback_msg = callback.get("message") or {}
+            callback_chat = str((callback_msg.get("chat") or {}).get("id", ""))
+            callback_id = str(callback.get("id") or "")
+            if callback_chat != str(chat):
+                continue
+            data = str(callback.get("data") or "")
+            # Acknowledge promptly to dismiss Telegram's loading indicator.
+            if callback_id:
+                _telegram_api("answerCallbackQuery", {"callback_query_id": callback_id}, timeout=10)
+            if not data.startswith("menu:"):
+                continue
+            action = data[5:]
+            if action in _TG_INLINE_MENUS:
+                _tg_show_menu(action, chat_id=callback_chat,
+                              message_id=callback_msg.get("message_id"))
+            elif action in {"PAPER", "LATEST", "PERFORMANCE", "EQUITY",
+                            "FUNNEL", "QUALITY", "SYSTEM"}:
+                if action == "PAPER":
+                    from paper_status import build_paper_positions_message
+                    body = build_paper_positions_message()
+                else:
+                    from telegram_dashboard import build_dashboard_message
+                    try:
+                        body = build_dashboard_message(action)
+                    except Exception as exc:
+                        print(f"Telegram dashboard callback failed ({action}): {exc}")
+                        body = "⚠️ 查詢暫時失敗，請稍後再試。"
+                _telegram_send(body, chat_id=callback_chat)
+            else:
+                # Reuse the existing command router for legacy functions.
+                # Callback dispatch is normalized to a command-only update.
+                upd["message"] = {"chat": {"id": callback_chat}, "text": action}
+                msg = upd["message"]
+                from_chat = callback_chat
+                text = action
+                key = normalize_query_symbol(text)
+                if key is None:
+                    continue
+                # Fall through to the standard command branches below.
+                callback = {}
+            if callback:
+                handled += 1
+                continue
         msg = upd.get("message") or {}
         from_chat = str((msg.get("chat") or {}).get("id", ""))
         if from_chat != str(chat):
@@ -2183,10 +2277,14 @@ def poll_telegram_queries(
             _telegram_send(
                 "用法：直接傳幣種，例如 <code>BTC</code> / <code>ETHUSDT</code>\n"
                 "或按底部按鈕：📋日內規劃、📊統計、🪙小幣推薦、📰財金新聞、台股／美股\n"
-                "新增：🎯最新訊號、💰交易績效、📈資金曲線、🔎訊號漏斗、🧠策略品質、⚙️系統狀態\\n"
+                "其他功能請點「🧪 模擬交易」「📈 台美股」或「⚙️ 更多功能」\\n"
                 "或 <code>/help</code>",
                 chat_id=from_chat,
             )
+            handled += 1
+            continue
+        if key in _TG_INLINE_MENUS:
+            _tg_show_menu(key, chat_id=from_chat)
             handled += 1
             continue
         if key in {"START", "HELP"}:
