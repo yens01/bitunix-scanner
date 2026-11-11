@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import html
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 from paper_status import fetch_snapshot
@@ -23,6 +24,8 @@ def build_comparison_message(rows, state, *, now=None):
     p = paper["overall"]
     counts = (state.get("entry_diagnostics") or {}).get("counts") or {}
     reasons = (state.get("entry_diagnostics") or {}).get("risk_rejected") or {}
+    unique = (state.get("entry_diagnostics") or {}).get("unique_signals") or {}
+    stages = Counter(item.get("stage", "unknown") for item in unique.values())
     rejection = sum(reasons.values())
     def n(key):
         return int(counts.get(key, 0))
@@ -48,6 +51,10 @@ def build_comparison_message(rows, state, *, now=None):
         f"訊號前 K 線：{n('candle_before_signal')}｜未觸及進場價：{n('entry_not_touched')}",
         f"風控／品質拒絕：{rejection}｜成功開倉：{n('opened')}",
     ]
+    lines.append("")
+    lines.append("🧭 <b>D. 獨立訊號漏斗（每個訊號 ID 只計一次）</b>")
+    lines.append(f"獨立候選：{len(unique)}｜已開倉：{stages['opened']}｜拒絕：{stages['rejected']}")
+    lines.append(f"未觸價：{stages['entry_not_touched']}｜等待 K 線：{stages['waiting_candle']}｜缺 K 線：{stages['no_candle']}")
     if reasons:
         lines.append("拒絕原因：" + "；".join(
             f"{html.escape(str(k))} {v}" for k, v in sorted(reasons.items())))
