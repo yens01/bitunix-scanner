@@ -41,8 +41,9 @@ class AnalyticsTests(unittest.TestCase):
 
     def test_quality_is_observational(self):
         score, tier = quality(row(missing_steps="03 BOS, 08 回測反應"))
-        self.assertLess(score, 50)
-        self.assertIn(tier, ("low", "medium"))
+        self.assertEqual(score, 56)
+        self.assertEqual(tier, "medium")
+        self.assertEqual(row().score, 50)  # original scanner score is independent
 
 
 if __name__ == "__main__":

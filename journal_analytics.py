@@ -31,22 +31,27 @@ def lifecycle(row):
 
 
 def quality(row):
-    """Observational priority only; never rewrites strategy decisions."""
-    score = 50
+    """Heuristic setup completeness score, NOT a win probability.
+
+    Keep the scanner's original row.score untouched. Missing confirmations
+    reduce priority but should not automatically veto paper-only observation.
+    This scale is provisional until enough out-of-sample fills exist.
+    """
+    score = 60
     if row.side not in ("long", "short"):
         score -= 40
     if row.planned_rr >= 2:
-        score += 15
+        score += 10
     elif row.planned_rr < 1.5:
         score -= 15
     if "BOS" in (row.missing_steps or ""):
-        score -= 15
+        score -= 8
     if "回測反應" in (row.missing_steps or ""):
-        score -= 10
+        score -= 6
     if row.kind == "base":
-        score -= 15  # conservative observational flag, not a backtested filter
+        score -= 10
     score = max(0, min(100, score))
-    return score, "high" if score >= 65 else ("medium" if score >= 40 else "low")
+    return score, "high" if score >= 70 else ("medium" if score >= 50 else "low")
 
 
 def net_r(row, *, fee_pct=0.12, slippage_pct=0.10, funding_pct=0.0):
