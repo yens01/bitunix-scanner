@@ -20,6 +20,21 @@ def signal(id="sig1"):
 
 
 class TelegramDashboardTests(unittest.TestCase):
+
+    def test_telegram_api_reports_http_conflict_without_token(self):
+        import io
+        import urllib.error
+        from contextlib import redirect_stdout
+        from bitunix_scanner import _telegram_api
+
+        with patch("bitunix_scanner._telegram_token_chat", return_value=("private-token", "123")):
+            with patch("bitunix_scanner.urllib.request.urlopen", side_effect=urllib.error.HTTPError("url", 409, "Conflict", {}, None)):
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    self.assertIsNone(_telegram_api("getUpdates", {"timeout": "0"}))
+                self.assertIn("409", out.getvalue())
+                self.assertNotIn("private-token", out.getvalue())
+
     def test_eight_home_buttons_and_submenus(self):
         keyboard = json.loads(_tg_reply_keyboard())["keyboard"]
         labels = [item["text"] for row in keyboard for item in row]
