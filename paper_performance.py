@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from collections import defaultdict
 from pathlib import Path
 
@@ -72,6 +73,9 @@ def report(state, *, starting_capital_usdt=50.0):
             except (KeyError, ValueError, TypeError):
                 unmatched_closes += 1
                 continue
+            if not math.isfinite(pnl):
+                unmatched_closes += 1
+                continue
             seen_closes.add(signal_id)
             trades.append({
                 "signal_id": signal_id, "symbol": opened.get("symbol", "unknown"),
@@ -84,12 +88,16 @@ def report(state, *, starting_capital_usdt=50.0):
     position = state.get("position") or {}
     unrealized = None
     if position and mark.get("symbol") == position.get("symbol") and mark.get("price") is not None:
-        price = float(mark["price"])
-        entry = float(position["entry"])
-        qty = float(position["quantity"])
-        direction = 1 if position["side"] == "long" else -1
-        unrealized = round((price - entry) * qty * direction -
-                           (price + entry) * qty * 0.0011, 8)
+        try:
+            price = float(mark["price"])
+            entry = float(position["entry"])
+            qty = float(position["quantity"])
+            if all(math.isfinite(v) for v in (price, entry, qty)) and qty > 0 and price > 0 and entry > 0:
+                direction = 1 if position["side"] == "long" else -1
+                unrealized = round((price - entry) * qty * direction -
+                                   (price + entry) * qty * 0.0011, 8)
+        except (KeyError, ValueError, TypeError, OverflowError):
+            pass
     grouped = defaultdict(list)
     for trade in trades:
         grouped[("symbol", trade["symbol"])].append(trade)
