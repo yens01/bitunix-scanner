@@ -18,6 +18,10 @@ def process(state, rows, candles):
                    "candle_before_signal": 0, "entry_not_touched": 0,
                    "risk_rejected": {}, "opened": 0}
     position = state.get("position")
+    # Count each scan observation, not unique signals; preserve across runs.
+    state.setdefault("entry_diagnostics", {"scans": 0, "counts": {}, "risk_rejected": {}})
+    stats = state["entry_diagnostics"]
+    stats["scans"] += 1
     if position:
         candle = candles.get(position["symbol"])
         if candle:
@@ -56,6 +60,12 @@ def process(state, rows, candles):
             diagnostics["opened"] += 1
             events.append({"type": "paper_open", **state["position"]})
             break
+    for key, value in diagnostics.items():
+        if key == "risk_rejected":
+            for reason, count in value.items():
+                stats["risk_rejected"][reason] = stats["risk_rejected"].get(reason, 0) + count
+        else:
+            stats["counts"][key] = stats["counts"].get(key, 0) + value
     print("Paper entry diagnostics:", json.dumps(diagnostics, ensure_ascii=False))
     return events
 

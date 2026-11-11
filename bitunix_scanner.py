@@ -2280,6 +2280,8 @@ def poll_telegram_queries(
             )
 
             rows = load_journal()
+            from paper_comparison import build_cloud_comparison_message
+            _telegram_send(build_cloud_comparison_message(rows), chat_id=from_chat)
             bodies = format_today_rich_messages(rows)
             sent = 0
             for body in bodies:
