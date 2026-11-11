@@ -80,6 +80,16 @@ def report(state, *, starting_capital_usdt=50.0):
                 "closed_at": event.get("closed_at"),
                 "reason": event.get("reason"), "estimated_net_pnl_usdt": pnl,
             })
+    mark = state.get("mark") or {}
+    position = state.get("position") or {}
+    unrealized = None
+    if position and mark.get("symbol") == position.get("symbol") and mark.get("price") is not None:
+        price = float(mark["price"])
+        entry = float(position["entry"])
+        qty = float(position["quantity"])
+        direction = 1 if position["side"] == "long" else -1
+        unrealized = round((price - entry) * qty * direction -
+                           (price + entry) * qty * 0.0011, 8)
     grouped = defaultdict(list)
     for trade in trades:
         grouped[("symbol", trade["symbol"])].append(trade)
@@ -95,10 +105,15 @@ def report(state, *, starting_capital_usdt=50.0):
         "source": "paper_state.events (simulated orders, not exchange fills)",
         "assumptions": {"starting_capital_usdt": starting_capital_usdt,
                         "pnl": "estimated net after modelled costs; no live execution",
-                        "unrealized_pnl": "unavailable without a verified current mark price",
+                        "unrealized_pnl": "estimated using last closed candle, not executable quote",
                         "drawdown": "closed-trade equity only; excludes intratrade excursions"},
         "day_utc": state.get("day"), "orders_today": state.get("orders_today", 0),
         "open_position": state.get("position"),
+        "mark": mark if unrealized is not None else None,
+        "estimated_unrealized_pnl_usdt": unrealized,
+        "estimated_marked_equity_usdt": round(
+            starting_capital_usdt + sum(t["estimated_net_pnl_usdt"] for t in trades)
+            + unrealized, 8) if unrealized is not None else None,
         "unmatched_close_events": unmatched_closes,
         "duplicate_open_events": duplicate_opens,
         "duplicate_close_events": duplicate_closes,

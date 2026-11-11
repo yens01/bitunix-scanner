@@ -113,7 +113,12 @@ jobs:
             telegram_offset.json
           key: state-v5-${{ github.run_id }}
 
-      # 同步到 cloud-journal 分支（獨立 orphan，避免掃描殘檔擋 checkout）
+      - name: Telegram paper open/close notifications
+        if: always()\n        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python paper_notify.py\n\n      # 同步到 cloud-journal 分支（獨立 orphan，避免掃描殘檔擋 checkout）
       - name: Generate analytics report
         if: always()
         run: python journal_analytics.py --output journal_analytics.json || true
@@ -121,6 +126,10 @@ jobs:
       - name: Generate paper trading performance report
         if: always()
         run: python paper_performance.py --state paper_state.json --output paper_performance.json
+
+      - name: Generate quality calibration
+        if: always()
+        run: python quality_calibration.py --output quality_calibration.json
 
       - name: Publish journal snapshot branch
         if: always()
@@ -131,6 +140,7 @@ jobs:
           python bitunix_scanner.py journal stats > /tmp/journal-pub/cloud/journal_stats.txt 2>&1 || true
           if [ -f journal_analytics.json ]; then cp journal_analytics.json /tmp/journal-pub/cloud/journal_analytics.json; fi
           cp paper_state.json /tmp/journal-pub/cloud/paper_state.json
+          if [ -f quality_calibration.json ]; then cp quality_calibration.json /tmp/journal-pub/cloud/quality_calibration.json; fi
           if [ -f paper_performance.json ]; then cp paper_performance.json /tmp/journal-pub/cloud/paper_performance.json; fi
           cd /tmp/journal-pub
           git init
@@ -140,6 +150,7 @@ jobs:
           git add cloud/yes_journal.jsonl cloud/journal_stats.txt cloud/paper_state.json
           if [ -f cloud/journal_analytics.json ]; then git add cloud/journal_analytics.json; fi
           if [ -f cloud/paper_performance.json ]; then git add cloud/paper_performance.json; fi
+          if [ -f cloud/quality_calibration.json ]; then git add cloud/quality_calibration.json; fi
           git commit -m "chore: sync cloud journal $(date -u +%Y-%m-%dT%H:%MZ)"
           git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           # Backup the previous snapshot before publishing a replacement.
@@ -151,9 +162,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Telegram paper open/close notifications
-        if: success()
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python paper_notify.py

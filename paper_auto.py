@@ -40,12 +40,28 @@ def main():
             now = int(datetime.now(timezone.utc).timestamp()*1000)
             closed = [b for b in bars if b.time + 15*60*1000 <= now]
             if closed:
-                candles[symbol] = [{"open_time_ms":b.time, "high":b.high, "low":b.low, "closed":True} for b in closed]
+                candles[symbol] = [{"open_time_ms":b.time, "high":b.high, "low":b.low, "close":b.close, "closed":True} for b in closed]
         except Exception as exc:
             # Fail closed: do not open if market observation failed.
             print(f"Paper candle unavailable for {symbol}: {exc}")
     print(json.dumps({"paper_candidates": len(selected), "candles_available": len(candles)}, ensure_ascii=False))
+    if state.get("position"):
+        symbol = state["position"]["symbol"]
+        if candles.get(symbol):
+            latest = candles[symbol][-1]
+            state["mark"] = {"symbol": symbol, "price": latest.get("close"),
+                             "open_time_ms": latest["open_time_ms"]}
     events = process(state, rows, candles)
+    if state.get("position") is None:
+        state.pop("mark", None)
+    # Persist a durable outbox alongside the position, never just in a runner file.
+    outbox = state.setdefault("notification_outbox", [])
+    existing = {item["id"] for item in outbox}
+    for event in events:
+        event_id = f"{event.get('type')}:{event.get('signal_id')}:{event.get('opened_at', '')}"
+        if event_id not in existing:
+            outbox.append({"id": event_id, "event": event, "sent": False})
+            existing.add(event_id)
     save_state(state, STATE)
     EVENTS.write_text(json.dumps(events, ensure_ascii=False), encoding="utf-8")
     print(json.dumps({"paper_events":events, "position":state.get("position")}, ensure_ascii=False))

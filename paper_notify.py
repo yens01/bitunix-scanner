@@ -45,29 +45,51 @@ def format_event(e):
     return "\n".join(lines)
 
 
-def main():
-    path=Path("paper_events_pending.json")
-    if not path.exists():
-        return
-    events=json.loads(path.read_text(encoding="utf-8"))
-    if not events:
-        return
-    token=os.getenv("TELEGRAM_BOT_TOKEN","").strip()
-    chat=os.getenv("TELEGRAM_CHAT_ID","").strip()
-    if not token or not chat:
-        raise RuntimeError("Telegram credentials missing; events remain in snapshot")
-    for e in events:
-        msg=format_event(e)
-        if not msg:
-            continue
-        payload=urllib.parse.urlencode({"chat_id":chat,"text":msg}).encode()
-        request=urllib.request.Request(
-            f"https://api.telegram.org/bot{token}/sendMessage",data=payload,method="POST")
-        with urllib.request.urlopen(request,timeout=20) as response:
-            data=json.load(response)
-            if not data.get("ok"):
-                raise RuntimeError("Telegram API rejected message")
-        print("Sent paper event:",e.get("type"),e.get("signal_id"))
+def deliver(state, sender):
+    """Deliver pending events; persist each successful acknowledgement.
 
-if __name__=="__main__":
+    Telegram cannot guarantee exactly-once delivery after an ambiguous timeout.
+    """
+    from paper_trading import save_state
+    path = Path("paper_state.json")
+    for item in state.get("notification_outbox", []):
+        if item.get("sent"):
+            continue
+        message = format_event(item.get("event", {}))
+        if not message:
+            item["sent"] = True
+            save_state(state, path)
+            continue
+        sender(message)
+        item["sent"] = True
+        save_state(state, path)
+
+
+def send_telegram(message, token, chat):
+    payload = urllib.parse.urlencode({"chat_id": chat, "text": message}).encode()
+    request = urllib.request.Request(
+        f"https://api.telegram.org/bot{token}/sendMessage",
+        data=payload, method="POST")
+    with urllib.request.urlopen(request, timeout=20) as response:
+        data = json.load(response)
+        if not data.get("ok"):
+            raise RuntimeError("Telegram API rejected message")
+
+
+def main():
+    from paper_trading import load_state
+    path = Path("paper_state.json")
+    if not path.exists():
+        raise RuntimeError("paper state unavailable; cannot deliver notifications")
+    state = load_state(path)
+    if not any(not item.get("sent") for item in state.get("notification_outbox", [])):
+        return
+    token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    chat = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+    if not token or not chat:
+        raise RuntimeError("Telegram credentials missing; outbox remains pending")
+    deliver(state, lambda message: send_telegram(message, token, chat))
+
+
+if __name__ == "__main__":
     main()

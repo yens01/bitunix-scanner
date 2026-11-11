@@ -21,6 +21,7 @@ def process(state, rows, candles):
     events = []
     stats = state.setdefault("entry_diagnostics", {"scans": 0, "counts": {}, "risk_rejected": {}})
     stats["scans"] += 1
+    unique = stats.setdefault("unique_signals", {})
     observations = {}
     for symbol, bars in candles.items():
         if isinstance(bars, dict):
@@ -53,20 +54,24 @@ def process(state, rows, candles):
         if row.kind != "retest" or row.status != "open":
             continue
         diagnostics["retest_open"] += 1
+        unique.setdefault(row.id, {"symbol": row.symbol, "stage": "candidate"})
         bars = observations.get(row.symbol, [])
         if not bars:
             diagnostics["no_candle"] += 1
+            unique[row.id]["stage"] = "no_candle"
             continue
         future = [b for b in bars
                   if int(b.get("open_time_ms", 0)) > row.signal_time_ms
                   and int(b.get("open_time_ms", 0)) > last.get(row.symbol, -1)]
         if not future:
             diagnostics["candle_before_signal"] += 1
+            unique[row.id]["stage"] = "waiting_candle"
             continue
         touched = next((b for b in future
                         if float(b["low"]) <= row.entry <= float(b["high"])), None)
         if touched is None:
             diagnostics["entry_not_touched"] += 1
+            unique[row.id]["stage"] = "entry_not_touched"
             continue
         score, _ = quality(row)
         accepted, reason = try_open(
@@ -75,8 +80,11 @@ def process(state, rows, candles):
             kind=row.kind)
         if not accepted:
             diagnostics["risk_rejected"][reason] = diagnostics["risk_rejected"].get(reason, 0) + 1
+            unique[row.id]["stage"] = "rejected"
+            unique[row.id]["reason"] = reason
         else:
             diagnostics["opened"] += 1
+            unique[row.id]["stage"] = "opened"
             last[row.symbol] = int(touched["open_time_ms"])
             events.append({"type": "paper_open", **state["position"]})
             break
