@@ -21,7 +21,7 @@ class PaperConfig:
     max_new_orders_per_day: int = 2
     max_leverage: float = 1.0
     max_notional_usdt: float = 50.0
-    min_quality_score: int = 65
+    min_quality_score: int = 50
 
 @dataclass
 class PaperPosition:
@@ -68,6 +68,16 @@ def try_open(state, *, signal_id, symbol, side, entry, stop, tp,
              quality_score, kind="retest", config=None, live=False):
     """Returns (accepted, reason). No external side effects or exchange calls."""
     c = config or PaperConfig()
+    # Paper-only quality threshold can be tuned without enabling live orders.
+    raw_quality = os.getenv('PAPER_MIN_QUALITY_SCORE', '').strip()
+    if raw_quality:
+        try:
+            threshold = int(raw_quality)
+        except ValueError:
+            return False, 'invalid PAPER_MIN_QUALITY_SCORE'
+        if not 0 <= threshold <= 100:
+            return False, 'invalid PAPER_MIN_QUALITY_SCORE'
+        c.min_quality_score = threshold
     if live:
         return False, "live orders disabled"
     if os.getenv("PAPER_TRADING_ENABLED", "false").lower() != "true":

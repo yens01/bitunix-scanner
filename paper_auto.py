@@ -45,6 +45,7 @@ def main():
         except Exception as exc:
             # Fail closed: do not open if market observation failed.
             print(f"Paper candle unavailable for {symbol}: {exc}")
+    print(json.dumps({"paper_candidates": len(selected), "candles_available": len(candles)}, ensure_ascii=False))
     events = process(state, rows, candles)
     save_state(state, STATE)
     EVENTS.write_text(json.dumps(events, ensure_ascii=False), encoding="utf-8")
