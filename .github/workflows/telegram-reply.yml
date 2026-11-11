@@ -26,9 +26,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
 
-      - name: Install deps
-        run: pip install -r requirements.txt
+      - name: Install deps (cached)
+        run: pip install -r requirements.txt --disable-pip-version-check
 
       - name: Restore telegram offset
         uses: actions/cache@v4
