@@ -41,8 +41,19 @@ def format_paper_positions(state):
         f"今日開倉：{int(state.get('orders_today',0))} / 2",
         "最近 5 筆平倉：",
     ])
+    open_symbols = {
+        str(e.get("signal_id")): e.get("symbol")
+        for e in opens if e.get("signal_id") and e.get("symbol")
+    }
     for e in closes[-5:][::-1]:
-        lines.append(f"• {html.escape(str(e.get('signal_id','—')))}｜{html.escape(str(e.get('reason','—')))}｜{float(e.get('estimated_net_pnl_usdt',0)):+.4f} U")
+        symbol = e.get("symbol") or open_symbols.get(str(e.get("signal_id"))) or "未知幣種"
+        side = {"long": "做多", "short": "做空"}.get(e.get("side"), "")
+        reason = {"stop": "停損", "tp": "停利"}.get(e.get("reason"), e.get("reason", "—"))
+        lines.append(
+            f"• {html.escape(str(symbol))}"
+            + (f"｜{side}" if side else "")
+            + f"｜{html.escape(str(reason))}｜{float(e.get('estimated_net_pnl_usdt', 0)):+.4f} USDT"
+        )
     if not closes:
         lines.append("尚無模擬平倉紀錄")
     lines.append("\n資料來源：GitHub cloud-journal 快照；可能晚於市場即時狀態。")
