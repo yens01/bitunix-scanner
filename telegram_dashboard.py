@@ -33,24 +33,48 @@ def _date(value):
         return "未知"
 
 
+def _price(value):
+    """Compact decimal display without floating point artifacts."""
+    from decimal import Decimal, InvalidOperation
+    try:
+        number = Decimal(str(value))
+        if not number.is_finite():
+            return "—"
+        if number == 0:
+            return "0"
+        # Retain more precision for low-priced coins.
+        digits = 8 if abs(number) < 0.01 else (6 if abs(number) < 1 else 4)
+        return format(number.quantize(Decimal(1).scaleb(-digits)), "f").rstrip("0").rstrip(".")
+    except (InvalidOperation, ValueError, TypeError):
+        return "—"
+
+
 def latest_signals(rows, limit=5):
-    """Show distinct journal observations; never describe them as fills."""
+    """Readable Telegram HTML; signals are not paper or real fills."""
     unique = {}
     for row in rows:
         if row.id:
             unique[row.id] = row
     recent = sorted(unique.values(), key=lambda r: r.signal_time_ms, reverse=True)[:limit]
-    lines = ["🎯 <b>最新訊號（非成交）</b>"]
+    lines = ["🎯 <b>最新交易訊號</b>", "📌 以下為策略訊號，並非實際成交"]
     if not recent:
         return "\n".join(lines + ["目前沒有訊號日記資料。"])
+    statuses = {"open": "等待進場", "timeout": "逾時", "win": "模擬達標",
+                "loss": "模擬止損", "expired": "已過期"}
     for row in recent:
-        direction = {"long": "做多", "short": "做空"}.get(row.side, "觀察")
-        lines.append(
-            f"• <b>{_esc(row.symbol)}</b>｜{direction}｜{_esc(row.status)}"
-            f"\n  進場 {_esc(row.entry)}｜停損 {_esc(row.stop)}｜停利 {_esc(row.tp)}"
-            f"\n  RR {_esc(row.planned_rr)}｜{_esc(row.ts)}"
-        )
-    lines.append("⚠️ 訊號日記不是實際交易；價格可能已過期。")
+        direction = {"long": "🟢 做多", "short": "🔴 做空"}.get(row.side, "⚪ 觀察")
+        status = statuses.get(row.status, str(row.status))
+        lines.extend([
+            "",
+            "━━━━━━━━━━━━━━",
+            f"<b>{_esc(row.symbol)}</b>  {direction}",
+            f"📍 狀態：{_esc(status)}",
+            f"💰 進場：<b>{_price(row.entry)}</b>",
+            f"🛑 止損：{_price(row.stop)}",
+            f"🎯 止盈：{_price(row.tp)}",
+            f"📊 RR：{_price(row.planned_rr)}  ｜  🕒 {_esc(row.ts)}",
+        ])
+    lines.append("\\n⚠️ 價格可能已過期，請勿視為成交通知。")
     return "\n".join(lines)
 
 
