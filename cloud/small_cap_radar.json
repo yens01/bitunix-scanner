@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-12T21:16:56.596561+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "HYPEUSDT",
+      "score": 74,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 72.015,
+      "reference_stop": 71.232,
+      "reference_target": 73.581,
+      "reference_rr": 2,
+      "risk_pct": 1.09,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 71.887,
+      "volume_ratio": 2.88,
+      "breakout_pct": -0.18,
+      "range_width_pct": 1.89,
+      "change_24h_pct": -1.96,
+      "quote_volume_24h": 29643582.59854,
+      "resistance": 72.015,
+      "candle_open_ms": 1794517200000
+    }
+  ]
+}
