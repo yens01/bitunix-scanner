@@ -34,7 +34,9 @@ def process(state, rows, candles):
     position = state.get("position")
     if position:
         symbol = position["symbol"]
-        opened_ms = int(position.get("entry_bar_ms") or 0)\n        if not opened_ms and position.get("opened_at"):\n            opened_ms = int(datetime.fromisoformat(position["opened_at"]).timestamp() * 1000)
+        opened_ms = int(position.get("entry_bar_ms") or 0)
+        if not opened_ms and position.get("opened_at"):
+            opened_ms = int(datetime.fromisoformat(position["opened_at"]).timestamp() * 1000)
         for bar in observations.get(symbol, []):
             stamp = int(bar.get("open_time_ms", 0))
             if stamp <= last.get(symbol, -1) or stamp <= opened_ms:
