@@ -13,6 +13,9 @@ class TelegramFlatRadarTests(unittest.TestCase):
         labels = [button["text"] for row in keyboard for button in row]
         self.assertIn("🚀 小幣爆發雷達", labels)
         self.assertIn("💰 交易績效", labels)
+        self.assertEqual(len(labels), 8)
+        self.assertNotIn("🪙 小幣推薦", labels)
+        self.assertNotIn("🔎 訊號漏斗", labels)
         self.assertIn("🧠 策略品質", labels)
         self.assertNotIn("⚙️ 更多功能", labels)
         self.assertNotIn("📈 台美股", labels)
