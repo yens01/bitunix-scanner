@@ -1135,14 +1135,21 @@ def _telegram_api(method: str, payload: dict[str, Any] | None = None, *, timeout
 
 
 def _tg_reply_keyboard() -> str:
-    """Eight compact home buttons; secondary features live in inline menus."""
+    """All features directly accessible; no submenu navigation required."""
+    labels = [
+        "📊 市場總覽", "🎯 最新訊號",
+        "📌 模擬持倉", "💰 交易績效",
+        "📈 資金曲線", "🔎 訊號漏斗",
+        "🧠 策略品質", "📋 日內規劃",
+        "🪙 小幣推薦", "🚀 小幣爆發雷達",
+        "🇹🇼 台股當沖", "🔥 台股熱度",
+        "🇺🇸 美股熱度", "📰 財金新聞",
+        "⚙️ 系統狀態",
+    ]
     return json.dumps(
-        {"keyboard": [
-            [{"text": "📊 市場總覽"}, {"text": "🎯 最新訊號"}],
-            [{"text": "🧪 模擬交易"}, {"text": "📋 日內規劃"}],
-            [{"text": "🪙 小幣推薦"}, {"text": "📈 台美股"}],
-            [{"text": "📰 財金新聞"}, {"text": "⚙️ 更多功能"}],
-        ], "resize_keyboard": True, "is_persistent": True},
+        {"keyboard": [[{"text": label} for label in labels[i:i + 2]]
+                      for i in range(0, len(labels), 2)],
+         "resize_keyboard": True, "is_persistent": True},
         ensure_ascii=False,
     )
 
@@ -1168,7 +1175,8 @@ _TG_INLINE_MENUS = {
         "🏠 <b>Bitunix Scanner</b>｜請選擇分類",
         [("📊 市場總覽", "STATS"), ("🎯 最新訊號", "LATEST"),
          ("🧪 模擬交易", "PAPER_MENU"), ("📋 日內規劃", "PLAN"),
-         ("🪙 小幣推薦", "ALTS"), ("📈 台美股", "STOCK_MENU"),
+         ("🪙 小幣推薦", "ALTS"), ("🚀 小幣爆發雷達", "RADAR"),
+         ("📈 台美股", "STOCK_MENU"),
          ("📰 財金新聞", "NEWS"), ("⚙️ 更多功能", "MORE_MENU")],
     ),
 }
@@ -1607,14 +1615,18 @@ _TG_CMD_ALIASES: dict[str, str] = {
     "QUALITY": "QUALITY",
     "策略品質": "QUALITY",
     "SYSTEM": "SYSTEM",
+    "RADAR": "RADAR",
+    "小幣爆發雷達": "RADAR",
+    "爆發雷達": "RADAR",
+    "爆噴雷達": "RADAR",
     "系統狀態": "SYSTEM",
     "TWHEAT": "TWHEAT",
     "USHEAT": "USHEAT",
     "STATS": "STATS",
     "市場總覽": "STATS",
-    "模擬交易": "PAPER_MENU",
-    "台美股": "STOCK_MENU",
-    "更多功能": "MORE_MENU",
+    "模擬交易": "PAPER",
+    "台美股": "TWHEAT",
+    "更多功能": "SYSTEM",
     "PAPER": "PAPER",
     "POSITIONS": "PAPER",
     "模擬倉位": "PAPER",
@@ -2247,7 +2259,7 @@ def poll_telegram_queries(
             if action in _TG_INLINE_MENUS:
                 _tg_show_menu(action, chat_id=callback_chat,
                               message_id=callback_msg.get("message_id"))
-            elif action in {"PAPER", "LATEST", "PERFORMANCE", "EQUITY",
+            elif action in {"PAPER", "RADAR", "LATEST", "PERFORMANCE", "EQUITY",
                             "FUNNEL", "QUALITY", "SYSTEM"}:
                 if action == "PAPER":
                     from paper_status import build_paper_positions_message
@@ -2392,7 +2404,7 @@ def poll_telegram_queries(
                 notify_plan_with_chart(title, plans, chat_id=from_chat)
             handled += 1
             continue
-        if key in {"LATEST", "PERFORMANCE", "EQUITY", "FUNNEL", "QUALITY", "SYSTEM"}:
+        if key in {"RADAR", "LATEST", "PERFORMANCE", "EQUITY", "FUNNEL", "QUALITY", "SYSTEM"}:
             from telegram_dashboard import build_dashboard_message
             try:
                 body = build_dashboard_message(key)
