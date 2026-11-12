@@ -49,12 +49,17 @@ def process(state, rows, candles):
 
     diagnostics = {"retest_open": 0, "no_candle": 0, "unclosed_candle": 0,
                    "candle_before_signal": 0, "entry_not_touched": 0,
-                   "risk_rejected": {}, "opened": 0}
+                   "risk_rejected": {}, "opened": 0, "quality_50_pass": 0, "quality_65_pass": 0, "touched_quality_50_pass": 0, "touched_quality_65_pass": 0}
     for row in sorted(rows, key=lambda x: x.signal_time_ms, reverse=True):
         if row.kind != "retest" or row.status != "open":
             continue
         diagnostics["retest_open"] += 1
         unique.setdefault(row.id, {"symbol": row.symbol, "stage": "candidate"})
+        score, _ = quality(row)
+        if score >= 50:
+            diagnostics["quality_50_pass"] += 1
+        if score >= 65:
+            diagnostics["quality_65_pass"] += 1
         bars = observations.get(row.symbol, [])
         if not bars:
             diagnostics["no_candle"] += 1
@@ -73,7 +78,10 @@ def process(state, rows, candles):
             diagnostics["entry_not_touched"] += 1
             unique[row.id]["stage"] = "entry_not_touched"
             continue
-        score, _ = quality(row)
+        if score >= 50:
+            diagnostics["touched_quality_50_pass"] += 1
+        if score >= 65:
+            diagnostics["touched_quality_65_pass"] += 1
         accepted, reason = try_open(
             state, signal_id=row.id, symbol=row.symbol, side=row.side,
             entry=row.entry, stop=row.stop, tp=row.tp, quality_score=score,
