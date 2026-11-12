@@ -105,7 +105,12 @@ def rank_candidates(tickers, fetch_candles, *, now_ms=None, limit=5, pool=20):
 
 
 def scan():
-    return rank_candidates(fetch_tickers(), lambda symbol: parse_klines(fetch_klines(symbol, "15m", 100)))
+    # Allow the preceding full-market scan to cool down before a smaller radar pass.
+    time.sleep(5)
+    def paced_candles(symbol):
+        time.sleep(1.5)
+        return parse_klines(fetch_klines(symbol, "15m", 100))
+    return rank_candidates(fetch_tickers(), paced_candles)
 
 
 def main():
