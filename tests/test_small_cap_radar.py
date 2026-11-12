@@ -1,6 +1,6 @@
 import unittest
 from types import SimpleNamespace
-from small_cap_radar import score_candidate, rank_candidates, fetch_with_backoff
+from small_cap_radar import score_candidate, rank_candidates, fetch_with_backoff, trade_plan
 
 
 def candles():
@@ -11,6 +11,28 @@ def candles():
 
 
 class SmallCapRadarTests(unittest.TestCase):
+    def test_plan_uses_closed_candles_and_bounded_stop(self):
+        bars = candles()
+        plan = trade_plan(bars, 101, volume_ratio=3)
+        self.assertEqual(plan["entry_status"], "突破確認")
+        self.assertEqual(plan["reference_entry"], 101)
+        self.assertEqual(plan["reference_target"], 105)
+        self.assertEqual(plan["reference_rr"], 2)
+
+    def test_failed_breakout_suppresses_plan(self):
+        bars = candles()
+        bars[-2] = SimpleNamespace(time=42 * 900000, high=103, low=100, close=102, volume=400)
+        bars[-1] = SimpleNamespace(time=43 * 900000, high=102, low=99, close=100, volume=400)
+        plan = trade_plan(bars, 103, volume_ratio=3)
+        self.assertEqual(plan["entry_status"], "突破失敗")
+        self.assertIsNone(plan["reference_entry"])
+
+    def test_excessive_stop_distance_suppresses_plan(self):
+        bars = candles()
+        bars[-3] = SimpleNamespace(time=41 * 900000, high=101, low=50, close=100, volume=100)
+        plan = trade_plan(bars, 101, volume_ratio=3)
+        self.assertIsNone(plan["reference_entry"])
+
     def test_breakout_volume_ranks_candidate(self):
         result = score_candidate("TESTUSDT", candles(), 4000000, 2,
                                  now_ms=44 * 900000)
