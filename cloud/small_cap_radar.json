@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-12T12:51:28.568577+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "INTCUSDT",
+      "score": 64,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 61.62,
+      "reference_stop": 60.65,
+      "reference_target": 63.56,
+      "reference_rr": 2,
+      "risk_pct": 1.57,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 60.8,
+      "volume_ratio": 2.07,
+      "breakout_pct": -1.33,
+      "range_width_pct": 1.72,
+      "change_24h_pct": -2.03,
+      "quote_volume_24h": 18110655.2977,
+      "resistance": 61.62,
+      "candle_open_ms": 1794486600000
+    }
+  ]
+}
