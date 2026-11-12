@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-12T17:16:36.784173+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "CLUSDT",
+      "score": 62,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 86.82,
+      "reference_stop": 85.58,
+      "reference_target": 89.3,
+      "reference_rr": 2,
+      "risk_pct": 1.43,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 86.61,
+      "volume_ratio": 1.92,
+      "breakout_pct": -0.24,
+      "range_width_pct": 2.87,
+      "change_24h_pct": -0.1,
+      "quote_volume_24h": 34768129.009,
+      "resistance": 86.82,
+      "candle_open_ms": 1794502800000
+    }
+  ]
+}
