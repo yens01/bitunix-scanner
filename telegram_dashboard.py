@@ -48,9 +48,17 @@ def small_cap_radar(snapshot, *, now=None):
                           f"💰 收盤價：{_price(coin['last_closed_price'])}",
                           f"📊 成交量倍率：{float(coin['volume_ratio']):.2f}x｜24h：{float(coin['change_24h_pct']):+.2f}%",
                           f"📈 距壓力突破：{float(coin['breakout_pct']):+.2f}%｜壓力：{_price(coin['resistance'])}"])
+            if "entry_status" in coin:
+                lines.append(f"🚦 判斷：{_esc(coin['entry_status'])}｜{_esc(coin.get('entry_reason', ''))}")
+                if coin.get("reference_entry") is not None:
+                    lines.append(f"📝 參考計畫：突破價 {_price(coin['reference_entry'])}｜停損 {_price(coin['reference_stop'])}｜目標 {_price(coin['reference_target'])}｜風報比 1:{coin['reference_rr']}")
+                    lines.append(f"🛡️ 參考停損距離：{coin['risk_pct']}%｜需確認回踩，不是立即買入")
+                else:
+                    lines.append(f"⛔ {_esc(coin.get('plan_note', '暫無合理交易計畫'))}")
         except (KeyError, ValueError, TypeError):
             return "⚠️ 小幣爆發雷達候選資料錯誤，暫不顯示排行榜。"
-    lines.append("\\n⚠️ 只使用已收盤 15m K 線，非即時報價或買入建議。")
+    lines.append("")
+    lines.append("⚠️ 只使用已收盤 15m K 線；價位為假設情境，非即時報價或買入建議。")
     return "\n".join(lines)
 
 
