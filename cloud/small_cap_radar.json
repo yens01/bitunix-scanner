@@ -1,0 +1,58 @@
+{
+  "generated_at": "2026-11-12T11:41:18.975656+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "HYPEUSDT",
+      "score": 76,
+      "stage": "潛伏",
+      "last_closed_price": 71.399,
+      "volume_ratio": 3.1,
+      "breakout_pct": -0.66,
+      "range_width_pct": 1.48,
+      "change_24h_pct": -2.1,
+      "quote_volume_24h": 23433827.01104,
+      "resistance": 71.874,
+      "candle_open_ms": 1794482100000
+    },
+    {
+      "symbol": "INTCUSDT",
+      "score": 67,
+      "stage": "潛伏",
+      "last_closed_price": 60.82,
+      "volume_ratio": 2.36,
+      "breakout_pct": -1.3,
+      "range_width_pct": 2.0,
+      "change_24h_pct": -1.57,
+      "quote_volume_24h": 18357884.8258,
+      "resistance": 61.62,
+      "candle_open_ms": 1794482100000
+    },
+    {
+      "symbol": "TAOUSDT",
+      "score": 66,
+      "stage": "潛伏",
+      "last_closed_price": 213.13,
+      "volume_ratio": 2.87,
+      "breakout_pct": -1.2,
+      "range_width_pct": 1.35,
+      "change_24h_pct": -3.16,
+      "quote_volume_24h": 8585202.69491,
+      "resistance": 215.71,
+      "candle_open_ms": 1794482100000
+    },
+    {
+      "symbol": "SOXSUSDT",
+      "score": 66,
+      "stage": "潛伏",
+      "last_closed_price": 48.58,
+      "volume_ratio": 1.58,
+      "breakout_pct": -1.42,
+      "range_width_pct": 5.57,
+      "change_24h_pct": 2.86,
+      "quote_volume_24h": 35483887.9931,
+      "resistance": 49.28,
+      "candle_open_ms": 1794482100000
+    }
+  ]
+}
