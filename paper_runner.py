@@ -34,7 +34,7 @@ def process(state, rows, candles):
     position = state.get("position")
     if position:
         symbol = position["symbol"]
-        opened_ms = int(datetime.fromisoformat(position["opened_at"]).timestamp() * 1000) if position.get("opened_at") else 0
+        opened_ms = int(position.get("entry_bar_ms") or 0)\n        if not opened_ms and position.get("opened_at"):\n            opened_ms = int(datetime.fromisoformat(position["opened_at"]).timestamp() * 1000)
         for bar in observations.get(symbol, []):
             stamp = int(bar.get("open_time_ms", 0))
             if stamp <= last.get(symbol, -1) or stamp <= opened_ms:
@@ -77,7 +77,7 @@ def process(state, rows, candles):
         accepted, reason = try_open(
             state, signal_id=row.id, symbol=row.symbol, side=row.side,
             entry=row.entry, stop=row.stop, tp=row.tp, quality_score=score,
-            kind=row.kind)
+            kind=row.kind, entry_bar_ms=int(touched["open_time_ms"]))
         if not accepted:
             diagnostics["risk_rejected"][reason] = diagnostics["risk_rejected"].get(reason, 0) + 1
             unique[row.id]["stage"] = "rejected"
