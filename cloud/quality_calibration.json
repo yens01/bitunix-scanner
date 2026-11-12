@@ -1,0 +1,26 @@
+{
+  "source": "paper fills matched to signal quality; observational only",
+  "min_samples_per_tier": 20,
+  "unmatched_fills": 0,
+  "groups": {
+    "low": {
+      "samples": 0,
+      "eligible_for_interpretation": false,
+      "observed_win_rate_pct": null,
+      "observed_mean_net_pnl_usdt": null
+    },
+    "medium": {
+      "samples": 4,
+      "eligible_for_interpretation": false,
+      "observed_win_rate_pct": null,
+      "observed_mean_net_pnl_usdt": null
+    },
+    "high": {
+      "samples": 0,
+      "eligible_for_interpretation": false,
+      "observed_win_rate_pct": null,
+      "observed_mean_net_pnl_usdt": null
+    }
+  },
+  "auto_adjust_threshold": false
+}
