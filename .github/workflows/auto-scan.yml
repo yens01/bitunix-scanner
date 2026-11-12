@@ -95,7 +95,6 @@ jobs:
         run: python bitunix_scanner.py watch-once --n 200
 
       - name: Small-cap breakout radar (read-only)
-        continue-on-error: true
         run: python small_cap_radar.py --output small_cap_radar.json
 
       - name: Show journal stats
