@@ -1,6 +1,6 @@
 import unittest
 from types import SimpleNamespace
-from small_cap_radar import score_candidate, rank_candidates
+from small_cap_radar import score_candidate, rank_candidates, fetch_with_backoff
 
 
 def candles():
@@ -27,6 +27,27 @@ class SmallCapRadarTests(unittest.TestCase):
                                           now_ms=44 * 900000))
         self.assertIsNone(score_candidate("TESTUSDT", candles(), 10000, 2,
                                           now_ms=44 * 900000))
+
+    def test_rate_limit_retries_with_backoff(self):
+        calls = []
+        sleeps = []
+        def fetch(symbol):
+            calls.append(symbol)
+            if len(calls) < 3:
+                raise RuntimeError("API 錯誤: request too frequently")
+            return candles()
+        result = fetch_with_backoff(fetch, "TESTUSDT", sleep=sleeps.append)
+        self.assertEqual(result, candles())
+        self.assertEqual(sleeps, [3, 6])
+
+    def test_non_rate_limit_error_is_not_retried(self):
+        calls = []
+        def fetch(symbol):
+            calls.append(symbol)
+            raise RuntimeError("API 錯誤: invalid symbol")
+        with self.assertRaises(RuntimeError):
+            fetch_with_backoff(fetch, "TESTUSDT", sleep=lambda _: None)
+        self.assertEqual(len(calls), 1)
 
     def test_major_symbols_excluded(self):
         ticks = [{"symbol": "BTCUSDT", "quoteVol": "4000000", "lastPrice": "102", "open": "100"},

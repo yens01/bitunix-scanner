@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from bitunix_scanner import MAJOR_SYMBOLS, fetch_klines, fetch_tickers, parse_klines
@@ -53,7 +53,22 @@ def score_candidate(symbol, bars, quote_vol, change_24h, *, now_ms=None):
             "resistance": resistance, "candle_open_ms": recent.time}
 
 
-def rank_candidates(tickers, fetch_candles, *, now_ms=None, limit=5, pool=35):
+def fetch_with_backoff(fetch_candles, symbol, *, attempts=4, sleep=time.sleep):
+    """Retry only rate-limit failures; propagate other API failures."""
+    for attempt in range(attempts):
+        try:
+            return fetch_candles(symbol)
+        except RuntimeError as exc:
+            message = str(exc).lower()
+            limited = any(token in message for token in ("request too frequently", "rate limit", "http 429", "too many requests"))
+            if not limited or attempt == attempts - 1:
+                raise
+            delay = min(2 ** attempt * 3, 24)
+            print(f"Radar {symbol}: rate limited; retry in {delay}s ({attempt + 1}/{attempts})", flush=True)
+            sleep(delay)
+
+
+def rank_candidates(tickers, fetch_candles, *, now_ms=None, limit=5, pool=20):
     eligible = []
     for t in tickers:
         sym = str(t.get("symbol") or "").upper()
@@ -72,22 +87,30 @@ def rank_candidates(tickers, fetch_candles, *, now_ms=None, limit=5, pool=35):
             eligible.append((sym, qv, change))
     eligible.sort(key=lambda item: item[1], reverse=True)
     result = []
-    with ThreadPoolExecutor(max_workers=5) as ex:
-        futures = {ex.submit(fetch_candles, sym): (sym, qv, change)
-                   for sym, qv, change in eligible[:pool]}
-        for fut in as_completed(futures):
-            sym, qv, change = futures[fut]
-            try:
-                candidate = score_candidate(sym, fut.result(), qv, change, now_ms=now_ms)
-            except (ValueError, TypeError, AttributeError, ZeroDivisionError):
-                continue
-            if candidate:
-                result.append(candidate)
+    # Run sequentially to avoid burst requests after the main market scanner.
+    # Retry exchange rate limits with bounded exponential backoff.
+    for sym, qv, change in eligible[:pool]:
+        try:
+            bars = fetch_with_backoff(fetch_candles, sym)
+            candidate = score_candidate(sym, bars, qv, change, now_ms=now_ms)
+        except RuntimeError as exc:
+            print(f"Radar {sym}: API unavailable after retries: {exc}", flush=True)
+            raise
+        except (ValueError, TypeError, AttributeError, ZeroDivisionError) as exc:
+            print(f"Radar skipped invalid {sym}: {exc}", flush=True)
+            continue
+        if candidate:
+            result.append(candidate)
     return sorted(result, key=lambda r: (-r["score"], -r["volume_ratio"], r["symbol"]))[:limit]
 
 
 def scan():
-    return rank_candidates(fetch_tickers(), lambda symbol: parse_klines(fetch_klines(symbol, "15m", 100)))
+    # Allow the preceding full-market scan to cool down before a smaller radar pass.
+    time.sleep(5)
+    def paced_candles(symbol):
+        time.sleep(1.5)
+        return parse_klines(fetch_klines(symbol, "15m", 100))
+    return rank_candidates(fetch_tickers(), paced_candles)
 
 
 def main():
