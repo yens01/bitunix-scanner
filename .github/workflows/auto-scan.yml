@@ -94,6 +94,10 @@ jobs:
         # n=200：擴大山寨覆蓋；逾時 12 分鐘
         run: python bitunix_scanner.py watch-once --n 200
 
+      - name: Small-cap breakout radar (read-only)
+        continue-on-error: true
+        run: python small_cap_radar.py --output small_cap_radar.json
+
       - name: Show journal stats
         if: always()
         run: |
@@ -143,6 +147,7 @@ jobs:
           python bitunix_scanner.py journal stats > /tmp/journal-pub/cloud/journal_stats.txt 2>&1 || true
           if [ -f journal_analytics.json ]; then cp journal_analytics.json /tmp/journal-pub/cloud/journal_analytics.json; fi
           cp paper_state.json /tmp/journal-pub/cloud/paper_state.json
+          if [ -f small_cap_radar.json ]; then cp small_cap_radar.json /tmp/journal-pub/cloud/small_cap_radar.json; fi
           if [ -f quality_calibration.json ]; then cp quality_calibration.json /tmp/journal-pub/cloud/quality_calibration.json; fi
           if [ -f paper_performance.json ]; then cp paper_performance.json /tmp/journal-pub/cloud/paper_performance.json; fi
           cd /tmp/journal-pub
@@ -153,6 +158,7 @@ jobs:
           git add cloud/yes_journal.jsonl cloud/journal_stats.txt cloud/paper_state.json
           if [ -f cloud/journal_analytics.json ]; then git add cloud/journal_analytics.json; fi
           if [ -f cloud/paper_performance.json ]; then git add cloud/paper_performance.json; fi
+          if [ -f cloud/small_cap_radar.json ]; then git add cloud/small_cap_radar.json; fi
           if [ -f cloud/quality_calibration.json ]; then git add cloud/quality_calibration.json; fi
           git commit -m "chore: sync cloud journal $(date -u +%Y-%m-%dT%H:%MZ)"
           git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
