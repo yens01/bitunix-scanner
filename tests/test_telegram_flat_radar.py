@@ -35,6 +35,19 @@ class TelegramFlatRadarTests(unittest.TestCase):
         # Depending on the real clock, the snapshot may be stale.
         self.assertTrue("TESTUSDT" in msg or "超過 45 分鐘" in msg)
 
+    def test_radar_plan_and_newline_rendering(self):
+        snapshot = {"generated_at": "2026-11-12T10:00:00Z", "candidates": [
+            {"symbol": "TESTUSDT", "score": 80, "stage": "啟動",
+             "last_closed_price": 102, "volume_ratio": 3,
+             "change_24h_pct": 2, "breakout_pct": 1, "resistance": 101,
+             "entry_status": "突破確認", "entry_reason": "15m站上壓力",
+             "reference_entry": 101, "reference_stop": 99,
+             "reference_target": 105, "reference_rr": 2, "risk_pct": 1.98}]}
+        msg = small_cap_radar(snapshot, now=datetime(2026, 11, 12, 10, 5, tzinfo=timezone.utc))
+        self.assertIn("突破確認", msg)
+        self.assertIn("風報比 1:2", msg)
+        self.assertNotIn(r"\\n⚠️", msg)
+
     def test_stale_snapshot_fails_closed(self):
         snapshot = {"generated_at": "2026-11-12T10:00:00Z", "candidates": []}
         msg = small_cap_radar(snapshot, now=datetime(2026, 11, 12, 11, 0, tzinfo=timezone.utc))

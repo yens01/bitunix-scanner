@@ -12,6 +12,32 @@ from pathlib import Path
 from bitunix_scanner import MAJOR_SYMBOLS, fetch_klines, fetch_tickers, parse_klines
 
 
+def trade_plan(closed, resistance, *, volume_ratio):
+    """Illustrative long-only breakout plan, never an execution instruction."""
+    last = closed[-1]
+    previous = closed[-2]
+    prior_resistance = max(b.high for b in closed[-22:-2])
+    if previous.close > prior_resistance and last.close < prior_resistance:
+        status, reason = "突破失敗", "前一根曾站上壓力，最新收盤跌回原壓力下方"
+    elif last.close > resistance:
+        status, reason = "突破確認", "最新15m收盤站上前20根高點；仍需觀察能否守穩"
+    elif previous.close > prior_resistance and last.low <= prior_resistance <= last.close:
+        status, reason = "等待回踩", "價格回測先前壓力；需再次確認支撐"
+    else:
+        status, reason = "等待突破", "尚未收盤站上前20根壓力"
+    entry = resistance
+    stop = min(b.low for b in closed[-5:])
+    risk_pct = (entry - stop) / entry * 100 if entry > 0 else float("inf")
+    valid = math.isfinite(risk_pct) and 0.3 <= risk_pct <= 4 and volume_ratio >= 1.5 and status != "突破失敗"
+    return {"entry_status": status, "entry_reason": reason,
+            "reference_entry": round(entry, 10) if valid else None,
+            "reference_stop": round(stop, 10) if valid else None,
+            "reference_target": round(entry + 2 * (entry - stop), 10) if valid else None,
+            "reference_rr": 2 if valid else None,
+            "risk_pct": round(risk_pct, 2) if math.isfinite(risk_pct) else None,
+            "plan_note": "僅供突破後評估；非立即買入" if valid else "停損距離不合理或突破失敗，不提供進場計畫"}
+
+
 def score_candidate(symbol, bars, quote_vol, change_24h, *, now_ms=None):
     now_ms = now_ms or int(datetime.now(timezone.utc).timestamp() * 1000)
     closed = sorted((b for b in bars if b.time + 900000 <= now_ms),
@@ -46,7 +72,9 @@ def score_candidate(symbol, bars, quote_vol, change_24h, *, now_ms=None):
     score = round(volume_points + structure_points + compression_points + strength_points + liquidity_points)
     if score < 60:
         return None
+    plan = trade_plan(closed, resistance, volume_ratio=ratio)
     return {"symbol": symbol, "score": score, "stage": "啟動" if breakout_pct >= 0 else "潛伏",
+            **plan,
             "last_closed_price": recent.close, "volume_ratio": round(ratio, 2),
             "breakout_pct": round(breakout_pct, 2), "range_width_pct": round(width_pct, 2),
             "change_24h_pct": round(change_24h, 2), "quote_volume_24h": quote_vol,
