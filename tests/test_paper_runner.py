@@ -23,6 +23,23 @@ class PaperRunnerTests(unittest.TestCase):
             state=default_state()
             self.assertEqual(process(state,[row()],{"BTCUSDT":{"open_time_ms":2000,"low":99,"high":101,"closed":False}}),[])
 
+    def test_quality_comparison_diagnostics(self):
+        from contextlib import redirect_stdout
+        from io import StringIO
+        import json
+        with patch.dict(os.environ, {"PAPER_TRADING_ENABLED":"true", "TRADING_KILL_SWITCH":"false"}):
+            state = default_state()
+            candidate = row()
+            candidate.missing_steps = "BOS"
+            output = StringIO()
+            with redirect_stdout(output):
+                process(state, [candidate], {"BTCUSDT": {"open_time_ms": 2000, "low": 99.9, "high": 101, "closed": True}})
+            diagnostic = state["entry_diagnostics"]["counts"]
+            self.assertEqual(diagnostic["quality_50_pass"], 1)
+            self.assertEqual(diagnostic["quality_65_pass"], 0)
+            self.assertEqual(diagnostic["touched_quality_50_pass"], 1)
+            self.assertEqual(diagnostic["touched_quality_65_pass"], 0)
+
     def test_paper_open_with_valid_observation(self):
         with patch.dict(os.environ, {"PAPER_TRADING_ENABLED":"true","TRADING_KILL_SWITCH":"false"}):
             state=default_state()
