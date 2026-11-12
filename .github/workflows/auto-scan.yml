@@ -76,6 +76,7 @@ jobs:
         env:
           PAPER_TRADING_ENABLED: ${{ vars.PAPER_TRADING_ENABLED || 'true' }}
           TRADING_KILL_SWITCH: ${{ vars.TRADING_KILL_SWITCH || 'false' }}
+          PAPER_MIN_QUALITY_SCORE: ${{ vars.PAPER_MIN_QUALITY_SCORE || '50' }}
         run: python paper_auto.py
 
       - name: Run scan
