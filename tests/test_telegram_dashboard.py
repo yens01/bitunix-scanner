@@ -35,14 +35,14 @@ class TelegramDashboardTests(unittest.TestCase):
                 self.assertIn("409", out.getvalue())
                 self.assertNotIn("private-token", out.getvalue())
 
-    def test_eight_home_buttons_and_submenus(self):
+    def test_flat_home_buttons_and_legacy_submenus(self):
         keyboard = json.loads(_tg_reply_keyboard())["keyboard"]
         labels = [item["text"] for row in keyboard for item in row]
-        self.assertEqual(len(labels), 8)
-        self.assertEqual(len(keyboard), 4)
-        for name in ("📊 市場總覽", "🎯 最新訊號", "🧪 模擬交易",
-                     "📋 日內規劃", "🪙 小幣推薦", "📈 台美股",
-                     "📰 財金新聞", "⚙️ 更多功能"):
+        self.assertEqual(len(labels), 15)
+        self.assertEqual(len(keyboard), 8)
+        for name in ("📊 市場總覽", "🎯 最新訊號", "📌 模擬持倉", "💰 交易績效",
+                     "📋 日內規劃", "🪙 小幣推薦", "🚀 小幣爆發雷達",
+                     "📰 財金新聞", "⚙️ 系統狀態"):
             self.assertIn(name, labels)
         callbacks = set()
         for menu in ("PAPER_MENU", "STOCK_MENU", "MORE_MENU", "HOME_MENU"):
@@ -56,8 +56,9 @@ class TelegramDashboardTests(unittest.TestCase):
 
     def test_aliases(self):
         for label, command in (
-            ("📊 市場總覽", "STATS"), ("🧪 模擬交易", "PAPER_MENU"),
-            ("📈 台美股", "STOCK_MENU"), ("⚙️ 更多功能", "MORE_MENU"),
+            ("📊 市場總覽", "STATS"), ("🧪 模擬交易", "PAPER"),
+            ("📈 台美股", "TWHEAT"), ("⚙️ 更多功能", "SYSTEM"),
+            ("🚀 小幣爆發雷達", "RADAR"),
             ("🎯 最新訊號", "LATEST"), ("💰 交易績效", "PERFORMANCE"),
             ("📈 資金曲線", "EQUITY"), ("🔎 訊號漏斗", "FUNNEL"),
             ("🧠 策略品質", "QUALITY"), ("⚙️ 系統狀態", "SYSTEM"),
