@@ -33,6 +33,7 @@ class PaperPosition:
     tp: float
     quantity: float
     opened_at: str
+    entry_bar_ms: int | None = None
 
 def today_utc():
     return datetime.now(timezone.utc).date().isoformat()
@@ -66,7 +67,7 @@ def save_state(state, path: Path):
             os.unlink(tmp)
 
 def try_open(state, *, signal_id, symbol, side, entry, stop, tp,
-             quality_score, kind="retest", config=None, live=False):
+             quality_score, kind="retest", config=None, live=False, entry_bar_ms=None):
     """Returns (accepted, reason). No external side effects or exchange calls."""
     c = config or PaperConfig()
     # Paper-only quality threshold can be tuned without enabling live orders.
@@ -115,8 +116,10 @@ def try_open(state, *, signal_id, symbol, side, entry, stop, tp,
               c.max_notional_usdt / entry)
     if qty <= 0:
         return False, "zero quantity"
+    if entry_bar_ms is not None and (not isinstance(entry_bar_ms, int) or entry_bar_ms < 0):
+        return False, "invalid entry bar time"
     position = PaperPosition(signal_id, symbol, side, entry, stop, tp, qty,
-                             datetime.now(timezone.utc).isoformat())
+                             datetime.now(timezone.utc).isoformat(), entry_bar_ms)
     state["position"] = asdict(position)
     state["orders_today"] = state.get("orders_today", 0) + 1
     state.setdefault("events", []).append({"type": "open", **asdict(position)})

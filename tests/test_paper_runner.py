@@ -23,6 +23,24 @@ class PaperRunnerTests(unittest.TestCase):
             state=default_state()
             self.assertEqual(process(state,[row()],{"BTCUSDT":{"open_time_ms":2000,"low":99,"high":101,"closed":False}}),[])
 
+    def test_entry_bar_time_survives_and_prevents_same_bar_exit(self):
+        with patch.dict(os.environ, {"PAPER_TRADING_ENABLED": "true", "TRADING_KILL_SWITCH": "false"}):
+            state = default_state()
+            first = {"open_time_ms": 2000, "low": 99.9, "high": 101, "closed": True}
+            events = process(state, [row()], {"BTCUSDT": [first]})
+            self.assertEqual(len(events), 1)
+            self.assertEqual(state["position"]["entry_bar_ms"], 2000)
+            self.assertEqual(len([e for e in state["events"] if e["type"] == "open"]), 1)
+            self.assertEqual(process(state, [row()], {"BTCUSDT": [first]}), [])
+            self.assertIsNotNone(state["position"])
+            second = {"open_time_ms": 3000, "low": 98.5, "high": 101, "closed": True}
+            closed = process(state, [row()], {"BTCUSDT": [first, second]})
+            self.assertEqual(len(closed), 1)
+            self.assertEqual(closed[0]["reason"], "stop")
+            self.assertIsNone(state["position"])
+            self.assertEqual(process(state, [], {"BTCUSDT": [first, second]}), [])
+            self.assertEqual(len([e for e in state["events"] if e["type"] == "close"]), 1)
+
     def test_paper_open_with_valid_observation(self):
         with patch.dict(os.environ, {"PAPER_TRADING_ENABLED":"true","TRADING_KILL_SWITCH":"false"}):
             state=default_state()
