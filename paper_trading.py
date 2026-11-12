@@ -66,7 +66,7 @@ def save_state(state, path: Path):
             os.unlink(tmp)
 
 def try_open(state, *, signal_id, symbol, side, entry, stop, tp,
-             quality_score, kind="retest", config=None, live=False):
+             quality_score, kind="retest", config=None, live=False, entry_bar_ms=None):
     """Returns (accepted, reason). No external side effects or exchange calls."""
     c = config or PaperConfig()
     # Paper-only quality threshold can be tuned without enabling live orders.
