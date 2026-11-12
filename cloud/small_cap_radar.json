@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-12T18:01:24.585644+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "CLUSDT",
+      "score": 91,
+      "stage": "啟動",
+      "entry_status": "突破確認",
+      "entry_reason": "最新15m收盤站上前20根高點；仍需觀察能否守穩",
+      "reference_entry": 86.9,
+      "reference_stop": 85.96,
+      "reference_target": 88.78,
+      "reference_rr": 2,
+      "risk_pct": 1.08,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 87.13,
+      "volume_ratio": 2.77,
+      "breakout_pct": 0.26,
+      "range_width_pct": 2.96,
+      "change_24h_pct": 1.22,
+      "quote_volume_24h": 34617304.218,
+      "resistance": 86.9,
+      "candle_open_ms": 1794505500000
+    },
+    {
+      "symbol": "BZUSDT",
+      "score": 79,
+      "stage": "啟動",
+      "entry_status": "突破確認",
+      "entry_reason": "最新15m收盤站上前20根高點；仍需觀察能否守穩",
+      "reference_entry": 92.82,
+      "reference_stop": 91.8,
+      "reference_target": 94.86,
+      "reference_rr": 2,
+      "risk_pct": 1.1,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 92.87,
+      "volume_ratio": 1.78,
+      "breakout_pct": 0.05,
+      "range_width_pct": 3.12,
+      "change_24h_pct": 1.59,
+      "quote_volume_24h": 9384996.10253,
+      "resistance": 92.82,
+      "candle_open_ms": 1794505500000
+    }
+  ]
+}
