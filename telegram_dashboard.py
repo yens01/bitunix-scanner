@@ -11,6 +11,49 @@ from paper_performance import report
 from paper_status import fetch_snapshot
 from quality_calibration import calibrate
 
+RADAR_URL = "https://raw.githubusercontent.com/yens01/bitunix-scanner/cloud-journal/cloud/small_cap_radar.json"
+
+
+def fetch_radar_snapshot():
+    req = urllib.request.Request(RADAR_URL, headers={"User-Agent": "bitunix-radar/1.0"})
+    with urllib.request.urlopen(req, timeout=12) as response:
+        return json.load(response)
+
+
+def small_cap_radar(snapshot, *, now=None):
+    """Read-only radar; missing, invalid or stale snapshots are never presented as live."""
+    now = now or datetime.now(timezone.utc)
+    try:
+        timestamp = datetime.fromisoformat(str(snapshot["generated_at"]).replace("Z", "+00:00"))
+        age = (now - timestamp).total_seconds() / 60
+        if timestamp.tzinfo is None or age < -5 or age > 45:
+            return "⚠️ 小幣爆發雷達資料超過 45 分鐘或時間異常，請檢查 Auto Scan。"
+        candidates = snapshot["candidates"]
+        if not isinstance(candidates, list):
+            raise ValueError("invalid candidates")
+    except (KeyError, ValueError, TypeError, AttributeError):
+        return "⚠️ 小幣爆發雷達資料格式錯誤，暫不顯示排行榜。"
+    lines = ["🚀 <b>小幣爆發雷達｜觀察清單</b>",
+             f"🕒 快照：{_date(snapshot['generated_at'])}（約 {max(0, int(age))} 分鐘前）",
+             "📌 分數是量價排序，不是上漲機率；不會自動下單。"]
+    if not candidates:
+        lines.append("目前沒有符合門檻的小幣；不代表掃描失敗。")
+    for rank, coin in enumerate(candidates[:5], 1):
+        try:
+            symbol = _esc(coin["symbol"])
+            score = int(coin["score"])
+            if not 0 <= score <= 100:
+                raise ValueError("score out of bounds")
+            lines.extend(["", f"<b>{rank}. {symbol}｜{score}/100｜{_esc(coin['stage'])}</b>",
+                          f"💰 收盤價：{_price(coin['last_closed_price'])}",
+                          f"📊 成交量倍率：{float(coin['volume_ratio']):.2f}x｜24h：{float(coin['change_24h_pct']):+.2f}%",
+                          f"📈 距壓力突破：{float(coin['breakout_pct']):+.2f}%｜壓力：{_price(coin['resistance'])}"])
+        except (KeyError, ValueError, TypeError):
+            return "⚠️ 小幣爆發雷達候選資料錯誤，暫不顯示排行榜。"
+    lines.append("\\n⚠️ 只使用已收盤 15m K 線，非即時報價或買入建議。")
+    return "\n".join(lines)
+
+
 COMMIT_API = "https://api.github.com/repos/yens01/bitunix-scanner/commits/cloud-journal"
 SPARKS = "▁▂▃▄▅▆▇█"
 
@@ -189,6 +232,11 @@ def fetch_cloud_commit():
 
 def build_dashboard_message(command, *, rows=None, state=None):
     """Fail closed on cloud errors; never silently show an empty state as healthy."""
+    if command == "RADAR":
+        try:
+            return small_cap_radar(fetch_radar_snapshot())
+        except Exception:
+            return "⚠️ 尚無可讀取的小幣爆發雷達快照，請確認 Auto Scan 已完成並發布資料。"
     if command == "LATEST":
         if rows is None:
             from signal_tracker import load_journal
