@@ -69,8 +69,16 @@ class TelegramDashboardTests(unittest.TestCase):
         r.symbol = "<BTC&USDT>"
         msg = latest_signals([r, r])
         self.assertIn("&lt;BTC&amp;USDT&gt;", msg)
-        self.assertEqual(msg.count("進場"), 1)
-        self.assertIn("非成交", msg)
+        self.assertEqual(msg.count("💰 進場："), 1)
+        self.assertIn("並非實際成交", msg)
+        self.assertIn("🟢 做多", msg)
+        self.assertIn("💰 進場：<b>100</b>", msg)
+        self.assertIn("📍 狀態：等待進場", msg)
+
+    def test_price_formatting_no_float_artifacts(self):
+        from telegram_dashboard import _price
+        self.assertEqual(_price(1001.0350000000001), "1001.035")
+        self.assertEqual(_price(0.0072534999999999995), "0.0072535")
 
     def test_performance_and_curve(self):
         state = {"events": [
