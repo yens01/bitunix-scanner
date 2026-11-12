@@ -69,7 +69,7 @@ class TelegramDashboardTests(unittest.TestCase):
         r.symbol = "<BTC&USDT>"
         msg = latest_signals([r, r])
         self.assertIn("&lt;BTC&amp;USDT&gt;", msg)
-        self.assertEqual(msg.count("進場"), 1)
+        self.assertEqual(msg.count("💰 進場："), 1)
         self.assertIn("並非實際成交", msg)
         self.assertIn("🟢 做多", msg)
         self.assertIn("💰 進場：<b>100</b>", msg)
