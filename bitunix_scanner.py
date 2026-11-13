@@ -1516,7 +1516,7 @@ def _plan_coin_block(r: ChecklistResult, *, html: bool = False) -> list[str]:
         else:
             lines.append(f"🟢低多 進{_px(le)}  損{_px(ls)}  盈{_px(lt)}")
             lines.append(f"🔴高空 進{_px(se)}  損{_px(ss)}  盈{_px(st)}")
-    elif levels:
+    elif levels and r.structure != "盤整":
         entry, stop, tp = levels
         rr = "  RR2.0"
         if html:
