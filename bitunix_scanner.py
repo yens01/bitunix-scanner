@@ -2975,11 +2975,14 @@ def _apply_session_intraday_box(r: ChecklistResult) -> ChecklistResult:
 
     _fill_trading_session_hl(r, candles)
 
+    from datetime import timedelta
+    tw_day = (now_tw() - timedelta(hours=8)).strftime("%Y-%m-%d")
+    day_box = build_day_range_box(candles, day=tw_day, tz_offset_hours=8, day_start_hour=8)
+    if day_box is not None:
+        r.plan_day_lo = day_box.lo
+        r.plan_day_hi = day_box.hi
     if keep_zone:
         return r
-
-    tw_day = now_tw().strftime("%Y-%m-%d")
-    day_box = build_day_range_box(candles, day=tw_day, tz_offset_hours=8)
     if day_box is None:
         day_box = build_adaptive_range_box(candles, target_width=target)
     if day_box is None:
@@ -2987,13 +2990,12 @@ def _apply_session_intraday_box(r: ChecklistResult) -> ChecklistResult:
             _downgrade_plan_to_box(r, "做多未齊日／4H，改看箱")
         return r
 
-    # 保留真實今日高低（給卡片對照；進出場箱可另裁近端）
-    r.plan_day_lo = day_box.lo
-    r.plan_day_hi = day_box.hi
+    # 保留 08:00 交易日高低（給卡片對照；進出場箱可另裁近端）
+    # 近端箱體可回退，但不可冒充當日 Fibonacci 區間。
     r.plan_box_clipped = False
 
     width = day_box.hi - day_box.lo
-    tag = f"今日高低{tw_day}·實寬{width:.2f}"
+    tag = f"交易日08:00起{tw_day}·實寬{width:.2f}"
     trade_box = day_box
     # 今日高低過寬（>2.2×目標）→ 進出場改近端目標箱，避免又變成六千點大箱
     if width > target * 2.2:
