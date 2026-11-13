@@ -50,6 +50,25 @@ class SmallCapRadarTests(unittest.TestCase):
         self.assertIsNone(score_candidate("TESTUSDT", candles(), 10000, 2,
                                           now_ms=44 * 900000))
 
+    def test_early_breakout_even_if_24h_change_exceeds_eight_percent(self):
+        bars = [SimpleNamespace(time=i * 900000, high=101, low=99, close=100, volume=100)
+                for i in range(44)]
+        bars[-2] = SimpleNamespace(time=42 * 900000, high=106, low=100, close=105, volume=500)
+        bars[-1] = SimpleNamespace(time=43 * 900000, high=108, low=104, close=107, volume=400)
+        result = score_candidate("AKEUSDT", bars, 4000000, 35,
+                                 now_ms=44 * 900000)
+        self.assertIsNotNone(result)
+        self.assertIn(result["stage"], ("爆發初期", "突破延續"))
+        self.assertIsNone(result["reference_entry"])
+
+    def test_late_breakout_does_not_invite_chasing(self):
+        bars = [SimpleNamespace(time=i * 900000, high=101, low=99, close=100, volume=100)
+                for i in range(44)]
+        bars[-2] = SimpleNamespace(time=42 * 900000, high=120, low=100, close=119, volume=500)
+        bars[-1] = SimpleNamespace(time=43 * 900000, high=130, low=118, close=129, volume=500)
+        self.assertIsNone(score_candidate("AKEUSDT", bars, 4000000, 35,
+                                          now_ms=44 * 900000))
+
     def test_rate_limit_retries_with_backoff(self):
         calls = []
         sleeps = []
