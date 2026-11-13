@@ -38,14 +38,61 @@ def trade_plan(closed, resistance, *, volume_ratio):
             "plan_note": "僅供突破後評估；非立即買入" if valid else "停損距離不合理或突破失敗，不提供進場計畫"}
 
 
+def _breakout_candidate(symbol, closed, quote_vol, change_24h):
+    """Detect the first closed 15m expansion out of a quiet base; no live trade."""
+    if len(closed) < 42 or quote_vol < 500000 or not math.isfinite(change_24h):
+        return None
+    base = closed[-41:-5]
+    recent = closed[-5:]
+    if len(base) < 20 or any(b.close <= 0 or b.high <= 0 or b.low <= 0 for b in closed[-41:]):
+        return None
+    ceiling = max(b.high for b in base)
+    floor = min(b.low for b in base)
+    if floor <= 0 or ceiling / floor - 1 > 0.16:
+        return None
+    base_vol = sum(float(b.volume) for b in base[-20:]) / 20
+    if base_vol <= 0:
+        return None
+    first = next((i for i, b in enumerate(recent)
+                  if b.close > ceiling * 1.005 and
+                  float(b.volume) / base_vol >= 2.0), None)
+    if first is None:
+        return None
+    latest = recent[-1]
+    expansion_pct = (latest.close / ceiling - 1) * 100
+    if expansion_pct < 0 or expansion_pct > 15:
+        return None  # Late chases are excluded from actionable watchlist.
+    if any(not math.isfinite(float(b.volume)) or b.volume < 0 for b in recent):
+        return None
+    volume_ratio = max(float(b.volume) for b in recent[first:]) / base_vol
+    score = min(100, round(65 + min(volume_ratio, 6) * 4 + (10 if first >= 3 else 0)))
+    return {
+        "symbol": symbol, "score": score, "stage": "爆發初期" if first >= 2 else "突破延續",
+        "entry_status": "觀察突破回測", "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+        "reference_entry": None, "reference_stop": None, "reference_target": None,
+        "reference_rr": None, "risk_pct": None,
+        "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+        "last_closed_price": latest.close, "volume_ratio": round(volume_ratio, 2),
+        "breakout_pct": round(expansion_pct, 2),
+        "range_width_pct": round((ceiling / floor - 1) * 100, 2),
+        "change_24h_pct": round(change_24h, 2), "quote_volume_24h": quote_vol,
+        "resistance": ceiling, "candle_open_ms": latest.time,
+    }
+
+
 def score_candidate(symbol, bars, quote_vol, change_24h, *, now_ms=None):
     now_ms = now_ms or int(datetime.now(timezone.utc).timestamp() * 1000)
     closed = sorted((b for b in bars if b.time + 900000 <= now_ms),
                     key=lambda b: b.time)
     if len(closed) < 42 or not math.isfinite(quote_vol) or quote_vol < 500000:
         return None
+    if not -15 <= change_24h <= 120:
+        return None  # Reject extreme moves and collapsing markets.
+    breakout = _breakout_candidate(symbol, closed, quote_vol, change_24h)
+    if breakout is not None:
+        return breakout
     if not -8 <= change_24h <= 8:
-        return None  # Avoid already-pumped coins and collapsing markets.
+        return None  # Legacy pre-breakout radar is intentionally conservative.
     recent = closed[-1]
     prior = closed[-41:-1]
     volumes = [float(getattr(b, "volume", 0) or 0) for b in prior]
@@ -96,7 +143,7 @@ def fetch_with_backoff(fetch_candles, symbol, *, attempts=4, sleep=time.sleep):
             sleep(delay)
 
 
-def rank_candidates(tickers, fetch_candles, *, now_ms=None, limit=5, pool=20):
+def rank_candidates(tickers, fetch_candles, *, now_ms=None, limit=5, pool=60):
     eligible = []
     for t in tickers:
         sym = str(t.get("symbol") or "").upper()
@@ -111,9 +158,10 @@ def rank_candidates(tickers, fetch_candles, *, now_ms=None, limit=5, pool=20):
         if not all(math.isfinite(v) for v in (qv, last, opening)) or opening <= 0 or last <= 0:
             continue
         change = (last / opening - 1) * 100
-        if 500000 <= qv <= 150000000 and -8 <= change <= 8:
+        if 500000 <= qv <= 150000000 and -15 <= change <= 120:
             eligible.append((sym, qv, change))
-    eligible.sort(key=lambda item: item[1], reverse=True)
+    # Cover both liquid quiet bases and fast movers, instead of volume-only top 20.
+    eligible.sort(key=lambda item: (abs(item[2]) < 8, -item[1]))
     result = []
     # Run sequentially to avoid burst requests after the main market scanner.
     # Retry exchange rate limits with bounded exponential backoff.
