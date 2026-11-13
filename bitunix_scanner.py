@@ -1441,6 +1441,44 @@ def _format_sr_tf_block(
     ]
 
 
+def _intraday_level_status(r: ChecklistResult) -> tuple[str, tuple[float, float, float] | None]:
+    """Fail-closed intraday display: never advertise remote legacy entry/TP as actionable."""
+    try:
+        from recovery_dashboard import _closed_candles
+        import math
+        candles = _closed_candles(r.symbol, "15m", 15, datetime.now(timezone.utc))
+        from bitunix_scanner import fetch_ticker_last
+        price = float(fetch_ticker_last(r.symbol))
+        if not math.isfinite(price) or price <= 0:
+            return "⚠️ 現價不可用；禁止進場", None
+        close = candles[-1][4]
+        if abs(price - close) / close > 0.025:
+            return "⚠️ 現價與收盤價差異過大；禁止進場", None
+        previous = candles[-16:]
+        tr = [max(c[2]-c[3], abs(c[2]-p[4]), abs(c[3]-p[4]))
+              for p, c in zip(previous[:-1], previous[1:])]
+        atr = sum(tr[-14:]) / 14
+        entry, stop = float(r.entry), float(r.stop)
+        if not all(math.isfinite(x) and x > 0 for x in (entry, stop, atr)):
+            return "⚠️ 進場或停損資料無效；禁止進場", None
+        side = "short" if r.side == "short" or r.structure == "偏空" else "long"
+        risk = (entry-stop) if side == "long" else (stop-entry)
+        if risk <= 0 or risk / entry > 0.02:
+            return "⛔ 停損距離不合格；重新等待15m訊號", None
+        gap = abs(price-entry)
+        if gap > min(0.75*atr, 0.003*price):
+            return "⌛ 已錯過／距離過遠；舊進場價失效，等待下一個15m訊號", None
+        # Reject plans whose original 15m bar is no longer near current price.
+        if side == "long" and price < stop or side == "short" and price > stop:
+            return "⛔ 價格已穿越停損；計畫失效", None
+        target = entry + 2*risk if side == "long" else entry - 2*risk
+        if target <= 0:
+            return "⛔ 目標價無效；禁止進場", None
+        return "⏳ 價格接近候選區；仍需15m確認（非下單指令）", (entry, stop, target)
+    except (ValueError, KeyError, TypeError, RuntimeError, OSError, TimeoutError, OverflowError):
+        return "⚠️ 即時資料未通過驗證；禁止進場", None
+
+
 def _plan_coin_block(r: ChecklistResult, *, html: bool = False) -> list[str]:
     """單一幣種重點區塊（圖示分區）。"""
     htf = (SESSION_PLAN_INTERVAL or "4h").upper()
@@ -1459,7 +1497,9 @@ def _plan_coin_block(r: ChecklistResult, *, html: bool = False) -> list[str]:
         if rhythm:
             lines.append(f"🗓 {rhythm}")
 
-    edges = _session_box_edge_levels(r)
+    status, levels = _intraday_level_status(r)
+    lines.append(_esc(status) if html else status)
+    edges = None  # Legacy range edges are context only; not actionable intraday levels.
     if edges:
         _mid, le, ls, lt, se, ss, st = edges
         if html:
@@ -1476,17 +1516,18 @@ def _plan_coin_block(r: ChecklistResult, *, html: bool = False) -> list[str]:
         else:
             lines.append(f"🟢低多 進{_px(le)}  損{_px(ls)}  盈{_px(lt)}")
             lines.append(f"🔴高空 進{_px(se)}  損{_px(ss)}  盈{_px(st)}")
-    elif r.entry > 0 and r.stop > 0 and r.tp > 0:
-        rr = f"  RR{r.rr:.1f}" if r.rr else ""
+    elif levels and r.structure != "盤整":
+        entry, stop, tp = levels
+        rr = "  RR2.0"
         if html:
             lines.append(
-                f"🎯 進<code>{_esc(_px(r.entry))}</code>  "
-                f"損<code>{_esc(_px(r.stop))}</code>  "
-                f"盈<code>{_esc(_px(r.tp))}</code>{_esc(rr)}"
+                f"🎯 進<code>{_esc(_px(entry))}</code>  "
+                f"損<code>{_esc(_px(stop))}</code>  "
+                f"盈<code>{_esc(_px(tp))}</code>{_esc(rr)}"
             )
         else:
             lines.append(
-                f"🎯 進{_px(r.entry)}  損{_px(r.stop)}  盈{_px(r.tp)}{rr}"
+                f"🎯 進{_px(entry)}  損{_px(stop)}  盈{_px(tp)}{rr}"
             )
 
     span_lo = r.plan_day_lo if r.plan_day_lo > 0 else r.zone_lo
