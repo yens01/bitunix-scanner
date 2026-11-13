@@ -2460,7 +2460,11 @@ def poll_telegram_queries(
             _telegram_send(build_recovery_message(key), chat_id=from_chat)
             handled += 1
             continue
-        if key in {"RADAR", "LATEST", "PERFORMANCE", "EQUITY", "FUNNEL", "QUALITY", "SYSTEM"}:
+        if key == "RADAR":
+            _telegram_send("🔒 小幣雷達已停用；請使用「🕒 今日進場觀察」查看 BTC／ETH。", chat_id=from_chat)
+            handled += 1
+            continue
+        if key in {"LATEST", "PERFORMANCE", "EQUITY", "FUNNEL", "QUALITY", "SYSTEM"}:
             from telegram_dashboard import build_dashboard_message
             try:
                 body = build_dashboard_message(key)
