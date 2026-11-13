@@ -92,6 +92,24 @@ class SmallCapRadarTests(unittest.TestCase):
             fetch_with_backoff(fetch, "TESTUSDT", sleep=lambda _: None)
         self.assertEqual(len(calls), 1)
 
+    def test_untradable_contract_is_skipped_without_losing_other_candidates(self):
+        ticks = [
+            {"symbol": "BADUSDT", "quoteVol": "5000000", "lastPrice": "102", "open": "100"},
+            {"symbol": "GOODUSDT", "quoteVol": "4000000", "lastPrice": "102", "open": "100"},
+        ]
+        def fetch(symbol):
+            if symbol == "BADUSDT":
+                raise RuntimeError("API 錯誤: this Futures is not allowed to trade.")
+            return candles()
+        result = rank_candidates(ticks, fetch, now_ms=44 * 900000)
+        self.assertEqual([item["symbol"] for item in result], ["GOODUSDT"])
+
+    def test_other_api_errors_still_fail_loudly(self):
+        ticks = [{"symbol": "BADUSDT", "quoteVol": "4000000", "lastPrice": "102", "open": "100"}]
+        with self.assertRaisesRegex(RuntimeError, "invalid API response"):
+            rank_candidates(ticks, lambda _: (_ for _ in ()).throw(RuntimeError("invalid API response")),
+                            now_ms=44 * 900000)
+
     def test_major_symbols_excluded(self):
         ticks = [{"symbol": "BTCUSDT", "quoteVol": "4000000", "lastPrice": "102", "open": "100"},
                  {"symbol": "TESTUSDT", "quoteVol": "4000000", "lastPrice": "102", "open": "100"}]
