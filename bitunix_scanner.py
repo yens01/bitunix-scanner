@@ -114,6 +114,7 @@ DEFAULT_SCAN_POOL = 200              # 掃描池（成交額排序取前 N；雲
 SESSION_PLAN_INTERVAL = "4h"         # 日內規劃用 4H K 線（結構／高週期）
 SESSION_PLAN_MTF = ("1d", "1w", "1M")
 SESSION_PLAN_SYMBOLS = ("BTCUSDT", "ETHUSDT")
+TRADE_SYMBOLS = frozenset(SESSION_PLAN_SYMBOLS)  # Only assets eligible for new scans/signals
 SESSION_PLAN_COOLDOWN_PREFIX = "__session_btc_eth_plan__"
 # 日內規劃箱體：台灣日「今日高低」（15m）；過寬時再裁近端目標波段
 SESSION_BOX_INTERVAL = "15m"
@@ -326,6 +327,8 @@ def build_signals(
     signals: list[CoinSignal] = []
     for t in tickers:
         symbol = t.get("symbol") or ""
+        if symbol not in TRADE_SYMBOLS:
+            continue
         if not symbol.endswith("USDT"):
             continue
         pair = pair_map.get(symbol, {})
@@ -1140,8 +1143,8 @@ def _tg_reply_keyboard() -> str:
         "📊 市場總覽", "🎯 最新訊號",
         "📌 模擬持倉", "💰 交易績效",
         "🧠 策略品質", "📋 日內規劃",
-        "🚀 小幣爆發雷達", "📰 財金新聞",
-        "🎯 我的目標", "🕒 今日進場觀察",
+        "🕒 今日進場觀察", "📰 財金新聞",
+        "🎯 我的目標", "📋 日內規劃",
     ]
     return json.dumps(
         {"keyboard": [[{"text": label} for label in labels[i:i + 2]]
@@ -1174,7 +1177,7 @@ _TG_INLINE_MENUS = {
         [("📊 市場總覽", "STATS"), ("🎯 最新訊號", "LATEST"),
          ("🎯 我的目標", "GOAL"), ("🕒 今日進場觀察", "ENTRY_WATCH"),
          ("🧪 模擬交易", "PAPER_MENU"), ("📋 日內規劃", "PLAN"),
-         ("🪙 小幣推薦", "ALTS"), ("🚀 小幣爆發雷達", "RADAR"),
+
          ("📈 台美股", "STOCK_MENU"),
          ("📰 財金新聞", "NEWS"), ("⚙️ 更多功能", "MORE_MENU")],
     ),
@@ -1803,7 +1806,7 @@ def normalize_query_symbol(text: str) -> str | None:
         return None
     if not raw.endswith("USDT"):
         raw = base + "USDT"
-    return raw
+    return raw if raw in TRADE_SYMBOLS else None
 
 
 def _alt_watch_bias(r: ChecklistResult) -> tuple[str, str] | None:
@@ -1839,7 +1842,8 @@ def build_alt_watchlist_message(
     per_bucket: int = 6,
     interval: str = "15m",
 ) -> str:
-    """掃一輪山寨 Setup，整理可進／見頂／等回測／關注的多空清單。"""
+    """Legacy alt command disabled in BTC/ETH-only mode."""
+    return "🔒 已停用小幣推薦；目前只關注 BTCUSDT／ETHUSDT。"
     cfg = SetupFilterConfig()
     tw = now_tw().strftime("%m-%d %H:%M")
     try:
@@ -4059,7 +4063,7 @@ def run_filtered_setup(
 ) -> list[ChecklistResult]:
     cfg = cfg or SetupFilterConfig()
     # 先用更高成交額挑掃描池
-    pool = [s for s in signals if s.quote_vol >= cfg.min_quote_vol]
+    pool = [s for s in signals if s.symbol in TRADE_SYMBOLS and s.quote_vol >= cfg.min_quote_vol]
     if len(pool) < 15:
         pool = sorted(signals, key=lambda s: s.quote_vol, reverse=True)[:n]
     else:
