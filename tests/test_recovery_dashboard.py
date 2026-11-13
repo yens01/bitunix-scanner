@@ -33,11 +33,11 @@ class RecoveryButtonsTests(unittest.TestCase):
             ({"events": [], "halted": True}, "已停止"),
             ({"events": [], "position": {"symbol": "BTCUSDT"}}, "禁止加碼"),
             ({"events": [], "orders_today": 2}, "兩筆上限"),
-            ({"events": []}, "尚未驗證"),
+            ({"events": []}, "K 線資料無法驗證"),
         ]:
             with self.subTest(expected=expected):
                 self.assertIn(expected, entry_watch_message(state, now=now))
-        self.assertIn("10:00", entry_watch_message({"events": []}, now=now))
+        self.assertIn("BTCUSDT", entry_watch_message({"events": []}, now=now))
 
     def test_missing_state_fails_closed(self):
         with patch("recovery_dashboard.fetch_snapshot", side_effect=OSError("offline")):
