@@ -1479,6 +1479,39 @@ def _intraday_level_status(r: ChecklistResult) -> tuple[str, tuple[float, float,
         return "⚠️ 即時資料未通過驗證；禁止進場", None
 
 
+def _session_action_brief(r: ChecklistResult, status: str, *, html: bool = False) -> list[str]:
+    """Explain the day plan without converting reference levels into orders."""
+    def fmt(line: str) -> str:
+        return _esc(line) if html else line
+
+    out = [fmt("📋 先講結論")]
+    if r.structure == "偏空":
+        out.append(fmt("方向偏空；先等反彈到壓力區，15m 收盤轉弱才觀察，禁止追空。"))
+    elif r.structure == "偏多":
+        out.append(fmt("方向偏多；先等回踩支撐，15m 收盤守住才觀察，禁止追多。"))
+    else:
+        out.append(fmt("盤整／方向未確認；觀察箱體邊界，沒有突破與回測確認就不進場。"))
+    out.append(fmt("📍 今晚價位用途（參考區，不是掛單指令）"))
+    lo, hi = float(r.zone_lo or 0), float(r.zone_hi or 0)
+    if hi > lo > 0:
+        out.append(fmt(f"近端箱體 {_px(lo)}–{_px(hi)}｜箱底看支撐，箱頂看壓力；箱內不追價"))
+    else:
+        out.append(fmt("近端箱體資料不足；不以舊價位下單"))
+    for session, low, high, active in getattr(r, "plan_session_hl", None) or []:
+        if high > low > 0:
+            mark = "（進行中）" if active else ""
+            out.append(fmt(f"🗓 {session}{mark} {_px(low)}–{_px(high)}｜低點支撐參考／高點壓力參考"))
+    out.append(fmt("🧭 今晚操作順序"))
+    out.append(fmt("① 先確認 1H／4H 方向與當前 15m 收盤，不用舊訊號追價"))
+    out.append(fmt("② 等價格到近端壓力／支撐後，確認回測與 15m 收盤；未確認不進場"))
+    out.append(fmt("③ 若突破箱體、訊號失效或價格距離過遠，重新計算；不沿用舊計畫"))
+    if "禁止" in status or "失效" in status or "距離過遠" in status or "錯過" in status:
+        out.append(fmt("⛔ 目前沒有可執行進場計畫；以下價位僅供行情觀察"))
+    else:
+        out.append(fmt("⚠️ 價格接近也不代表可以下單；需確認停損、費用及風險預算"))
+    return out
+
+
 def _plan_coin_block(r: ChecklistResult, *, html: bool = False) -> list[str]:
     """單一幣種重點區塊（圖示分區）。"""
     htf = (SESSION_PLAN_INTERVAL or "4h").upper()
@@ -1499,6 +1532,7 @@ def _plan_coin_block(r: ChecklistResult, *, html: bool = False) -> list[str]:
 
     status, levels = _intraday_level_status(r)
     lines.append(_esc(status) if html else status)
+    lines.extend(_session_action_brief(r, status, html=html))
     edges = None  # Legacy range edges are context only; not actionable intraday levels.
     if edges:
         _mid, le, ls, lt, se, ss, st = edges
