@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-13T23:41:35.613330+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "BERAUSDT",
+      "score": 99,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.1145,
+      "volume_ratio": 8.2,
+      "breakout_pct": 1.24,
+      "range_width_pct": 8.65,
+      "change_24h_pct": 12.97,
+      "quote_volume_24h": 1127602.96343,
+      "resistance": 0.1131,
+      "candle_open_ms": 1794611700000
+    },
+    {
+      "symbol": "XAUTUSDT",
+      "score": 61,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": 0.21,
+      "plan_note": "停損距離不合理或突破失敗，不提供進場計畫",
+      "last_closed_price": 3873.36,
+      "volume_ratio": 1.8,
+      "breakout_pct": -0.15,
+      "range_width_pct": 0.39,
+      "change_24h_pct": -0.01,
+      "quote_volume_24h": 16277302.07608,
+      "resistance": 3879.09,
+      "candle_open_ms": 1794611700000
+    }
+  ]
+}
