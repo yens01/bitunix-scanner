@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-13T21:41:31.565250+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "HYPEUSDT",
+      "score": 76,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 73.357,
+      "reference_stop": 72.207,
+      "reference_target": 75.657,
+      "reference_rr": 2,
+      "risk_pct": 1.57,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 72.722,
+      "volume_ratio": 2.45,
+      "breakout_pct": -0.87,
+      "range_width_pct": 1.8,
+      "change_24h_pct": 0.49,
+      "quote_volume_24h": 61470468.10749,
+      "resistance": 73.357,
+      "candle_open_ms": 1794604500000
+    },
+    {
+      "symbol": "GOOGLUSDT",
+      "score": 62,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 296.68,
+      "reference_stop": 294.26,
+      "reference_target": 301.52,
+      "reference_rr": 2,
+      "risk_pct": 0.82,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 295.01,
+      "volume_ratio": 1.96,
+      "breakout_pct": -0.56,
+      "range_width_pct": 0.93,
+      "change_24h_pct": -1.75,
+      "quote_volume_24h": 7078362.7002,
+      "resistance": 296.68,
+      "candle_open_ms": 1794604500000
+    }
+  ]
+}
