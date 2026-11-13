@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-13T04:31:38.503659+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "XAUTUSDT",
+      "score": 66,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 3913.98,
+      "reference_stop": 3898.84,
+      "reference_target": 3944.26,
+      "reference_rr": 2,
+      "risk_pct": 0.39,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 3899.93,
+      "volume_ratio": 2.28,
+      "breakout_pct": -0.36,
+      "range_width_pct": 1.07,
+      "change_24h_pct": -1.68,
+      "quote_volume_24h": 15005498.43049,
+      "resistance": 3913.98,
+      "candle_open_ms": 1794543300000
+    }
+  ]
+}
