@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-13T21:46:38.771795+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "XAGUSDT",
+      "score": 81,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 49.33,
+      "reference_stop": 48.56,
+      "reference_target": 50.87,
+      "reference_rr": 2,
+      "risk_pct": 1.56,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 48.73,
+      "volume_ratio": 3.87,
+      "breakout_pct": -1.22,
+      "range_width_pct": 1.21,
+      "change_24h_pct": -2.63,
+      "quote_volume_24h": 28609184.02085,
+      "resistance": 49.33,
+      "candle_open_ms": 1794605400000
+    }
+  ]
+}
