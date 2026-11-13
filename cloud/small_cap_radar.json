@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-13T03:26:01.074224+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "XAUUSDT",
+      "score": 74,
+      "stage": "啟動",
+      "entry_status": "突破確認",
+      "entry_reason": "最新15m收盤站上前20根高點；仍需觀察能否守穩",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": 0.29,
+      "plan_note": "停損距離不合理或突破失敗，不提供進場計畫",
+      "last_closed_price": 3924.21,
+      "volume_ratio": 2.01,
+      "breakout_pct": 0.03,
+      "range_width_pct": 1.04,
+      "change_24h_pct": -1.62,
+      "quote_volume_24h": 98233830.79546,
+      "resistance": 3922.94,
+      "candle_open_ms": 1794538800000
+    }
+  ]
+}
