@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-13T20:51:32.698609+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "BERAUSDT",
+      "score": 89,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.1107,
+      "volume_ratio": 6.05,
+      "breakout_pct": 1.1,
+      "range_width_pct": 5.49,
+      "change_24h_pct": 10.08,
+      "quote_volume_24h": 735894.42379,
+      "resistance": 0.1095,
+      "candle_open_ms": 1794601800000
+    },
+    {
+      "symbol": "FARTCOINUSDT",
+      "score": 80,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 0.1097,
+      "reference_stop": 0.1083,
+      "reference_target": 0.1125,
+      "reference_rr": 2,
+      "risk_pct": 1.28,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 0.1087,
+      "volume_ratio": 2.71,
+      "breakout_pct": -0.91,
+      "range_width_pct": 3.59,
+      "change_24h_pct": 0.83,
+      "quote_volume_24h": 4339419.81826,
+      "resistance": 0.1097,
+      "candle_open_ms": 1794601800000
+    }
+  ]
+}
