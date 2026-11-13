@@ -1386,6 +1386,7 @@ def build_day_range_box(
     day: str | None = None,
     tz_offset_hours: int = 8,
     min_bars: int = 4,
+    day_start_hour: int = 0,
 ) -> Zone | None:
     """
     取指定曆日（預設：最後一根 K 所在日）的最高／最低，供日內高拋低吸。
@@ -1395,19 +1396,21 @@ def build_day_range_box(
         return None
     from datetime import datetime, timedelta, timezone
 
+    if not 0 <= day_start_hour <= 23:
+        raise ValueError('day_start_hour must be 0..23')
     tz = timezone(timedelta(hours=tz_offset_hours))
     if day is None:
-        day = datetime.fromtimestamp(candles[-1].time / 1000, tz=timezone.utc).astimezone(tz).strftime(
-            "%Y-%m-%d"
-        )
+        local = datetime.fromtimestamp(candles[-1].time / 1000, tz=timezone.utc).astimezone(tz)
+        day = (local - timedelta(hours=day_start_hour)).strftime("%Y-%m-%d")
 
     day_cs = [
-        c
-        for c in candles
-        if datetime.fromtimestamp(c.time / 1000, tz=timezone.utc).astimezone(tz).strftime("%Y-%m-%d")
-        == day
+        c for c in candles
+        if (datetime.fromtimestamp(c.time / 1000, tz=timezone.utc).astimezone(tz)
+            - timedelta(hours=day_start_hour)).strftime("%Y-%m-%d") == day
     ]
     if len(day_cs) < min_bars:
+        if day_start_hour != 0:
+            return None  # Never mix previous trading day into the 08:00 range.
         # 今日 K 太少：退回最近 24h
         last_t = candles[-1].time
         day_cs = [c for c in candles if c.time >= last_t - 24 * 3600 * 1000]
