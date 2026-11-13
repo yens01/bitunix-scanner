@@ -38,8 +38,8 @@ class TelegramDashboardTests(unittest.TestCase):
     def test_flat_home_buttons_and_legacy_submenus(self):
         keyboard = json.loads(_tg_reply_keyboard())["keyboard"]
         labels = [item["text"] for row in keyboard for item in row]
-        self.assertEqual(len(labels), 8)
-        self.assertEqual(len(keyboard), 4)
+        self.assertEqual(len(labels), 10)
+        self.assertEqual(len(keyboard), 5)
         for name in ("📊 市場總覽", "🎯 最新訊號", "📌 模擬持倉", "💰 交易績效",
                      "🧠 策略品質", "📋 日內規劃", "🚀 小幣爆發雷達",
                      "📰 財金新聞"):

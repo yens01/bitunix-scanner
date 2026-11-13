@@ -1141,6 +1141,7 @@ def _tg_reply_keyboard() -> str:
         "📌 模擬持倉", "💰 交易績效",
         "🧠 策略品質", "📋 日內規劃",
         "🚀 小幣爆發雷達", "📰 財金新聞",
+        "🎯 我的目標", "🕒 今日進場觀察",
     ]
     return json.dumps(
         {"keyboard": [[{"text": label} for label in labels[i:i + 2]]
@@ -1155,7 +1156,8 @@ _TG_INLINE_MENUS = {
         "🧪 <b>模擬交易</b>｜請選擇功能",
         [("📌 目前持倉", "PAPER"), ("💰 交易績效", "PERFORMANCE"),
          ("📈 資金曲線", "EQUITY"), ("🔎 訊號漏斗", "FUNNEL"),
-         ("🧠 策略品質", "QUALITY"), ("↩️ 返回首頁", "HOME_MENU")],
+         ("🧠 策略品質", "QUALITY"), ("🎯 我的目標", "GOAL"),
+         ("🕒 今日進場觀察", "ENTRY_WATCH"), ("↩️ 返回首頁", "HOME_MENU")],
     ),
     "STOCK_MENU": (
         "📈 <b>台美股</b>｜請選擇功能",
@@ -1170,6 +1172,7 @@ _TG_INLINE_MENUS = {
     "HOME_MENU": (
         "🏠 <b>Bitunix Scanner</b>｜請選擇分類",
         [("📊 市場總覽", "STATS"), ("🎯 最新訊號", "LATEST"),
+         ("🎯 我的目標", "GOAL"), ("🕒 今日進場觀察", "ENTRY_WATCH"),
          ("🧪 模擬交易", "PAPER_MENU"), ("📋 日內規劃", "PLAN"),
          ("🪙 小幣推薦", "ALTS"), ("🚀 小幣爆發雷達", "RADAR"),
          ("📈 台美股", "STOCK_MENU"),
@@ -1595,6 +1598,10 @@ def save_telegram_offset(offset: int, path: str = TELEGRAM_OFFSET_PATH) -> None:
 
 # Telegram 指令別名 → 內部 key（須在加 USDT 之前判斷，避免 Plan→PLANUSDT）
 _TG_CMD_ALIASES: dict[str, str] = {
+    "GOAL": "GOAL",
+    "我的目標": "GOAL",
+    "ENTRY_WATCH": "ENTRY_WATCH",
+    "今日進場觀察": "ENTRY_WATCH",
     "START": "START",
     "HELP": "HELP",
     "STATS": "STATS",
@@ -2255,9 +2262,12 @@ def poll_telegram_queries(
             if action in _TG_INLINE_MENUS:
                 _tg_show_menu(action, chat_id=callback_chat,
                               message_id=callback_msg.get("message_id"))
-            elif action in {"PAPER", "RADAR", "LATEST", "PERFORMANCE", "EQUITY",
+            elif action in {"GOAL", "ENTRY_WATCH", "PAPER", "RADAR", "LATEST", "PERFORMANCE", "EQUITY",
                             "FUNNEL", "QUALITY", "SYSTEM"}:
-                if action == "PAPER":
+                if action in {"GOAL", "ENTRY_WATCH"}:
+                    from recovery_dashboard import build_recovery_message
+                    body = build_recovery_message(action)
+                elif action == "PAPER":
                     from paper_status import build_paper_positions_message
                     body = build_paper_positions_message()
                 else:
@@ -2398,6 +2408,11 @@ def poll_telegram_queries(
                 tw = now_tw().strftime("%m-%d %H:%M")
                 title = f"BTC／ETH 日內規劃 · {tw}"
                 notify_plan_with_chart(title, plans, chat_id=from_chat)
+            handled += 1
+            continue
+        if key in {"GOAL", "ENTRY_WATCH"}:
+            from recovery_dashboard import build_recovery_message
+            _telegram_send(build_recovery_message(key), chat_id=from_chat)
             handled += 1
             continue
         if key in {"RADAR", "LATEST", "PERFORMANCE", "EQUITY", "FUNNEL", "QUALITY", "SYSTEM"}:
