@@ -1564,8 +1564,8 @@ def _plan_coin_block(r: ChecklistResult, *, html: bool = False) -> list[str]:
                 f"🎯 進{_px(entry)}  損{_px(stop)}  盈{_px(tp)}{rr}"
             )
 
-    span_lo = r.plan_day_lo if r.plan_day_lo > 0 else r.zone_lo
-    span_hi = r.plan_day_hi if r.plan_day_hi > r.plan_day_lo else r.zone_hi
+    span_lo = r.plan_day_lo
+    span_hi = r.plan_day_hi
     if span_hi > span_lo > 0:
         w = span_hi - span_lo
         p382 = span_hi - w * 0.382
@@ -1583,6 +1583,8 @@ def _plan_coin_block(r: ChecklistResult, *, html: bool = False) -> list[str]:
                 f"📐 Fibo  0.382={_px(p382)}  0.5={_px(p50)}  0.618={_px(p618)}"
             )
 
+    if not (span_hi > span_lo > 0):
+        lines.append("📐 Fibo 今日08:00起資料不足，暫不提供" if not html else "📐 Fibo 今日08:00起資料不足，暫不提供")
     lv15, lv4h = _fetch_plan_sr_levels(r.symbol)
     lines.extend(_format_sr_tf_block("15m 進出", lv15, html=html))
     lines.extend(_format_sr_tf_block(f"{htf} 戰場", lv4h, html=html))
@@ -2975,11 +2977,14 @@ def _apply_session_intraday_box(r: ChecklistResult) -> ChecklistResult:
 
     _fill_trading_session_hl(r, candles)
 
+    from datetime import timedelta
+    tw_day = (now_tw() - timedelta(hours=8)).strftime("%Y-%m-%d")
+    day_box = build_day_range_box(candles, day=tw_day, tz_offset_hours=8, day_start_hour=8)
+    if day_box is not None:
+        r.plan_day_lo = day_box.lo
+        r.plan_day_hi = day_box.hi
     if keep_zone:
         return r
-
-    tw_day = now_tw().strftime("%Y-%m-%d")
-    day_box = build_day_range_box(candles, day=tw_day, tz_offset_hours=8)
     if day_box is None:
         day_box = build_adaptive_range_box(candles, target_width=target)
     if day_box is None:
@@ -2987,13 +2992,12 @@ def _apply_session_intraday_box(r: ChecklistResult) -> ChecklistResult:
             _downgrade_plan_to_box(r, "做多未齊日／4H，改看箱")
         return r
 
-    # 保留真實今日高低（給卡片對照；進出場箱可另裁近端）
-    r.plan_day_lo = day_box.lo
-    r.plan_day_hi = day_box.hi
+    # 保留 08:00 交易日高低（給卡片對照；進出場箱可另裁近端）
+    # 近端箱體可回退，但不可冒充當日 Fibonacci 區間。
     r.plan_box_clipped = False
 
     width = day_box.hi - day_box.lo
-    tag = f"今日高低{tw_day}·實寬{width:.2f}"
+    tag = f"交易日08:00起{tw_day}·實寬{width:.2f}"
     trade_box = day_box
     # 今日高低過寬（>2.2×目標）→ 進出場改近端目標箱，避免又變成六千點大箱
     if width > target * 2.2:
