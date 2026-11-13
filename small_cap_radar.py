@@ -143,6 +143,15 @@ def fetch_with_backoff(fetch_candles, symbol, *, attempts=4, sleep=time.sleep):
             sleep(delay)
 
 
+def is_untradable_contract_error(exc):
+    """Only skip explicit symbol-level futures trading restrictions."""
+    message = str(exc).lower()
+    return any(phrase in message for phrase in (
+        "this futures is not allowed to trade",
+        "futures is not allowed to trade",
+    ))
+
+
 def rank_candidates(tickers, fetch_candles, *, now_ms=None, limit=5, pool=60):
     eligible = []
     for t in tickers:
@@ -170,6 +179,9 @@ def rank_candidates(tickers, fetch_candles, *, now_ms=None, limit=5, pool=60):
             bars = fetch_with_backoff(fetch_candles, sym)
             candidate = score_candidate(sym, bars, qv, change, now_ms=now_ms)
         except RuntimeError as exc:
+            if is_untradable_contract_error(exc):
+                print(f"Radar skipped untradable contract {sym}: {exc}", flush=True)
+                continue
             print(f"Radar {sym}: API unavailable after retries: {exc}", flush=True)
             raise
         except (ValueError, TypeError, AttributeError, ZeroDivisionError) as exc:
