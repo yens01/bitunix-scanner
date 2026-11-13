@@ -1564,8 +1564,8 @@ def _plan_coin_block(r: ChecklistResult, *, html: bool = False) -> list[str]:
                 f"🎯 進{_px(entry)}  損{_px(stop)}  盈{_px(tp)}{rr}"
             )
 
-    span_lo = r.plan_day_lo if r.plan_day_lo > 0 else r.zone_lo
-    span_hi = r.plan_day_hi if r.plan_day_hi > r.plan_day_lo else r.zone_hi
+    span_lo = r.plan_day_lo
+    span_hi = r.plan_day_hi
     if span_hi > span_lo > 0:
         w = span_hi - span_lo
         p382 = span_hi - w * 0.382
@@ -1583,6 +1583,8 @@ def _plan_coin_block(r: ChecklistResult, *, html: bool = False) -> list[str]:
                 f"📐 Fibo  0.382={_px(p382)}  0.5={_px(p50)}  0.618={_px(p618)}"
             )
 
+    if not (span_hi > span_lo > 0):
+        lines.append("📐 Fibo 今日08:00起資料不足，暫不提供" if not html else "📐 Fibo 今日08:00起資料不足，暫不提供")
     lv15, lv4h = _fetch_plan_sr_levels(r.symbol)
     lines.extend(_format_sr_tf_block("15m 進出", lv15, html=html))
     lines.extend(_format_sr_tf_block(f"{htf} 戰場", lv4h, html=html))
