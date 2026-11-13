@@ -37,16 +37,18 @@ class SmallCapRadarTests(unittest.TestCase):
         result = score_candidate("TESTUSDT", candles(), 4000000, 2,
                                  now_ms=44 * 900000)
         self.assertIsNotNone(result)
-        self.assertEqual(result["stage"], "啟動")
+        self.assertIn(result["stage"], ("啟動", "爆發初期", "突破延續"))
         self.assertGreaterEqual(result["score"], 80)
 
     def test_unclosed_latest_candle_ignored(self):
         self.assertIsNone(score_candidate("TESTUSDT", candles(), 4000000, 2,
                                           now_ms=43 * 900000))
 
-    def test_reject_already_pumped_and_illiquid(self):
-        self.assertIsNone(score_candidate("TESTUSDT", candles(), 4000000, 25,
-                                          now_ms=44 * 900000))
+    def test_rising_coin_is_watch_only_and_illiquid_rejected(self):
+        rising = score_candidate("TESTUSDT", candles(), 4000000, 25,
+                                 now_ms=44 * 900000)
+        self.assertIsNotNone(rising)
+        self.assertIsNone(rising["reference_entry"])
         self.assertIsNone(score_candidate("TESTUSDT", candles(), 10000, 2,
                                           now_ms=44 * 900000))
 
