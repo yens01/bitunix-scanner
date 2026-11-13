@@ -1499,7 +1499,7 @@ def _plan_coin_block(r: ChecklistResult, *, html: bool = False) -> list[str]:
 
     status, levels = _intraday_level_status(r)
     lines.append(_esc(status) if html else status)
-    edges = _session_box_edge_levels(r) if levels else None
+    edges = None  # Legacy range edges are context only; not actionable intraday levels.
     if edges:
         _mid, le, ls, lt, se, ss, st = edges
         if html:
