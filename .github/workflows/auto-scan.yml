@@ -57,6 +57,7 @@ jobs:
           fi
 
       - name: Validate Python and regression tests
+        id: validation
         run: |
           python -m compileall -q signal_tracker.py risk_manager.py journal_analytics.py bitunix_scanner.py paper_trading.py paper_runner.py paper_auto.py paper_notify.py paper_status.py paper_performance.py paper_comparison.py
           python -m unittest discover -s tests -v
@@ -73,12 +74,14 @@ jobs:
           python -m json.tool paper_state.json >/dev/null
 
       - name: Paper trade simulation (no live orders)
+        id: paper
         env:
           PAPER_TRADING_ENABLED: ${{ vars.PAPER_TRADING_ENABLED || 'true' }}
           TRADING_KILL_SWITCH: ${{ vars.TRADING_KILL_SWITCH || 'false' }}
         run: python paper_auto.py
 
       - name: Run scan
+        id: market_scan
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -95,6 +98,7 @@ jobs:
         run: python bitunix_scanner.py watch-once --n 200
 
       - name: Small-cap breakout radar (read-only)
+        id: radar
         run: python small_cap_radar.py --output small_cap_radar.json
 
       - name: Show journal stats
@@ -117,6 +121,7 @@ jobs:
           key: state-v5-${{ github.run_id }}
 
       - name: Telegram paper open/close notifications
+        id: telegram_notify
         if: always()
         continue-on-error: true
         env:
@@ -139,7 +144,9 @@ jobs:
 
       # Never replace durable paper state with partial data from a failed scan.
       - name: Publish journal snapshot branch
-        if: success()
+        # Notification delivery is best-effort; durable state requires successful validation,
+        # paper simulation, market scan, and radar before publication.
+        if: ${{ success() && steps.validation.outcome == 'success' && steps.paper.outcome == 'success' && steps.market_scan.outcome == 'success' && steps.radar.outcome == 'success' }}
         run: |
           set -e
           mkdir -p /tmp/journal-pub/cloud
