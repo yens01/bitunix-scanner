@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-14T03:16:23.051143+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "UAIUSDT",
+      "score": 99,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.04178,
+      "volume_ratio": 6.85,
+      "breakout_pct": 0.63,
+      "range_width_pct": 9.0,
+      "change_24h_pct": 17.09,
+      "quote_volume_24h": 1585884.36952,
+      "resistance": 0.04152,
+      "candle_open_ms": 1794625200000
+    }
+  ]
+}
