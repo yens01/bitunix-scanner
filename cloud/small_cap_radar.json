@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-14T06:51:29.559708+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "AINUSDT",
+      "score": 91,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.11627,
+      "volume_ratio": 4.12,
+      "breakout_pct": 0.56,
+      "range_width_pct": 4.52,
+      "change_24h_pct": 8.52,
+      "quote_volume_24h": 837324.7197,
+      "resistance": 0.11562,
+      "candle_open_ms": 1794637800000
+    },
+    {
+      "symbol": "BZUSDT",
+      "score": 73,
+      "stage": "啟動",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 93.62,
+      "reference_stop": 93.32,
+      "reference_target": 94.22,
+      "reference_rr": 2,
+      "risk_pct": 0.32,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 93.62,
+      "volume_ratio": 1.91,
+      "breakout_pct": 0.0,
+      "range_width_pct": 0.35,
+      "change_24h_pct": -0.58,
+      "quote_volume_24h": 6749686.90025,
+      "resistance": 93.62,
+      "candle_open_ms": 1794637800000
+    }
+  ]
+}
