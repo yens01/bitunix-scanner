@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-14T08:26:28.420359+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "ARIAUSDT",
+      "score": 79,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.20752,
+      "volume_ratio": 3.48,
+      "breakout_pct": 1.34,
+      "range_width_pct": 5.93,
+      "change_24h_pct": -3.14,
+      "quote_volume_24h": 4997114.76688,
+      "resistance": 0.20478,
+      "candle_open_ms": 1794643200000
+    }
+  ]
+}
