@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-14T11:51:25.094185+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "ARIAUSDT",
+      "score": 82,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.2208,
+      "volume_ratio": 4.17,
+      "breakout_pct": 3.6,
+      "range_width_pct": 9.17,
+      "change_24h_pct": 10.59,
+      "quote_volume_24h": 4635811.70312,
+      "resistance": 0.21312,
+      "candle_open_ms": 1794655800000
+    },
+    {
+      "symbol": "XAUTUSDT",
+      "score": 64,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": 0.08,
+      "plan_note": "停損距離不合理或突破失敗，不提供進場計畫",
+      "last_closed_price": 3864.71,
+      "volume_ratio": 2.07,
+      "breakout_pct": -0.08,
+      "range_width_pct": 0.15,
+      "change_24h_pct": -0.4,
+      "quote_volume_24h": 13363821.34379,
+      "resistance": 3867.78,
+      "candle_open_ms": 1794655800000
+    }
+  ]
+}
