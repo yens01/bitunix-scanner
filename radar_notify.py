@@ -40,7 +40,7 @@ def format_alert(item):
         f"成交量：{item.get('volume_ratio', '—')} 倍\\n"
         f"24h 漲幅：{item.get('change_24h_pct', '—')}%\\n"
         "⚠️ 僅供觀察，不是即時成交價或買入指令；請勿追高。"
-    ).replace("\\\\n", "\\n")
+    ).replace(chr(92) + "n", chr(10))
 
 
 def send_telegram(message, token, chat):
