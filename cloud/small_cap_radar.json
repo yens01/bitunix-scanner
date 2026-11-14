@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-14T06:55:55.156668+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "BZUSDT",
+      "score": 73,
+      "stage": "啟動",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 93.62,
+      "reference_stop": 93.32,
+      "reference_target": 94.22,
+      "reference_rr": 2,
+      "risk_pct": 0.32,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 93.62,
+      "volume_ratio": 1.91,
+      "breakout_pct": 0.0,
+      "range_width_pct": 0.35,
+      "change_24h_pct": -0.47,
+      "quote_volume_24h": 6726500.48008,
+      "resistance": 93.62,
+      "candle_open_ms": 1794637800000
+    }
+  ]
+}
