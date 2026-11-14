@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-14T07:11:15.061678+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "PIEVERSEUSDT",
+      "score": 89,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 1.7675,
+      "volume_ratio": 13.89,
+      "breakout_pct": 1.12,
+      "range_width_pct": 7.27,
+      "change_24h_pct": 8.06,
+      "quote_volume_24h": 1117210.81,
+      "resistance": 1.7479,
+      "candle_open_ms": 1794638700000
+    }
+  ]
+}
