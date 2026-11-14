@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "source": "paper_state.events (simulated orders, not exchange fills)",
+  "assumptions": {
+    "starting_capital_usdt": 50.0,
+    "pnl": "estimated net after modelled costs; no live execution",
+    "unrealized_pnl": "estimated using last closed candle, not executable quote",
+    "drawdown": "closed-trade equity only; excludes intratrade excursions"
+  },
+  "day_utc": "2026-11-14",
+  "orders_today": 1,
+  "open_position": {
+    "signal_id": "37cf86179de4",
+    "symbol": "FETUSDT",
+    "side": "short",
+    "entry": 0.14815,
+    "stop": 0.14892014285714286,
+    "tp": 0.1469947857142857,
+    "quantity": 228.08702758288985,
+    "opened_at": "2026-11-14T00:00:50.535733+00:00",
+    "entry_bar_ms": 1794613500000
+  },
+  "mark": null,
+  "estimated_unrealized_pnl_usdt": null,
+  "estimated_marked_equity_usdt": null,
+  "unmatched_close_events": 0,
+  "duplicate_open_events": 0,
+  "duplicate_close_events": 0,
+  "unmatched_open_events": 1,
+  "overall": {
+    "closed_trades": 6,
+    "wins": 1,
+    "losses": 5,
+    "breakeven": 0,
+    "win_rate_pct": 16.67,
+    "estimated_net_pnl_usdt": -0.88039121,
+    "average_net_pnl_usdt": -0.14673187,
+    "average_win_usdt": 0.37073822,
+    "average_loss_usdt": -0.25022589,
+    "profit_factor": 0.2963,
+    "max_drawdown_usdt": 1.25112943,
+    "max_drawdown_pct": 2.4838,
+    "ending_equity_usdt": 49.11960879,
+    "equity_curve": [
+      {
+        "signal_id": "93c9aad04348",
+        "equity_usdt": 50.37073822
+      },
+      {
+        "signal_id": "5521c5e60341",
+        "equity_usdt": 50.12053747
+      },
+      {
+        "signal_id": "dbf661ed5c6e",
+        "equity_usdt": 49.87028883
+      },
+      {
+        "signal_id": "9515853ce6de",
+        "equity_usdt": 49.62008557
+      },
+      {
+        "signal_id": "412f4501fc89",
+        "equity_usdt": 49.3698207
+      },
+      {
+        "signal_id": "405c6d2dd4d2",
+        "equity_usdt": 49.11960879
+      }
+    ]
+  },
+  "groups": [
+    {
+      "dimension": "side",
+      "group": "short",
+      "closed_trades": 6,
+      "wins": 1,
+      "losses": 5,
+      "breakeven": 0,
+      "win_rate_pct": 16.67,
+      "estimated_net_pnl_usdt": -0.88039121,
+      "average_net_pnl_usdt": -0.14673187,
+      "average_win_usdt": 0.37073822,
+      "average_loss_usdt": -0.25022589,
+      "profit_factor": 0.2963
+    },
+    {
+      "dimension": "symbol",
+      "group": "DRAMUSDT",
+      "closed_trades": 1,
+      "wins": 0,
+      "losses": 1,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "estimated_net_pnl_usdt": -0.25024864,
+      "average_net_pnl_usdt": -0.25024864,
+      "average_win_usdt": null,
+      "average_loss_usdt": -0.25024864,
+      "profit_factor": 0.0
+    },
+    {
+      "dimension": "symbol",
+      "group": "HUMAUSDT",
+      "closed_trades": 1,
+      "wins": 0,
+      "losses": 1,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "estimated_net_pnl_usdt": -0.25021191,
+      "average_net_pnl_usdt": -0.25021191,
+      "average_win_usdt": null,
+      "average_loss_usdt": -0.25021191,
+      "profit_factor": 0.0
+    },
+    {
+      "dimension": "symbol",
+      "group": "ONEUSDT",
+      "closed_trades": 1,
+      "wins": 1,
+      "losses": 0,
+      "breakeven": 0,
+      "win_rate_pct": 100.0,
+      "estimated_net_pnl_usdt": 0.37073822,
+      "average_net_pnl_usdt": 0.37073822,
+      "average_win_usdt": 0.37073822,
+      "average_loss_usdt": null,
+      "profit_factor": null
+    },
+    {
+      "dimension": "symbol",
+      "group": "SOXSUSDT",
+      "closed_trades": 3,
+      "wins": 0,
+      "losses": 3,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "estimated_net_pnl_usdt": -0.75066888,
+      "average_net_pnl_usdt": -0.25022296,
+      "average_win_usdt": null,
+      "average_loss_usdt": -0.25022296,
+      "profit_factor": 0.0
+    }
+  ],
+  "trades": [
+    {
+      "signal_id": "93c9aad04348",
+      "symbol": "ONEUSDT",
+      "side": "short",
+      "opened_at": "2026-11-11T14:45:34.243466+00:00",
+      "closed_at": null,
+      "reason": "tp",
+      "estimated_net_pnl_usdt": 0.37073822
+    },
+    {
+      "signal_id": "5521c5e60341",
+      "symbol": "SOXSUSDT",
+      "side": "short",
+      "opened_at": "2026-11-11T15:00:54.025365+00:00",
+      "closed_at": null,
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.25020075
+    },
+    {
+      "signal_id": "dbf661ed5c6e",
+      "symbol": "DRAMUSDT",
+      "side": "short",
+      "opened_at": "2026-11-12T00:00:54.928077+00:00",
+      "closed_at": "2026-11-12T02:45:33.033137+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.25024864
+    },
+    {
+      "signal_id": "9515853ce6de",
+      "symbol": "SOXSUSDT",
+      "side": "short",
+      "opened_at": "2026-11-12T03:15:35.307158+00:00",
+      "closed_at": "2026-11-12T03:30:43.672140+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.25020326
+    },
+    {
+      "signal_id": "412f4501fc89",
+      "symbol": "SOXSUSDT",
+      "side": "short",
+      "opened_at": "2026-11-13T00:00:52.376606+00:00",
+      "closed_at": "2026-11-13T14:45:34.123131+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.25026487
+    },
+    {
+      "signal_id": "405c6d2dd4d2",
+      "symbol": "HUMAUSDT",
+      "side": "short",
+      "opened_at": "2026-11-13T15:45:36.502285+00:00",
+      "closed_at": "2026-11-13T16:00:51.479674+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.25021191
+    }
+  ]
+}
