@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-14T02:16:05.610759+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "TACUSDT",
+      "score": 89,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.001264,
+      "volume_ratio": 6.43,
+      "breakout_pct": 1.69,
+      "range_width_pct": 14.88,
+      "change_24h_pct": 39.04,
+      "quote_volume_24h": 1309731.121614,
+      "resistance": 0.001243,
+      "candle_open_ms": 1794621600000
+    }
+  ]
+}
