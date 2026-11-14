@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-14T07:31:25.655393+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "BZUSDT",
+      "score": 62,
+      "stage": "潛伏",
+      "entry_status": "等待回踩",
+      "entry_reason": "價格回測先前壓力；需再次確認支撐",
+      "reference_entry": 93.73,
+      "reference_stop": 93.37,
+      "reference_target": 94.45,
+      "reference_rr": 2,
+      "risk_pct": 0.38,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 93.69,
+      "volume_ratio": 1.93,
+      "breakout_pct": -0.04,
+      "range_width_pct": 0.47,
+      "change_24h_pct": -0.03,
+      "quote_volume_24h": 6521098.34491,
+      "resistance": 93.73,
+      "candle_open_ms": 1794640500000
+    },
+    {
+      "symbol": "ARIAUSDT",
+      "score": 60,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": 4.54,
+      "plan_note": "停損距離不合理或突破失敗，不提供進場計畫",
+      "last_closed_price": 0.20228,
+      "volume_ratio": 2.34,
+      "breakout_pct": -1.08,
+      "range_width_pct": 4.75,
+      "change_24h_pct": -7.38,
+      "quote_volume_24h": 5069298.60092,
+      "resistance": 0.20449,
+      "candle_open_ms": 1794640500000
+    }
+  ]
+}
