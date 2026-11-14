@@ -1,0 +1,1027 @@
+{
+  "day": "2026-11-14",
+  "orders_today": 2,
+  "realized_loss_today": 0.5004171796489972,
+  "position": null,
+  "events": [
+    {
+      "type": "open",
+      "signal_id": "93c9aad04348",
+      "symbol": "ONEUSDT",
+      "side": "short",
+      "entry": 0.0015594,
+      "stop": 0.0015729253571428571,
+      "tp": 0.0015308557142857144,
+      "quantity": 14744.011109064792,
+      "opened_at": "2026-11-11T14:45:34.243466+00:00"
+    },
+    {
+      "type": "close",
+      "signal_id": "93c9aad04348",
+      "reason": "tp",
+      "exit": 0.0015308557142857144,
+      "estimated_net_pnl_usdt": 0.37073822
+    },
+    {
+      "type": "open",
+      "signal_id": "5521c5e60341",
+      "symbol": "SOXSUSDT",
+      "side": "short",
+      "entry": 50.07,
+      "stop": 50.367842857142854,
+      "tp": 49.363485714285716,
+      "quantity": 0.6127498181008448,
+      "opened_at": "2026-11-11T15:00:54.025365+00:00"
+    },
+    {
+      "type": "close",
+      "signal_id": "5521c5e60341",
+      "symbol": "SOXSUSDT",
+      "side": "short",
+      "entry": 50.07,
+      "stop": 50.367842857142854,
+      "tp": 49.363485714285716,
+      "quantity": 0.6127498181008448,
+      "opened_at": "2026-11-11T15:00:54.025365+00:00",
+      "reason": "stop",
+      "exit": 50.367842857142854,
+      "estimated_net_pnl_usdt": -0.25020075
+    },
+    {
+      "type": "open",
+      "signal_id": "dbf661ed5c6e",
+      "symbol": "DRAMUSDT",
+      "side": "short",
+      "entry": 44.17,
+      "stop": 45.086642857142856,
+      "tp": 42.79503571428572,
+      "quantity": 0.24659286165802352,
+      "opened_at": "2026-11-12T00:00:54.928077+00:00"
+    },
+    {
+      "type": "close",
+      "signal_id": "dbf661ed5c6e",
+      "symbol": "DRAMUSDT",
+      "side": "short",
+      "entry": 44.17,
+      "stop": 45.086642857142856,
+      "tp": 42.79503571428572,
+      "quantity": 0.24659286165802352,
+      "opened_at": "2026-11-12T00:00:54.928077+00:00",
+      "closed_at": "2026-11-12T02:45:33.033137+00:00",
+      "reason": "stop",
+      "exit": 45.086642857142856,
+      "estimated_net_pnl_usdt": -0.25024864
+    },
+    {
+      "type": "open",
+      "signal_id": "9515853ce6de",
+      "symbol": "SOXSUSDT",
+      "side": "short",
+      "entry": 47.51,
+      "stop": 47.80611428571428,
+      "tp": 47.065828571428575,
+      "quantity": 0.6240073825422051,
+      "opened_at": "2026-11-12T03:15:35.307158+00:00",
+      "entry_bar_ms": 1794452400000
+    },
+    {
+      "type": "close",
+      "signal_id": "9515853ce6de",
+      "symbol": "SOXSUSDT",
+      "side": "short",
+      "entry": 47.51,
+      "stop": 47.80611428571428,
+      "tp": 47.065828571428575,
+      "quantity": 0.6240073825422051,
+      "opened_at": "2026-11-12T03:15:35.307158+00:00",
+      "entry_bar_ms": 1794452400000,
+      "closed_at": "2026-11-12T03:30:43.672140+00:00",
+      "reason": "stop",
+      "exit": 47.80611428571428,
+      "estimated_net_pnl_usdt": -0.25020326
+    },
+    {
+      "type": "open",
+      "signal_id": "412f4501fc89",
+      "symbol": "SOXSUSDT",
+      "side": "short",
+      "entry": 45.84,
+      "stop": 48.47810714285714,
+      "tp": 41.8828392857143,
+      "quantity": 0.09127568249957276,
+      "opened_at": "2026-11-13T00:00:52.376606+00:00",
+      "entry_bar_ms": 1794501000000
+    },
+    {
+      "type": "close",
+      "signal_id": "412f4501fc89",
+      "symbol": "SOXSUSDT",
+      "side": "short",
+      "entry": 45.84,
+      "stop": 48.47810714285714,
+      "tp": 41.8828392857143,
+      "quantity": 0.09127568249957276,
+      "opened_at": "2026-11-13T00:00:52.376606+00:00",
+      "entry_bar_ms": 1794501000000,
+      "closed_at": "2026-11-13T14:45:34.123131+00:00",
+      "reason": "stop",
+      "exit": 48.47810714285714,
+      "estimated_net_pnl_usdt": -0.25026487
+    },
+    {
+      "type": "open",
+      "signal_id": "405c6d2dd4d2",
+      "symbol": "HUMAUSDT",
+      "side": "short",
+      "entry": 0.008105000000000001,
+      "stop": 0.008164892857142857,
+      "tp": 0.007957285714285714,
+      "quantity": 3216.51561296685,
+      "opened_at": "2026-11-13T15:45:36.502285+00:00",
+      "entry_bar_ms": 1794583800000
+    },
+    {
+      "type": "close",
+      "signal_id": "405c6d2dd4d2",
+      "symbol": "HUMAUSDT",
+      "side": "short",
+      "entry": 0.008105000000000001,
+      "stop": 0.008164892857142857,
+      "tp": 0.007957285714285714,
+      "quantity": 3216.51561296685,
+      "opened_at": "2026-11-13T15:45:36.502285+00:00",
+      "entry_bar_ms": 1794583800000,
+      "closed_at": "2026-11-13T16:00:51.479674+00:00",
+      "reason": "stop",
+      "exit": 0.008164892857142857,
+      "estimated_net_pnl_usdt": -0.25021191
+    },
+    {
+      "type": "open",
+      "signal_id": "37cf86179de4",
+      "symbol": "FETUSDT",
+      "side": "short",
+      "entry": 0.14815,
+      "stop": 0.14892014285714286,
+      "tp": 0.1469947857142857,
+      "quantity": 228.08702758288985,
+      "opened_at": "2026-11-14T00:00:50.535733+00:00",
+      "entry_bar_ms": 1794613500000
+    },
+    {
+      "type": "close",
+      "signal_id": "37cf86179de4",
+      "symbol": "FETUSDT",
+      "side": "short",
+      "entry": 0.14815,
+      "stop": 0.14892014285714286,
+      "tp": 0.1469947857142857,
+      "quantity": 228.08702758288985,
+      "opened_at": "2026-11-14T00:00:50.535733+00:00",
+      "entry_bar_ms": 1794613500000,
+      "closed_at": "2026-11-14T00:15:44.853679+00:00",
+      "reason": "stop",
+      "exit": 0.14892014285714286,
+      "estimated_net_pnl_usdt": -0.25019323
+    },
+    {
+      "type": "open",
+      "signal_id": "60bd34497617",
+      "symbol": "UAIUSDT",
+      "side": "short",
+      "entry": 0.039705,
+      "stop": 0.040088235714285714,
+      "tp": 0.03860477142857143,
+      "quantity": 531.2517170814402,
+      "opened_at": "2026-11-14T03:15:34.019504+00:00",
+      "entry_bar_ms": 1794625200000
+    },
+    {
+      "type": "close",
+      "signal_id": "60bd34497617",
+      "symbol": "UAIUSDT",
+      "side": "short",
+      "entry": 0.039705,
+      "stop": 0.040088235714285714,
+      "tp": 0.03860477142857143,
+      "quantity": 531.2517170814402,
+      "opened_at": "2026-11-14T03:15:34.019504+00:00",
+      "entry_bar_ms": 1794625200000,
+      "closed_at": "2026-11-14T03:30:39.873685+00:00",
+      "reason": "stop",
+      "exit": 0.040088235714285714,
+      "estimated_net_pnl_usdt": -0.25022395
+    }
+  ],
+  "halted": false,
+  "entry_diagnostics": {
+    "scans": 785,
+    "counts": {
+      "retest_open": 9379,
+      "no_candle": 3894,
+      "unclosed_candle": 0,
+      "candle_before_signal": 408,
+      "entry_not_touched": 4614,
+      "opened": 6
+    },
+    "risk_rejected": {
+      "strategy/quality rejected": 156,
+      "daily order limit": 301
+    },
+    "unique_signals": {
+      "b2e3993771a9": {
+        "symbol": "AKEUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "9fee7eae8bc4": {
+        "symbol": "PIEVERSEUSDT",
+        "stage": "no_candle"
+      },
+      "27d6deffa0a3": {
+        "symbol": "UAIUSDT",
+        "stage": "no_candle"
+      },
+      "529e1fd94578": {
+        "symbol": "HUSDT",
+        "stage": "no_candle"
+      },
+      "efc4034f4a62": {
+        "symbol": "DASHUSDT",
+        "stage": "no_candle"
+      },
+      "28bb6eaf00c6": {
+        "symbol": "HUMAUSDT",
+        "stage": "no_candle"
+      },
+      "79307db35b7d": {
+        "symbol": "BRUSDT",
+        "stage": "no_candle"
+      },
+      "f2ed31e13681": {
+        "symbol": "PARTIUSDT",
+        "stage": "no_candle"
+      },
+      "8db932fad343": {
+        "symbol": "ARIAUSDT",
+        "stage": "no_candle"
+      },
+      "c9580136e7f0": {
+        "symbol": "ICNTUSDT",
+        "stage": "no_candle"
+      },
+      "a566136c8507": {
+        "symbol": "BIRBUSDT",
+        "stage": "no_candle"
+      },
+      "2cd04040aef2": {
+        "symbol": "EDGEXUSDT",
+        "stage": "no_candle"
+      },
+      "1f1fb5d87c4c": {
+        "symbol": "ZECUSDT",
+        "stage": "entry_not_touched"
+      },
+      "5c7114f0b44e": {
+        "symbol": "HUSDT",
+        "stage": "no_candle"
+      },
+      "48dbf091e206": {
+        "symbol": "ARIAUSDT",
+        "stage": "no_candle"
+      },
+      "6fa43d7ad8a2": {
+        "symbol": "CRVUSDT",
+        "stage": "no_candle"
+      },
+      "86330830d642": {
+        "symbol": "EVAAUSDT",
+        "stage": "no_candle"
+      },
+      "f8723b475930": {
+        "symbol": "RAYUSDT",
+        "stage": "no_candle"
+      },
+      "73dd95a4790d": {
+        "symbol": "GRASSUSDT",
+        "stage": "no_candle"
+      },
+      "303bef4f55a7": {
+        "symbol": "TTWOUSDT",
+        "stage": "no_candle"
+      },
+      "da78cc49a4ac": {
+        "symbol": "PIEVERSEUSDT",
+        "stage": "no_candle"
+      },
+      "18bcd8bcf549": {
+        "symbol": "1000PEPEUSDT",
+        "stage": "entry_not_touched"
+      },
+      "c428ec4cda98": {
+        "symbol": "AKEUSDT",
+        "stage": "entry_not_touched"
+      },
+      "4ea3e0960d65": {
+        "symbol": "UAIUSDT",
+        "stage": "no_candle"
+      },
+      "12829129b0c7": {
+        "symbol": "IRENUSDT",
+        "stage": "entry_not_touched"
+      },
+      "1b8a8d1d01d1": {
+        "symbol": "ICNTUSDT",
+        "stage": "entry_not_touched"
+      },
+      "33a2f5d610e7": {
+        "symbol": "HUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "b398644eaf6e": {
+        "symbol": "TQQQUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "d46184adfb05": {
+        "symbol": "SAMSUNGUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "dbf661ed5c6e": {
+        "symbol": "DRAMUSDT",
+        "stage": "opened",
+        "reason": "daily order limit"
+      },
+      "37e30bf2c28f": {
+        "symbol": "BLUAIUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "4dcc25738ce1": {
+        "symbol": "ZECUSDT",
+        "stage": "entry_not_touched"
+      },
+      "2d18baa1a21f": {
+        "symbol": "NBISUSDT",
+        "stage": "no_candle"
+      },
+      "9515853ce6de": {
+        "symbol": "SOXSUSDT",
+        "stage": "opened"
+      },
+      "851322ec534d": {
+        "symbol": "AINUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "24519d20c070": {
+        "symbol": "PIEVERSEUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "ca2500720dbd": {
+        "symbol": "AKEUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "4171b79f71e7": {
+        "symbol": "ONEUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "941e0af5e50b": {
+        "symbol": "ICNTUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "42d5bab8bfe1": {
+        "symbol": "HUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "e9aa8b4fd8ee": {
+        "symbol": "SPCXUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "b6597f4df15c": {
+        "symbol": "BTWUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "be75cb3c3019": {
+        "symbol": "ONUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "2a09cb89a4ae": {
+        "symbol": "AKEUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "33940595f087": {
+        "symbol": "NVDLUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "4a35055089fb": {
+        "symbol": "SPXUSDT",
+        "stage": "no_candle"
+      },
+      "87ba665ad855": {
+        "symbol": "AAOIUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "a68356f0d665": {
+        "symbol": "RENDERUSDT",
+        "stage": "no_candle"
+      },
+      "a33314ce4b7e": {
+        "symbol": "INITUSDT",
+        "stage": "no_candle"
+      },
+      "b22bf55efc13": {
+        "symbol": "ONUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "3e1feb7917ec": {
+        "symbol": "IDOLUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "ef7d5fc464e6": {
+        "symbol": "SNXXUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "87936a6d2257": {
+        "symbol": "AKEUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "857b053ce111": {
+        "symbol": "HUMAUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "af393fb5de66": {
+        "symbol": "GRASSUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "5c79bf956794": {
+        "symbol": "FARTCOINUSDT",
+        "stage": "no_candle"
+      },
+      "df1ffe8d1d5d": {
+        "symbol": "BTWUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "d5e569787518": {
+        "symbol": "USELESSUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "1661c9c6b42b": {
+        "symbol": "NVDAUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "33f14972074e": {
+        "symbol": "SUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "980190181944": {
+        "symbol": "XMRUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "c2f58bf20e05": {
+        "symbol": "PYTHUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "1e2a03e42b60": {
+        "symbol": "AINUSDT",
+        "stage": "no_candle"
+      },
+      "a4705e3f7b6d": {
+        "symbol": "UNIUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "44c80a067fa9": {
+        "symbol": "INITUSDT",
+        "stage": "entry_not_touched"
+      },
+      "032ca3404524": {
+        "symbol": "SNDKUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "a92b1326306b": {
+        "symbol": "BEUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "e4ad47fda336": {
+        "symbol": "1000PEPEUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "412f4501fc89": {
+        "symbol": "SOXSUSDT",
+        "stage": "opened",
+        "reason": "daily order limit"
+      },
+      "8745633f0d15": {
+        "symbol": "QNTUSDT",
+        "stage": "entry_not_touched"
+      },
+      "17c76b91c315": {
+        "symbol": "EIGENUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "8da8c782160a": {
+        "symbol": "HUMAUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "4d84ab0d2787": {
+        "symbol": "INJUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "7d480dcea412": {
+        "symbol": "ENAUSDT",
+        "stage": "entry_not_touched"
+      },
+      "6280365043e7": {
+        "symbol": "RENDERUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "007c90398c58": {
+        "symbol": "XMRUSDT",
+        "stage": "no_candle"
+      },
+      "85032cd8f55f": {
+        "symbol": "AKEUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "afe67bdfa515": {
+        "symbol": "BTWUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "a6883356a460": {
+        "symbol": "IRENUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "0719efc24def": {
+        "symbol": "NVDAUSDT",
+        "stage": "entry_not_touched"
+      },
+      "d4ee69455031": {
+        "symbol": "CYBERUSDT",
+        "stage": "no_candle"
+      },
+      "e002b70e32a3": {
+        "symbol": "HUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "3d41e3726d30": {
+        "symbol": "ZHIPUUSDT",
+        "stage": "no_candle"
+      },
+      "405c6d2dd4d2": {
+        "symbol": "HUMAUSDT",
+        "stage": "opened"
+      },
+      "7149b018c0e4": {
+        "symbol": "INITUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "d8d33e0dbeba": {
+        "symbol": "BATUSDT",
+        "stage": "no_candle"
+      },
+      "161f6c04b939": {
+        "symbol": "IMXUSDT",
+        "stage": "no_candle"
+      },
+      "61202871ff6b": {
+        "symbol": "ONEUSDT",
+        "stage": "no_candle"
+      },
+      "4d69d9e901a1": {
+        "symbol": "BMNRUSDT",
+        "stage": "no_candle"
+      },
+      "d441c527d5f8": {
+        "symbol": "PUMPFUNUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "419890b58334": {
+        "symbol": "TIAUSDT",
+        "stage": "no_candle"
+      },
+      "e86d1fb6ebd2": {
+        "symbol": "NEARUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "8df2dfdfa691": {
+        "symbol": "MSTRUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "7e596af3dcc2": {
+        "symbol": "FETUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "b66d99771e53": {
+        "symbol": "AINUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "7b73c0c10ff8": {
+        "symbol": "VVVUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "2e24ffe46bc2": {
+        "symbol": "PONSUSDT",
+        "stage": "no_candle"
+      },
+      "83a4b9c05f38": {
+        "symbol": "HOODUSDT",
+        "stage": "no_candle"
+      },
+      "f0eb73dc9012": {
+        "symbol": "USELESSUSDT",
+        "stage": "entry_not_touched"
+      },
+      "20ea1461dadb": {
+        "symbol": "ZECUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "b0a391dc45b0": {
+        "symbol": "JCTUSDT",
+        "stage": "rejected",
+        "reason": "daily order limit"
+      },
+      "60bd34497617": {
+        "symbol": "UAIUSDT",
+        "stage": "opened"
+      },
+      "ca9e993afa16": {
+        "symbol": "ZHIPUUSDT",
+        "stage": "no_candle"
+      },
+      "ec0c312a7d71": {
+        "symbol": "NBISUSDT",
+        "stage": "no_candle"
+      },
+      "06bae8e8e927": {
+        "symbol": "INTWUSDT",
+        "stage": "no_candle"
+      },
+      "8e0a4ba49bc2": {
+        "symbol": "INITUSDT",
+        "stage": "entry_not_touched"
+      },
+      "c143c1559a3e": {
+        "symbol": "IRENUSDT",
+        "stage": "no_candle"
+      },
+      "4077e0ef1cb6": {
+        "symbol": "ZECUSDT",
+        "stage": "entry_not_touched"
+      },
+      "37cf86179de4": {
+        "symbol": "FETUSDT",
+        "stage": "opened"
+      },
+      "a22c41b0f131": {
+        "symbol": "ERAUSDT",
+        "stage": "waiting_candle"
+      },
+      "1aef8c6b1a41": {
+        "symbol": "KORUUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "e449e91a6cca": {
+        "symbol": "XPLUSDT",
+        "stage": "no_candle"
+      },
+      "a7740d6d485e": {
+        "symbol": "JCTUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "d15ba4ea9368": {
+        "symbol": "OPUSDT",
+        "stage": "entry_not_touched"
+      },
+      "6cbd53415332": {
+        "symbol": "BTWUSDT",
+        "stage": "entry_not_touched"
+      },
+      "d8de6199ab18": {
+        "symbol": "VVVUSDT",
+        "stage": "entry_not_touched"
+      },
+      "a72d2eaf8cde": {
+        "symbol": "MUUUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "f03e25909b71": {
+        "symbol": "ERAUSDT",
+        "stage": "entry_not_touched"
+      },
+      "20557e0ab0d8": {
+        "symbol": "ZECUSDT",
+        "stage": "entry_not_touched"
+      },
+      "62ae641649fe": {
+        "symbol": "DASHUSDT",
+        "stage": "rejected",
+        "reason": "strategy/quality rejected"
+      },
+      "f166c6d42474": {
+        "symbol": "EIGENUSDT",
+        "stage": "entry_not_touched"
+      },
+      "8bf67798b527": {
+        "symbol": "CAPUSDT",
+        "stage": "entry_not_touched"
+      },
+      "fea7bf4c9ca0": {
+        "symbol": "BERAUSDT",
+        "stage": "entry_not_touched"
+      },
+      "309a8e49f249": {
+        "symbol": "INITUSDT",
+        "stage": "entry_not_touched"
+      },
+      "8ed99c09c918": {
+        "symbol": "ONEUSDT",
+        "stage": "entry_not_touched"
+      },
+      "2ffc157e5ff7": {
+        "symbol": "UAIUSDT",
+        "stage": "entry_not_touched"
+      },
+      "b8120649f31d": {
+        "symbol": "USELESSUSDT",
+        "stage": "entry_not_touched"
+      },
+      "c8071e0d8283": {
+        "symbol": "NIULAIUSDT",
+        "stage": "waiting_candle"
+      }
+    }
+  },
+  "last_processed_bar_ms": {
+    "DRAMUSDT": 1794450600000,
+    "SOXSUSDT": 1794580200000,
+    "HUMAUSDT": 1794584700000,
+    "FETUSDT": 1794614400000,
+    "UAIUSDT": 1794626100000
+  },
+  "notification_outbox": [
+    {
+      "id": "paper_open:dbf661ed5c6e:2026-11-12T00:00:54.928077+00:00",
+      "event": {
+        "type": "paper_open",
+        "signal_id": "dbf661ed5c6e",
+        "symbol": "DRAMUSDT",
+        "side": "short",
+        "entry": 44.17,
+        "stop": 45.086642857142856,
+        "tp": 42.79503571428572,
+        "quantity": 0.24659286165802352,
+        "opened_at": "2026-11-12T00:00:54.928077+00:00"
+      },
+      "sent": true
+    },
+    {
+      "id": "close:dbf661ed5c6e:2026-11-12T00:00:54.928077+00:00",
+      "event": {
+        "type": "close",
+        "signal_id": "dbf661ed5c6e",
+        "symbol": "DRAMUSDT",
+        "side": "short",
+        "entry": 44.17,
+        "stop": 45.086642857142856,
+        "tp": 42.79503571428572,
+        "quantity": 0.24659286165802352,
+        "opened_at": "2026-11-12T00:00:54.928077+00:00",
+        "closed_at": "2026-11-12T02:45:33.033137+00:00",
+        "reason": "stop",
+        "exit": 45.086642857142856,
+        "estimated_net_pnl_usdt": -0.25024864
+      },
+      "sent": true
+    },
+    {
+      "id": "paper_open:9515853ce6de:2026-11-12T03:15:35.307158+00:00",
+      "event": {
+        "type": "paper_open",
+        "signal_id": "9515853ce6de",
+        "symbol": "SOXSUSDT",
+        "side": "short",
+        "entry": 47.51,
+        "stop": 47.80611428571428,
+        "tp": 47.065828571428575,
+        "quantity": 0.6240073825422051,
+        "opened_at": "2026-11-12T03:15:35.307158+00:00",
+        "entry_bar_ms": 1794452400000
+      },
+      "sent": true
+    },
+    {
+      "id": "close:9515853ce6de:2026-11-12T03:15:35.307158+00:00",
+      "event": {
+        "type": "close",
+        "signal_id": "9515853ce6de",
+        "symbol": "SOXSUSDT",
+        "side": "short",
+        "entry": 47.51,
+        "stop": 47.80611428571428,
+        "tp": 47.065828571428575,
+        "quantity": 0.6240073825422051,
+        "opened_at": "2026-11-12T03:15:35.307158+00:00",
+        "entry_bar_ms": 1794452400000,
+        "closed_at": "2026-11-12T03:30:43.672140+00:00",
+        "reason": "stop",
+        "exit": 47.80611428571428,
+        "estimated_net_pnl_usdt": -0.25020326
+      },
+      "sent": true
+    },
+    {
+      "id": "paper_open:412f4501fc89:2026-11-13T00:00:52.376606+00:00",
+      "event": {
+        "type": "paper_open",
+        "signal_id": "412f4501fc89",
+        "symbol": "SOXSUSDT",
+        "side": "short",
+        "entry": 45.84,
+        "stop": 48.47810714285714,
+        "tp": 41.8828392857143,
+        "quantity": 0.09127568249957276,
+        "opened_at": "2026-11-13T00:00:52.376606+00:00",
+        "entry_bar_ms": 1794501000000
+      },
+      "sent": true
+    },
+    {
+      "id": "close:412f4501fc89:2026-11-13T00:00:52.376606+00:00",
+      "event": {
+        "type": "close",
+        "signal_id": "412f4501fc89",
+        "symbol": "SOXSUSDT",
+        "side": "short",
+        "entry": 45.84,
+        "stop": 48.47810714285714,
+        "tp": 41.8828392857143,
+        "quantity": 0.09127568249957276,
+        "opened_at": "2026-11-13T00:00:52.376606+00:00",
+        "entry_bar_ms": 1794501000000,
+        "closed_at": "2026-11-13T14:45:34.123131+00:00",
+        "reason": "stop",
+        "exit": 48.47810714285714,
+        "estimated_net_pnl_usdt": -0.25026487
+      },
+      "sent": true
+    },
+    {
+      "id": "paper_open:405c6d2dd4d2:2026-11-13T15:45:36.502285+00:00",
+      "event": {
+        "type": "paper_open",
+        "signal_id": "405c6d2dd4d2",
+        "symbol": "HUMAUSDT",
+        "side": "short",
+        "entry": 0.008105000000000001,
+        "stop": 0.008164892857142857,
+        "tp": 0.007957285714285714,
+        "quantity": 3216.51561296685,
+        "opened_at": "2026-11-13T15:45:36.502285+00:00",
+        "entry_bar_ms": 1794583800000
+      },
+      "sent": true
+    },
+    {
+      "id": "close:405c6d2dd4d2:2026-11-13T15:45:36.502285+00:00",
+      "event": {
+        "type": "close",
+        "signal_id": "405c6d2dd4d2",
+        "symbol": "HUMAUSDT",
+        "side": "short",
+        "entry": 0.008105000000000001,
+        "stop": 0.008164892857142857,
+        "tp": 0.007957285714285714,
+        "quantity": 3216.51561296685,
+        "opened_at": "2026-11-13T15:45:36.502285+00:00",
+        "entry_bar_ms": 1794583800000,
+        "closed_at": "2026-11-13T16:00:51.479674+00:00",
+        "reason": "stop",
+        "exit": 0.008164892857142857,
+        "estimated_net_pnl_usdt": -0.25021191
+      },
+      "sent": true
+    },
+    {
+      "id": "paper_open:37cf86179de4:2026-11-14T00:00:50.535733+00:00",
+      "event": {
+        "type": "paper_open",
+        "signal_id": "37cf86179de4",
+        "symbol": "FETUSDT",
+        "side": "short",
+        "entry": 0.14815,
+        "stop": 0.14892014285714286,
+        "tp": 0.1469947857142857,
+        "quantity": 228.08702758288985,
+        "opened_at": "2026-11-14T00:00:50.535733+00:00",
+        "entry_bar_ms": 1794613500000
+      },
+      "sent": true
+    },
+    {
+      "id": "close:37cf86179de4:2026-11-14T00:00:50.535733+00:00",
+      "event": {
+        "type": "close",
+        "signal_id": "37cf86179de4",
+        "symbol": "FETUSDT",
+        "side": "short",
+        "entry": 0.14815,
+        "stop": 0.14892014285714286,
+        "tp": 0.1469947857142857,
+        "quantity": 228.08702758288985,
+        "opened_at": "2026-11-14T00:00:50.535733+00:00",
+        "entry_bar_ms": 1794613500000,
+        "closed_at": "2026-11-14T00:15:44.853679+00:00",
+        "reason": "stop",
+        "exit": 0.14892014285714286,
+        "estimated_net_pnl_usdt": -0.25019323
+      },
+      "sent": true
+    },
+    {
+      "id": "paper_open:60bd34497617:2026-11-14T03:15:34.019504+00:00",
+      "event": {
+        "type": "paper_open",
+        "signal_id": "60bd34497617",
+        "symbol": "UAIUSDT",
+        "side": "short",
+        "entry": 0.039705,
+        "stop": 0.040088235714285714,
+        "tp": 0.03860477142857143,
+        "quantity": 531.2517170814402,
+        "opened_at": "2026-11-14T03:15:34.019504+00:00",
+        "entry_bar_ms": 1794625200000
+      },
+      "sent": true
+    },
+    {
+      "id": "close:60bd34497617:2026-11-14T03:15:34.019504+00:00",
+      "event": {
+        "type": "close",
+        "signal_id": "60bd34497617",
+        "symbol": "UAIUSDT",
+        "side": "short",
+        "entry": 0.039705,
+        "stop": 0.040088235714285714,
+        "tp": 0.03860477142857143,
+        "quantity": 531.2517170814402,
+        "opened_at": "2026-11-14T03:15:34.019504+00:00",
+        "entry_bar_ms": 1794625200000,
+        "closed_at": "2026-11-14T03:30:39.873685+00:00",
+        "reason": "stop",
+        "exit": 0.040088235714285714,
+        "estimated_net_pnl_usdt": -0.25022395
+      },
+      "sent": true
+    }
+  ],
+  "realized_net_today": -0.5004171796489972
+}
