@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-14T06:26:14.884196+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "PIEVERSEUSDT",
+      "score": 99,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 1.7958,
+      "volume_ratio": 13.89,
+      "breakout_pct": 2.74,
+      "range_width_pct": 7.27,
+      "change_24h_pct": 8.61,
+      "quote_volume_24h": 1322439.9509,
+      "resistance": 1.7479,
+      "candle_open_ms": 1794636000000
+    },
+    {
+      "symbol": "JCTUSDT",
+      "score": 69,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": 4.76,
+      "plan_note": "停損距離不合理或突破失敗，不提供進場計畫",
+      "last_closed_price": 0.002065,
+      "volume_ratio": 1.8,
+      "breakout_pct": -0.82,
+      "range_width_pct": 6.22,
+      "change_24h_pct": 3.86,
+      "quote_volume_24h": 6489753.137487,
+      "resistance": 0.002082,
+      "candle_open_ms": 1794636000000
+    }
+  ]
+}
