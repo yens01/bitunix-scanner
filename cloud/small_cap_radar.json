@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-14T17:01:31.083915+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "CLUSDT",
+      "score": 81,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 87.5,
+      "reference_stop": 86.75,
+      "reference_target": 89.0,
+      "reference_rr": 2,
+      "risk_pct": 0.86,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 86.99,
+      "volume_ratio": 8.81,
+      "breakout_pct": -0.58,
+      "range_width_pct": 0.62,
+      "change_24h_pct": -0.26,
+      "quote_volume_24h": 6937125.221,
+      "resistance": 87.5,
+      "candle_open_ms": 1794674700000
+    },
+    {
+      "symbol": "SOXSUSDT",
+      "score": 80,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 54.1,
+      "volume_ratio": 3.69,
+      "breakout_pct": 0.9,
+      "range_width_pct": 1.8,
+      "change_24h_pct": 2.56,
+      "quote_volume_24h": 10772728.5625,
+      "resistance": 53.62,
+      "candle_open_ms": 1794674700000
+    }
+  ]
+}
