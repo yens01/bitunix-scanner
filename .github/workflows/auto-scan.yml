@@ -73,6 +73,15 @@ jobs:
           fi
           python -m json.tool paper_state.json >/dev/null
 
+      - name: Restore small-cap alert history
+        run: |
+          if git cat-file -e FETCH_HEAD:cloud/radar_alert_state.json 2>/dev/null; then
+            git show FETCH_HEAD:cloud/radar_alert_state.json > radar_alert_state.json
+          fi
+          if git cat-file -e FETCH_HEAD:cloud/small_cap_radar.json 2>/dev/null; then
+            git show FETCH_HEAD:cloud/small_cap_radar.json > previous_small_cap_radar.json
+          fi
+
       - name: Paper trade simulation (no live orders)
         id: paper
         env:
@@ -100,6 +109,15 @@ jobs:
       - name: Small-cap breakout radar (read-only)
         id: radar
         run: python small_cap_radar.py --output small_cap_radar.json
+
+      - name: Telegram small-cap breakout push
+        id: radar_push
+        if: ${{ steps.radar.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python radar_notify.py
 
       - name: Show journal stats
         if: always()
@@ -155,6 +173,7 @@ jobs:
           if [ -f journal_analytics.json ]; then cp journal_analytics.json /tmp/journal-pub/cloud/journal_analytics.json; fi
           cp paper_state.json /tmp/journal-pub/cloud/paper_state.json
           if [ -f small_cap_radar.json ]; then cp small_cap_radar.json /tmp/journal-pub/cloud/small_cap_radar.json; fi
+          if [ -f radar_alert_state.json ]; then cp radar_alert_state.json /tmp/journal-pub/cloud/radar_alert_state.json; fi
           if [ -f quality_calibration.json ]; then cp quality_calibration.json /tmp/journal-pub/cloud/quality_calibration.json; fi
           if [ -f paper_performance.json ]; then cp paper_performance.json /tmp/journal-pub/cloud/paper_performance.json; fi
           cd /tmp/journal-pub
@@ -166,6 +185,7 @@ jobs:
           if [ -f cloud/journal_analytics.json ]; then git add cloud/journal_analytics.json; fi
           if [ -f cloud/paper_performance.json ]; then git add cloud/paper_performance.json; fi
           if [ -f cloud/small_cap_radar.json ]; then git add cloud/small_cap_radar.json; fi
+          if [ -f cloud/radar_alert_state.json ]; then git add cloud/radar_alert_state.json; fi
           if [ -f cloud/quality_calibration.json ]; then git add cloud/quality_calibration.json; fi
           git commit -m "chore: sync cloud journal $(date -u +%Y-%m-%dT%H:%MZ)"
           git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
