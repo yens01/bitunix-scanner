@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-14T14:36:14.888004+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "SNDKUSDT",
+      "score": 74,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 866.83,
+      "reference_stop": 857.87,
+      "reference_target": 884.75,
+      "reference_rr": 2,
+      "risk_pct": 1.03,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 861.19,
+      "volume_ratio": 7.96,
+      "breakout_pct": -0.65,
+      "range_width_pct": 0.9,
+      "change_24h_pct": -7.04,
+      "quote_volume_24h": 58553822.2721,
+      "resistance": 866.83,
+      "candle_open_ms": 1794665700000
+    }
+  ]
+}
