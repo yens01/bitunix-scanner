@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-15T21:56:03.013643+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "NVDAUSDT",
+      "score": 67,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 166.28,
+      "reference_stop": 164.02,
+      "reference_target": 170.8,
+      "reference_rr": 2,
+      "risk_pct": 1.36,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 165.66,
+      "volume_ratio": 1.67,
+      "breakout_pct": -0.37,
+      "range_width_pct": 4.09,
+      "change_24h_pct": 3.43,
+      "quote_volume_24h": 13693437.0505,
+      "resistance": 166.28,
+      "candle_open_ms": 1794778200000
+    }
+  ]
+}
