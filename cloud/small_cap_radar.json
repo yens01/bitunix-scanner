@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-15T08:40:57.950637+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "BLESSUSDT",
+      "score": 94,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.009378,
+      "volume_ratio": 4.82,
+      "breakout_pct": 1.01,
+      "range_width_pct": 8.12,
+      "change_24h_pct": 11.61,
+      "quote_volume_24h": 1558567.843019,
+      "resistance": 0.009284,
+      "candle_open_ms": 1794730500000
+    },
+    {
+      "symbol": "XAUUSDT",
+      "score": 61,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 3848.54,
+      "reference_stop": 3830.86,
+      "reference_target": 3883.9,
+      "reference_rr": 2,
+      "risk_pct": 0.46,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 3838.58,
+      "volume_ratio": 1.82,
+      "breakout_pct": -0.26,
+      "range_width_pct": 0.58,
+      "change_24h_pct": -1.29,
+      "quote_volume_24h": 31602958.71491,
+      "resistance": 3848.54,
+      "candle_open_ms": 1794730500000
+    }
+  ]
+}
