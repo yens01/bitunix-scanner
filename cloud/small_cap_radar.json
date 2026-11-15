@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-15T06:21:23.186597+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "STRCUSDT",
+      "score": 77,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 99.05,
+      "reference_stop": 98.32,
+      "reference_target": 100.51,
+      "reference_rr": 2,
+      "risk_pct": 0.74,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 98.34,
+      "volume_ratio": 3.2,
+      "breakout_pct": -0.72,
+      "range_width_pct": 1.78,
+      "change_24h_pct": -1.53,
+      "quote_volume_24h": 9614270.4199,
+      "resistance": 99.05,
+      "candle_open_ms": 1794722400000
+    }
+  ]
+}
