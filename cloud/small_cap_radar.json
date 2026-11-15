@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-15T07:31:45.864750+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "MEGAUSDT",
+      "score": 83,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.04911,
+      "volume_ratio": 2.0,
+      "breakout_pct": 0.82,
+      "range_width_pct": 11.03,
+      "change_24h_pct": 8.95,
+      "quote_volume_24h": 976713.62674,
+      "resistance": 0.04871,
+      "candle_open_ms": 1794726900000
+    },
+    {
+      "symbol": "XAUTUSDT",
+      "score": 66,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 3836.36,
+      "reference_stop": 3808.19,
+      "reference_target": 3892.7,
+      "reference_rr": 2,
+      "risk_pct": 0.73,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 3822.57,
+      "volume_ratio": 2.24,
+      "breakout_pct": -0.36,
+      "range_width_pct": 0.74,
+      "change_24h_pct": -1.08,
+      "quote_volume_24h": 11716657.98568,
+      "resistance": 3836.36,
+      "candle_open_ms": 1794726900000
+    }
+  ]
+}
