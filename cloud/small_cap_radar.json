@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-15T18:11:19.281392+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "SHELLUSDT",
+      "score": 99,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.03126,
+      "volume_ratio": 26.05,
+      "breakout_pct": 13.76,
+      "range_width_pct": 13.18,
+      "change_24h_pct": 20.17,
+      "quote_volume_24h": 2191077.32721,
+      "resistance": 0.02748,
+      "candle_open_ms": 1794764700000
+    },
+    {
+      "symbol": "MUUSDT",
+      "score": 66,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 765.14,
+      "reference_stop": 755.96,
+      "reference_target": 783.5,
+      "reference_rr": 2,
+      "risk_pct": 1.2,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 758.76,
+      "volume_ratio": 1.55,
+      "breakout_pct": -0.83,
+      "range_width_pct": 1.59,
+      "change_24h_pct": 0.12,
+      "quote_volume_24h": 5879220.684,
+      "resistance": 765.14,
+      "candle_open_ms": 1794764700000
+    }
+  ]
+}
