@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-15T21:16:23.043951+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "ASTERUSDT",
+      "score": 89,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.6186,
+      "volume_ratio": 102.82,
+      "breakout_pct": 11.98,
+      "range_width_pct": 5.38,
+      "change_24h_pct": 9.61,
+      "quote_volume_24h": 12333013.8588,
+      "resistance": 0.5524,
+      "candle_open_ms": 1794776400000
+    },
+    {
+      "symbol": "PIEVERSEUSDT",
+      "score": 71,
+      "stage": "啟動",
+      "entry_status": "突破確認",
+      "entry_reason": "最新15m收盤站上前20根高點；仍需觀察能否守穩",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": 6.53,
+      "plan_note": "停損距離不合理或突破失敗，不提供進場計畫",
+      "last_closed_price": 1.8789,
+      "volume_ratio": 2.06,
+      "breakout_pct": 0.63,
+      "range_width_pct": 7.91,
+      "change_24h_pct": 5.42,
+      "quote_volume_24h": 2927788.5864,
+      "resistance": 1.8672,
+      "candle_open_ms": 1794776400000
+    }
+  ]
+}
