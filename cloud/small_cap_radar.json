@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-15T00:21:11.778694+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "ZECUSDT",
+      "score": 66,
+      "stage": "啟動",
+      "entry_status": "突破確認",
+      "entry_reason": "最新15m收盤站上前20根高點；仍需觀察能否守穩",
+      "reference_entry": 864.85,
+      "reference_stop": 832.23,
+      "reference_target": 930.09,
+      "reference_rr": 2,
+      "risk_pct": 3.77,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 868.55,
+      "volume_ratio": 1.94,
+      "breakout_pct": 0.43,
+      "range_width_pct": 7.97,
+      "change_24h_pct": -7.99,
+      "quote_volume_24h": 97358770.53521,
+      "resistance": 864.85,
+      "candle_open_ms": 1794700800000
+    }
+  ]
+}
