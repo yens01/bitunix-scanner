@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-15T03:41:18.637270+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "ZECUSDT",
+      "score": 75,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 905.95,
+      "volume_ratio": 2.4,
+      "breakout_pct": 2.09,
+      "range_width_pct": 10.79,
+      "change_24h_pct": -0.91,
+      "quote_volume_24h": 109339659.44097,
+      "resistance": 887.43,
+      "candle_open_ms": 1794712500000
+    },
+    {
+      "symbol": "STRCUSDT",
+      "score": 65,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 99.05,
+      "reference_stop": 98.25,
+      "reference_target": 100.65,
+      "reference_rr": 2,
+      "risk_pct": 0.81,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 98.84,
+      "volume_ratio": 2.2,
+      "breakout_pct": -0.21,
+      "range_width_pct": 1.78,
+      "change_24h_pct": -0.86,
+      "quote_volume_24h": 8993957.2047,
+      "resistance": 99.05,
+      "candle_open_ms": 1794712500000
+    }
+  ]
+}
