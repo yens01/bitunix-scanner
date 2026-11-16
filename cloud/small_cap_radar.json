@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-16T23:41:24.856352+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "LIGHTERUSDT",
+      "score": 77,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 2.9826,
+      "volume_ratio": 3.05,
+      "breakout_pct": 5.51,
+      "range_width_pct": 12.72,
+      "change_24h_pct": 3.56,
+      "quote_volume_24h": 8702972.02552,
+      "resistance": 2.8268,
+      "candle_open_ms": 1794870900000
+    }
+  ]
+}
