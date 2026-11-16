@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-16T03:56:24.742691+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "SHELLUSDT",
+      "score": 73,
+      "stage": "啟動",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 0.02908,
+      "reference_stop": 0.0283,
+      "reference_target": 0.03064,
+      "reference_rr": 2,
+      "risk_pct": 2.68,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 0.02908,
+      "volume_ratio": 4.39,
+      "breakout_pct": 0.0,
+      "range_width_pct": 9.45,
+      "change_24h_pct": -5.29,
+      "quote_volume_24h": 2386251.45312,
+      "resistance": 0.02908,
+      "candle_open_ms": 1794799800000
+    }
+  ]
+}
