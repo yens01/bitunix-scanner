@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-16T16:52:04.565974+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "ICPUSDT",
+      "score": 78,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 2.462,
+      "volume_ratio": 3.16,
+      "breakout_pct": 0.94,
+      "range_width_pct": 10.96,
+      "change_24h_pct": 13.98,
+      "quote_volume_24h": 1746698.361,
+      "resistance": 2.439,
+      "candle_open_ms": 1794846600000
+    }
+  ]
+}
