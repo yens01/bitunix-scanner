@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-16T18:55:58.942143+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "CROSSUSDT",
+      "score": 84,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.14131,
+      "volume_ratio": 2.34,
+      "breakout_pct": 4.2,
+      "range_width_pct": 11.87,
+      "change_24h_pct": 29.59,
+      "quote_volume_24h": 1299688.36777,
+      "resistance": 0.13561,
+      "candle_open_ms": 1794853800000
+    },
+    {
+      "symbol": "SPYUSDT",
+      "score": 72,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 751.23,
+      "reference_stop": 739.93,
+      "reference_target": 773.83,
+      "reference_rr": 2,
+      "risk_pct": 1.5,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 741.06,
+      "volume_ratio": 2.78,
+      "breakout_pct": -1.35,
+      "range_width_pct": 1.29,
+      "change_24h_pct": -0.95,
+      "quote_volume_24h": 6637008.5908,
+      "resistance": 751.23,
+      "candle_open_ms": 1794853800000
+    }
+  ]
+}
