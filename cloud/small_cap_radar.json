@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-16T13:16:05.382017+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "ASTERUSDT",
+      "score": 70,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 0.5505,
+      "reference_stop": 0.5348,
+      "reference_target": 0.5819,
+      "reference_rr": 2,
+      "risk_pct": 2.85,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 0.5461,
+      "volume_ratio": 1.91,
+      "breakout_pct": -0.8,
+      "range_width_pct": 2.94,
+      "change_24h_pct": 3.89,
+      "quote_volume_24h": 18672317.2224,
+      "resistance": 0.5505,
+      "candle_open_ms": 1794834000000
+    },
+    {
+      "symbol": "XAGUSDT",
+      "score": 67,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 47.92,
+      "reference_stop": 47.51,
+      "reference_target": 48.74,
+      "reference_rr": 2,
+      "risk_pct": 0.86,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 47.55,
+      "volume_ratio": 2.35,
+      "breakout_pct": -0.77,
+      "range_width_pct": 1.25,
+      "change_24h_pct": -0.56,
+      "quote_volume_24h": 28046450.93279,
+      "resistance": 47.92,
+      "candle_open_ms": 1794834000000
+    }
+  ]
+}
