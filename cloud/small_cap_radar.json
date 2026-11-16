@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-16T02:31:13.118248+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "XMRUSDT",
+      "score": 85,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 500.63,
+      "reference_stop": 492.4,
+      "reference_target": 517.09,
+      "reference_rr": 2,
+      "risk_pct": 1.64,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 500.32,
+      "volume_ratio": 4.39,
+      "breakout_pct": -0.06,
+      "range_width_pct": 1.67,
+      "change_24h_pct": 3.8,
+      "quote_volume_24h": 2389674.67824,
+      "resistance": 500.63,
+      "candle_open_ms": 1794795300000
+    },
+    {
+      "symbol": "MSTRUSDT",
+      "score": 84,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 104.4,
+      "volume_ratio": 2.2,
+      "breakout_pct": 0.53,
+      "range_width_pct": 5.15,
+      "change_24h_pct": 4.22,
+      "quote_volume_24h": 10854706.2852,
+      "resistance": 103.85,
+      "candle_open_ms": 1794795300000
+    }
+  ]
+}
