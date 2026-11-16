@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-16T18:31:16.958212+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "SPYUSDT",
+      "score": 81,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 751.34,
+      "reference_stop": 741.63,
+      "reference_target": 770.76,
+      "reference_rr": 2,
+      "risk_pct": 1.29,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 741.77,
+      "volume_ratio": 8.66,
+      "breakout_pct": -1.27,
+      "range_width_pct": 1.08,
+      "change_24h_pct": -1.12,
+      "quote_volume_24h": 6425895.7232,
+      "resistance": 751.34,
+      "candle_open_ms": 1794852900000
+    }
+  ]
+}
