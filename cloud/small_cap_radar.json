@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-16T21:16:08.837106+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "MSTRUSDT",
+      "score": 82,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 104.48,
+      "reference_stop": 102.59,
+      "reference_target": 108.26,
+      "reference_rr": 2,
+      "risk_pct": 1.81,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 103.04,
+      "volume_ratio": 2.94,
+      "breakout_pct": -1.38,
+      "range_width_pct": 1.81,
+      "change_24h_pct": 2.38,
+      "quote_volume_24h": 17541925.2366,
+      "resistance": 104.48,
+      "candle_open_ms": 1794862800000
+    },
+    {
+      "symbol": "COINUSDT",
+      "score": 60,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 120.88,
+      "reference_stop": 119.33,
+      "reference_target": 123.98,
+      "reference_rr": 2,
+      "risk_pct": 1.28,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 119.7,
+      "volume_ratio": 1.77,
+      "breakout_pct": -0.98,
+      "range_width_pct": 1.79,
+      "change_24h_pct": -0.01,
+      "quote_volume_24h": 3536970.1117,
+      "resistance": 120.88,
+      "candle_open_ms": 1794862800000
+    }
+  ]
+}
