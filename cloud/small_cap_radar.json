@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-16T02:46:31.088385+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "MSTRUSDT",
+      "score": 70,
+      "stage": "潛伏",
+      "entry_status": "等待回踩",
+      "entry_reason": "價格回測先前壓力；需再次確認支撐",
+      "reference_entry": 104.83,
+      "reference_stop": 102.81,
+      "reference_target": 108.87,
+      "reference_rr": 2,
+      "risk_pct": 1.93,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 104.17,
+      "volume_ratio": 1.9,
+      "breakout_pct": -0.63,
+      "range_width_pct": 4.49,
+      "change_24h_pct": 3.79,
+      "quote_volume_24h": 10697669.6665,
+      "resistance": 104.83,
+      "candle_open_ms": 1794796200000
+    },
+    {
+      "symbol": "ENAUSDT",
+      "score": 66,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 0.1214,
+      "reference_stop": 0.11735,
+      "reference_target": 0.1295,
+      "reference_rr": 2,
+      "risk_pct": 3.34,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 0.11988,
+      "volume_ratio": 1.56,
+      "breakout_pct": -1.25,
+      "range_width_pct": 3.45,
+      "change_24h_pct": 1.83,
+      "quote_volume_24h": 7864848.68774,
+      "resistance": 0.1214,
+      "candle_open_ms": 1794796200000
+    }
+  ]
+}
