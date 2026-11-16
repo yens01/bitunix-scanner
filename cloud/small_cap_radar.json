@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-16T18:06:21.239899+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "ICPUSDT",
+      "score": 83,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 2.531,
+      "volume_ratio": 2.11,
+      "breakout_pct": 1.36,
+      "range_width_pct": 13.14,
+      "change_24h_pct": 16.63,
+      "quote_volume_24h": 2131441.692,
+      "resistance": 2.497,
+      "candle_open_ms": 1794851100000
+    },
+    {
+      "symbol": "PIEVERSEUSDT",
+      "score": 75,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 2.0948,
+      "volume_ratio": 2.46,
+      "breakout_pct": 3.17,
+      "range_width_pct": 9.66,
+      "change_24h_pct": 20.03,
+      "quote_volume_24h": 2120155.0239,
+      "resistance": 2.0305,
+      "candle_open_ms": 1794851100000
+    }
+  ]
+}
