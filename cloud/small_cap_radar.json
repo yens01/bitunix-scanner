@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-16T04:25:53.924401+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "PIEVERSEUSDT",
+      "score": 79,
+      "stage": "啟動",
+      "entry_status": "突破確認",
+      "entry_reason": "最新15m收盤站上前20根高點；仍需觀察能否守穩",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": 4.22,
+      "plan_note": "停損距離不合理或突破失敗，不提供進場計畫",
+      "last_closed_price": 1.9112,
+      "volume_ratio": 2.72,
+      "breakout_pct": 0.42,
+      "range_width_pct": 4.41,
+      "change_24h_pct": -0.25,
+      "quote_volume_24h": 2310469.8361,
+      "resistance": 1.9033,
+      "candle_open_ms": 1794801600000
+    }
+  ]
+}
