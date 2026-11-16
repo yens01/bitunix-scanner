@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-16T17:51:29.879465+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "ONUSDT",
+      "score": 82,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.1048,
+      "volume_ratio": 4.13,
+      "breakout_pct": 2.24,
+      "range_width_pct": 15.95,
+      "change_24h_pct": 17.18,
+      "quote_volume_24h": 529213.8672,
+      "resistance": 0.1025,
+      "candle_open_ms": 1794850200000
+    },
+    {
+      "symbol": "PIEVERSEUSDT",
+      "score": 74,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 2.0905,
+      "volume_ratio": 2.3,
+      "breakout_pct": 2.95,
+      "range_width_pct": 10.17,
+      "change_24h_pct": 20.79,
+      "quote_volume_24h": 2080139.1186,
+      "resistance": 2.0305,
+      "candle_open_ms": 1794850200000
+    }
+  ]
+}
