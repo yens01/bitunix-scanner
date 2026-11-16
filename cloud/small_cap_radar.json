@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-16T20:41:32.442243+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "HYPEUSDT",
+      "score": 87,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 68.611,
+      "volume_ratio": 2.88,
+      "breakout_pct": 0.73,
+      "range_width_pct": 5.07,
+      "change_24h_pct": 0.91,
+      "quote_volume_24h": 32845514.58442,
+      "resistance": 68.113,
+      "candle_open_ms": 1794860100000
+    },
+    {
+      "symbol": "XAUTUSDT",
+      "score": 68,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 3859.46,
+      "reference_stop": 3841.64,
+      "reference_target": 3895.1,
+      "reference_rr": 2,
+      "risk_pct": 0.46,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 3843.81,
+      "volume_ratio": 2.42,
+      "breakout_pct": -0.41,
+      "range_width_pct": 0.85,
+      "change_24h_pct": -0.04,
+      "quote_volume_24h": 8205735.32726,
+      "resistance": 3859.46,
+      "candle_open_ms": 1794860100000
+    }
+  ]
+}
