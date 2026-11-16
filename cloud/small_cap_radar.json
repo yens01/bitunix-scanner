@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-16T19:11:13.411879+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "CROSSUSDT",
+      "score": 84,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.13969,
+      "volume_ratio": 2.37,
+      "breakout_pct": 3.01,
+      "range_width_pct": 11.87,
+      "change_24h_pct": 29.37,
+      "quote_volume_24h": 1315515.74772,
+      "resistance": 0.13561,
+      "candle_open_ms": 1794854700000
+    }
+  ]
+}
