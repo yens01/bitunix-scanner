@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-17T06:41:11.434333+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "1000PEPEUSDT",
+      "score": 68,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 0.0039782,
+      "reference_stop": 0.0039082,
+      "reference_target": 0.0041182,
+      "reference_rr": 2,
+      "risk_pct": 1.76,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 0.0039307,
+      "volume_ratio": 1.73,
+      "breakout_pct": -1.19,
+      "range_width_pct": 2.13,
+      "change_24h_pct": 3.66,
+      "quote_volume_24h": 17223224.7306464,
+      "resistance": 0.0039782,
+      "candle_open_ms": 1794896100000
+    },
+    {
+      "symbol": "NVDAUSDT",
+      "score": 62,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 159.16,
+      "reference_stop": 156.95,
+      "reference_target": 163.58,
+      "reference_rr": 2,
+      "risk_pct": 1.39,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 157.29,
+      "volume_ratio": 1.94,
+      "breakout_pct": -1.17,
+      "range_width_pct": 1.67,
+      "change_24h_pct": -2.59,
+      "quote_volume_24h": 51117094.8981,
+      "resistance": 159.16,
+      "candle_open_ms": 1794896100000
+    }
+  ]
+}
