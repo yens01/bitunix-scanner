@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-17T16:56:39.887831+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "UVXYUSDT",
+      "score": 89,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 22.44,
+      "volume_ratio": 14.38,
+      "breakout_pct": 5.9,
+      "range_width_pct": 8.61,
+      "change_24h_pct": 20.29,
+      "quote_volume_24h": 1130659.8776,
+      "resistance": 21.19,
+      "candle_open_ms": 1794933000000
+    },
+    {
+      "symbol": "SHAZUSDT",
+      "score": 80,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 23.31,
+      "volume_ratio": 3.71,
+      "breakout_pct": 9.08,
+      "range_width_pct": 15.08,
+      "change_24h_pct": 16.39,
+      "quote_volume_24h": 525342.0987,
+      "resistance": 21.37,
+      "candle_open_ms": 1794933000000
+    }
+  ]
+}
