@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-17T03:11:06.925597+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "ZROUSDT",
+      "score": 76,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 1.5304,
+      "volume_ratio": 2.83,
+      "breakout_pct": 2.05,
+      "range_width_pct": 5.72,
+      "change_24h_pct": 10.77,
+      "quote_volume_24h": 1612268.01141,
+      "resistance": 1.4997,
+      "candle_open_ms": 1794883500000
+    },
+    {
+      "symbol": "AMDUSDT",
+      "score": 61,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 515.74,
+      "reference_stop": 510.42,
+      "reference_target": 526.38,
+      "reference_rr": 2,
+      "risk_pct": 1.03,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 514.81,
+      "volume_ratio": 1.84,
+      "breakout_pct": -0.18,
+      "range_width_pct": 3.74,
+      "change_24h_pct": -1.11,
+      "quote_volume_24h": 7400380.3105,
+      "resistance": 515.74,
+      "candle_open_ms": 1794883500000
+    }
+  ]
+}
