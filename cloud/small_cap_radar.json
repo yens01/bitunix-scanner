@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-17T21:01:56.883652+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "INTCUSDT",
+      "score": 76,
+      "stage": "啟動",
+      "entry_status": "突破確認",
+      "entry_reason": "最新15m收盤站上前20根高點；仍需觀察能否守穩",
+      "reference_entry": 54.55,
+      "reference_stop": 53.35,
+      "reference_target": 56.95,
+      "reference_rr": 2,
+      "risk_pct": 2.2,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 55.29,
+      "volume_ratio": 2.2,
+      "breakout_pct": 1.36,
+      "range_width_pct": 3.88,
+      "change_24h_pct": -0.38,
+      "quote_volume_24h": 15522547.8004,
+      "resistance": 54.55,
+      "candle_open_ms": 1794948300000
+    },
+    {
+      "symbol": "TSLAUSDT",
+      "score": 73,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 383.01,
+      "reference_stop": 378.63,
+      "reference_target": 391.77,
+      "reference_rr": 2,
+      "risk_pct": 1.14,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 380.61,
+      "volume_ratio": 2.14,
+      "breakout_pct": -0.63,
+      "range_width_pct": 2.19,
+      "change_24h_pct": 0.19,
+      "quote_volume_24h": 6274833.4822,
+      "resistance": 383.01,
+      "candle_open_ms": 1794948300000
+    }
+  ]
+}
