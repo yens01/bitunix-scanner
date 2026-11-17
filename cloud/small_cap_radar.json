@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-17T17:16:37.440969+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "SHAZUSDT",
+      "score": 80,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 22.76,
+      "volume_ratio": 3.66,
+      "breakout_pct": 5.76,
+      "range_width_pct": 15.89,
+      "change_24h_pct": 17.19,
+      "quote_volume_24h": 544395.3438,
+      "resistance": 21.52,
+      "candle_open_ms": 1794934800000
+    }
+  ]
+}
