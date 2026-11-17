@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-17T07:41:12.918229+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "MUSDT",
+      "score": 98,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.9027,
+      "volume_ratio": 5.75,
+      "breakout_pct": 2.45,
+      "range_width_pct": 4.22,
+      "change_24h_pct": 8.88,
+      "quote_volume_24h": 527347.4615,
+      "resistance": 0.8811,
+      "candle_open_ms": 1794899700000
+    },
+    {
+      "symbol": "HBARUSDT",
+      "score": 74,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 0.05763,
+      "reference_stop": 0.05635,
+      "reference_target": 0.06019,
+      "reference_rr": 2,
+      "risk_pct": 2.22,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 0.0569,
+      "volume_ratio": 4.18,
+      "breakout_pct": -1.27,
+      "range_width_pct": 2.27,
+      "change_24h_pct": -3.2,
+      "quote_volume_24h": 4335103.43682,
+      "resistance": 0.05763,
+      "candle_open_ms": 1794899700000
+    }
+  ]
+}
