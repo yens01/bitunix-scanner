@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-17T17:51:04.895424+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "GOOGLUSDT",
+      "score": 63,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 284.5,
+      "reference_stop": 280.43,
+      "reference_target": 292.64,
+      "reference_rr": 2,
+      "risk_pct": 1.43,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 282.66,
+      "volume_ratio": 1.98,
+      "breakout_pct": -0.65,
+      "range_width_pct": 2.03,
+      "change_24h_pct": -1.91,
+      "quote_volume_24h": 5226055.278,
+      "resistance": 284.5,
+      "candle_open_ms": 1794936600000
+    }
+  ]
+}
