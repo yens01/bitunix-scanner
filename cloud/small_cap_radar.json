@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-17T04:31:35.549496+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "XMRUSDT",
+      "score": 80,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 498.29,
+      "reference_stop": 490.48,
+      "reference_target": 513.91,
+      "reference_rr": 2,
+      "risk_pct": 1.57,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 496.11,
+      "volume_ratio": 2.72,
+      "breakout_pct": -0.44,
+      "range_width_pct": 1.64,
+      "change_24h_pct": 1.11,
+      "quote_volume_24h": 5260965.47251,
+      "resistance": 498.29,
+      "candle_open_ms": 1794888900000
+    }
+  ]
+}
