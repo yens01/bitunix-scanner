@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-18T19:16:10.591623+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "VELVETUSDT",
+      "score": 74,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.06334,
+      "volume_ratio": 2.23,
+      "breakout_pct": 0.92,
+      "range_width_pct": 12.09,
+      "change_24h_pct": 16.16,
+      "quote_volume_24h": 549356.42974,
+      "resistance": 0.06276,
+      "candle_open_ms": 1795028400000
+    },
+    {
+      "symbol": "TSLAUSDT",
+      "score": 68,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 389.59,
+      "reference_stop": 383.39,
+      "reference_target": 401.99,
+      "reference_rr": 2,
+      "risk_pct": 1.59,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 384.12,
+      "volume_ratio": 1.77,
+      "breakout_pct": -1.4,
+      "range_width_pct": 2.8,
+      "change_24h_pct": 0.86,
+      "quote_volume_24h": 8344313.1868,
+      "resistance": 389.59,
+      "candle_open_ms": 1795028400000
+    }
+  ]
+}
