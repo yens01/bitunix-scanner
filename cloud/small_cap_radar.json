@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-18T11:31:21.512196+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "PIEVERSEUSDT",
+      "score": 87,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 2.4533,
+      "volume_ratio": 5.44,
+      "breakout_pct": 4.6,
+      "range_width_pct": 12.48,
+      "change_24h_pct": 27.88,
+      "quote_volume_24h": 3530328.936,
+      "resistance": 2.3453,
+      "candle_open_ms": 1795000500000
+    },
+    {
+      "symbol": "NVDAUSDT",
+      "score": 70,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 162.0,
+      "reference_stop": 159.36,
+      "reference_target": 167.28,
+      "reference_rr": 2,
+      "risk_pct": 1.63,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 159.63,
+      "volume_ratio": 1.93,
+      "breakout_pct": -1.46,
+      "range_width_pct": 2.59,
+      "change_24h_pct": 1.76,
+      "quote_volume_24h": 101144162.458,
+      "resistance": 162.0,
+      "candle_open_ms": 1795000500000
+    }
+  ]
+}
