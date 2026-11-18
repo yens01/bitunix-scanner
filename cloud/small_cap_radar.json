@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-18T06:46:22.031546+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "FHEUSDT",
+      "score": 89,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.01626,
+      "volume_ratio": 14.17,
+      "breakout_pct": 1.12,
+      "range_width_pct": 8.58,
+      "change_24h_pct": 18.25,
+      "quote_volume_24h": 1798615.99475,
+      "resistance": 0.01608,
+      "candle_open_ms": 1794983400000
+    },
+    {
+      "symbol": "KORUUSDT",
+      "score": 77,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 6.97,
+      "reference_stop": 6.82,
+      "reference_target": 7.27,
+      "reference_rr": 2,
+      "risk_pct": 2.15,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 6.94,
+      "volume_ratio": 3.13,
+      "breakout_pct": -0.43,
+      "range_width_pct": 7.07,
+      "change_24h_pct": 7.11,
+      "quote_volume_24h": 34547546.6155,
+      "resistance": 6.97,
+      "candle_open_ms": 1794983400000
+    }
+  ]
+}
