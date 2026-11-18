@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-18T17:46:34.391695+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "1000PEPEUSDT",
+      "score": 66,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 0.003799,
+      "reference_stop": 0.0036804,
+      "reference_target": 0.0040362,
+      "reference_rr": 2,
+      "risk_pct": 3.12,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 0.0037534,
+      "volume_ratio": 1.56,
+      "breakout_pct": -1.2,
+      "range_width_pct": 3.68,
+      "change_24h_pct": 0.68,
+      "quote_volume_24h": 10368060.2125135,
+      "resistance": 0.003799,
+      "candle_open_ms": 1795023000000
+    }
+  ]
+}
