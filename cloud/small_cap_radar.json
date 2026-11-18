@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-18T05:36:32.026906+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "ZILUSDT",
+      "score": 88,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.001043,
+      "volume_ratio": 3.37,
+      "breakout_pct": 3.06,
+      "range_width_pct": 12.2,
+      "change_24h_pct": 9.82,
+      "quote_volume_24h": 911614.247899,
+      "resistance": 0.001012,
+      "candle_open_ms": 1794978900000
+    },
+    {
+      "symbol": "FHEUSDT",
+      "score": 85,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.01598,
+      "volume_ratio": 2.54,
+      "breakout_pct": 1.08,
+      "range_width_pct": 6.75,
+      "change_24h_pct": 14.16,
+      "quote_volume_24h": 1642550.58959,
+      "resistance": 0.01581,
+      "candle_open_ms": 1794978900000
+    }
+  ]
+}
