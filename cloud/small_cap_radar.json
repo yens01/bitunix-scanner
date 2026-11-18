@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-18T23:01:53.422090+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "ANTHROPICUSDT",
+      "score": 89,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 99.34,
+      "reference_stop": 97.69,
+      "reference_target": 102.64,
+      "reference_rr": 2,
+      "risk_pct": 1.66,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 99.18,
+      "volume_ratio": 3.99,
+      "breakout_pct": -0.16,
+      "range_width_pct": 2.99,
+      "change_24h_pct": 1.92,
+      "quote_volume_24h": 7334848.821,
+      "resistance": 99.34,
+      "candle_open_ms": 1795041900000
+    },
+    {
+      "symbol": "XAUTUSDT",
+      "score": 71,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 3735.72,
+      "reference_stop": 3717.79,
+      "reference_target": 3771.58,
+      "reference_rr": 2,
+      "risk_pct": 0.48,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 3721.24,
+      "volume_ratio": 3.22,
+      "breakout_pct": -0.39,
+      "range_width_pct": 0.57,
+      "change_24h_pct": -3.04,
+      "quote_volume_24h": 12073552.19878,
+      "resistance": 3735.72,
+      "candle_open_ms": 1795041900000
+    }
+  ]
+}
