@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-18T03:36:32.146056+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "XMRUSDT",
+      "score": 100,
+      "stage": "啟動",
+      "entry_status": "突破確認",
+      "entry_reason": "最新15m收盤站上前20根高點；仍需觀察能否守穩",
+      "reference_entry": 512.49,
+      "reference_stop": 497.58,
+      "reference_target": 542.31,
+      "reference_rr": 2,
+      "risk_pct": 2.91,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 514.05,
+      "volume_ratio": 5.42,
+      "breakout_pct": 0.3,
+      "range_width_pct": 3.0,
+      "change_24h_pct": 3.73,
+      "quote_volume_24h": 3743729.56734,
+      "resistance": 512.49,
+      "candle_open_ms": 1794971700000
+    },
+    {
+      "symbol": "PIEVERSEUSDT",
+      "score": 79,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 2.1819,
+      "volume_ratio": 3.45,
+      "breakout_pct": 1.31,
+      "range_width_pct": 11.94,
+      "change_24h_pct": 11.14,
+      "quote_volume_24h": 2521339.6327,
+      "resistance": 2.1537,
+      "candle_open_ms": 1794971700000
+    }
+  ]
+}
