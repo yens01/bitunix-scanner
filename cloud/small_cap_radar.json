@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-19T23:41:34.962857+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "HUMAUSDT",
+      "score": 99,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.009539,
+      "volume_ratio": 13.55,
+      "breakout_pct": 4.25,
+      "range_width_pct": 11.94,
+      "change_24h_pct": 9.72,
+      "quote_volume_24h": 3659448.306457,
+      "resistance": 0.00915,
+      "candle_open_ms": 1795130100000
+    },
+    {
+      "symbol": "CLUSDT",
+      "score": 80,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 83.62,
+      "reference_stop": 83.01,
+      "reference_target": 84.84,
+      "reference_rr": 2,
+      "risk_pct": 0.73,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 83.01,
+      "volume_ratio": 2.74,
+      "breakout_pct": -0.73,
+      "range_width_pct": 1.49,
+      "change_24h_pct": 0.96,
+      "quote_volume_24h": 21104030.161,
+      "resistance": 83.62,
+      "candle_open_ms": 1795130100000
+    }
+  ]
+}
