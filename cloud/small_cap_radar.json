@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-19T16:02:09.146894+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "SOXSUSDT",
+      "score": 99,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 56.62,
+      "volume_ratio": 6.53,
+      "breakout_pct": 0.12,
+      "range_width_pct": 11.52,
+      "change_24h_pct": -3.24,
+      "quote_volume_24h": 47594431.2915,
+      "resistance": 56.55,
+      "candle_open_ms": 1795103100000
+    }
+  ]
+}
