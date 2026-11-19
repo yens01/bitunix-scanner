@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-19T17:11:36.530331+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "RAVEUSDT",
+      "score": 80,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.1186,
+      "volume_ratio": 3.64,
+      "breakout_pct": 0.17,
+      "range_width_pct": 9.43,
+      "change_24h_pct": 12.81,
+      "quote_volume_24h": 791991.9279,
+      "resistance": 0.1184,
+      "candle_open_ms": 1795106700000
+    },
+    {
+      "symbol": "SOXSUSDT",
+      "score": 66,
+      "stage": "啟動",
+      "entry_status": "突破確認",
+      "entry_reason": "最新15m收盤站上前20根高點；仍需觀察能否守穩",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": 7.94,
+      "plan_note": "停損距離不合理或突破失敗，不提供進場計畫",
+      "last_closed_price": 59.81,
+      "volume_ratio": 1.88,
+      "breakout_pct": 0.02,
+      "range_width_pct": 19.27,
+      "change_24h_pct": 2.71,
+      "quote_volume_24h": 52370054.6103,
+      "resistance": 59.8,
+      "candle_open_ms": 1795106700000
+    }
+  ]
+}
