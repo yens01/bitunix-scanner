@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-19T19:41:10.184694+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "RAVEUSDT",
+      "score": 87,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.129,
+      "volume_ratio": 2.94,
+      "breakout_pct": 5.48,
+      "range_width_pct": 11.38,
+      "change_24h_pct": 22.3,
+      "quote_volume_24h": 939398.8188,
+      "resistance": 0.1223,
+      "candle_open_ms": 1795115700000
+    }
+  ]
+}
