@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-20T08:46:35.811685+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "INTCUSDT",
+      "score": 63,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 55.01,
+      "reference_stop": 53.88,
+      "reference_target": 57.27,
+      "reference_rr": 2,
+      "risk_pct": 2.05,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 54.33,
+      "volume_ratio": 2.61,
+      "breakout_pct": -1.24,
+      "range_width_pct": 2.1,
+      "change_24h_pct": -4.63,
+      "quote_volume_24h": 16826359.513,
+      "resistance": 55.01,
+      "candle_open_ms": 1795163400000
+    },
+    {
+      "symbol": "XAGUSDT",
+      "score": 63,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 42.69,
+      "reference_stop": 41.71,
+      "reference_target": 44.65,
+      "reference_rr": 2,
+      "risk_pct": 2.3,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 42.63,
+      "volume_ratio": 2.56,
+      "breakout_pct": -0.14,
+      "range_width_pct": 3.67,
+      "change_24h_pct": -5.98,
+      "quote_volume_24h": 61270667.91809,
+      "resistance": 42.69,
+      "candle_open_ms": 1795163400000
+    }
+  ]
+}
