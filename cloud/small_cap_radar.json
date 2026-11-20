@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-20T16:36:19.036026+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "SQQQUSDT",
+      "score": 76,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 54.01,
+      "volume_ratio": 2.71,
+      "breakout_pct": 2.27,
+      "range_width_pct": 5.68,
+      "change_24h_pct": 17.92,
+      "quote_volume_24h": 6076064.0352,
+      "resistance": 52.81,
+      "candle_open_ms": 1795191300000
+    },
+    {
+      "symbol": "SOXSUSDT",
+      "score": 73,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 77.11,
+      "volume_ratio": 2.1,
+      "breakout_pct": 6.95,
+      "range_width_pct": 8.96,
+      "change_24h_pct": 37.23,
+      "quote_volume_24h": 89900836.1472,
+      "resistance": 72.1,
+      "candle_open_ms": 1795191300000
+    }
+  ]
+}
