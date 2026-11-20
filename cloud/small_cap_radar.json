@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-20T08:11:46.200931+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "ICNTUSDT",
+      "score": 89,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.4491,
+      "volume_ratio": 8.91,
+      "breakout_pct": 1.06,
+      "range_width_pct": 8.97,
+      "change_24h_pct": 23.1,
+      "quote_volume_24h": 9493846.4198,
+      "resistance": 0.4444,
+      "candle_open_ms": 1795160700000
+    },
+    {
+      "symbol": "XAUTUSDT",
+      "score": 62,
+      "stage": "啟動",
+      "entry_status": "突破確認",
+      "entry_reason": "最新15m收盤站上前20根高點；仍需觀察能否守穩",
+      "reference_entry": 3562.15,
+      "reference_stop": 3537.89,
+      "reference_target": 3610.67,
+      "reference_rr": 2,
+      "risk_pct": 0.68,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 3562.74,
+      "volume_ratio": 1.58,
+      "breakout_pct": 0.02,
+      "range_width_pct": 1.42,
+      "change_24h_pct": -4.28,
+      "quote_volume_24h": 18139017.89889,
+      "resistance": 3562.15,
+      "candle_open_ms": 1795160700000
+    }
+  ]
+}
