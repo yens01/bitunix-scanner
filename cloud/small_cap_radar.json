@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-20T10:26:17.414083+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "SKDDUSDT",
+      "score": 77,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 12.755,
+      "volume_ratio": 3.04,
+      "breakout_pct": 0.47,
+      "range_width_pct": 4.37,
+      "change_24h_pct": 22.3,
+      "quote_volume_24h": 528482.96928,
+      "resistance": 12.695,
+      "candle_open_ms": 1795168800000
+    },
+    {
+      "symbol": "SOXSUSDT",
+      "score": 77,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 69.26,
+      "volume_ratio": 2.88,
+      "breakout_pct": 0.7,
+      "range_width_pct": 7.67,
+      "change_24h_pct": 30.85,
+      "quote_volume_24h": 68712622.2876,
+      "resistance": 68.78,
+      "candle_open_ms": 1795168800000
+    }
+  ]
+}
