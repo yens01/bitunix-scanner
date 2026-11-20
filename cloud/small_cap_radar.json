@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-20T03:31:30.367369+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "BARDUSDT",
+      "score": 89,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.098,
+      "volume_ratio": 36.73,
+      "breakout_pct": 12.64,
+      "range_width_pct": 4.19,
+      "change_24h_pct": 10.41,
+      "quote_volume_24h": 627370.0316,
+      "resistance": 0.087,
+      "candle_open_ms": 1795144500000
+    },
+    {
+      "symbol": "STRCUSDT",
+      "score": 70,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 95.05,
+      "reference_stop": 94.32,
+      "reference_target": 96.51,
+      "reference_rr": 2,
+      "risk_pct": 0.77,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 94.92,
+      "volume_ratio": 2.56,
+      "breakout_pct": -0.14,
+      "range_width_pct": 0.77,
+      "change_24h_pct": -1.57,
+      "quote_volume_24h": 7290491.4556,
+      "resistance": 95.05,
+      "candle_open_ms": 1795144500000
+    }
+  ]
+}
