@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-21T06:36:04.219054+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "RAREUSDT",
+      "score": 84,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.01385,
+      "volume_ratio": 2.3,
+      "breakout_pct": 0.58,
+      "range_width_pct": 7.75,
+      "change_24h_pct": 12.11,
+      "quote_volume_24h": 2050469.67796,
+      "resistance": 0.01377,
+      "candle_open_ms": 1795241700000
+    },
+    {
+      "symbol": "BLESSUSDT",
+      "score": 83,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.015392,
+      "volume_ratio": 2.05,
+      "breakout_pct": 3.45,
+      "range_width_pct": 15.07,
+      "change_24h_pct": 17.42,
+      "quote_volume_24h": 6283721.643365,
+      "resistance": 0.014879,
+      "candle_open_ms": 1795241700000
+    }
+  ]
+}
