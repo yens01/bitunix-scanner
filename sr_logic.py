@@ -251,35 +251,56 @@ def fmt_short(p: float) -> str:
     return f"{p:.6g}"
 
 
+def structure_break_event(
+    candles: list[Candle], *, lookback: int = 120
+) -> tuple[str, int, float, int]:
+    """
+    依時間順序找「最近一次」結構事件（教材：BOS＝收盤突破前高／跌破前低；
+    CHOCH＝在相反結構中突破最後一個 LH／跌破最後一個 HL）。
+    事件發生後，回測期間仍然有效，直到出現新的事件。
+    回傳 (標籤, 分數, 被突破的價位, 發生在第幾根)；lookback 根內沒有事件回傳空。
+    """
+    n = len(candles)
+    highs_i, lows_i = find_swings(candles, 2, 2)
+    confirm: dict[int, list[tuple[str, int]]] = {}
+    for i in highs_i:
+        confirm.setdefault(i + 2, []).append(("H", i))
+    for i in lows_i:
+        confirm.setdefault(i + 2, []).append(("L", i))
+    trend = ""
+    last_h: tuple[float, bool] | None = None  # (價位, 已被突破)
+    last_l: tuple[float, bool] | None = None
+    ev: tuple[str, int, float, int] = ("", 0, 0.0, -1)
+    for k in range(n):
+        for kind, i in confirm.get(k, []):
+            if kind == "H":
+                last_h = (candles[i].high, False)
+            else:
+                last_l = (candles[i].low, False)
+        cl = candles[k].close
+        if last_h and not last_h[1] and cl > last_h[0]:
+            tag, sc = ("CHOCH轉多", 2) if trend == "bear" else ("BOS向上", 1)
+            ev = (tag, sc, last_h[0], k)
+            last_h = (last_h[0], True)
+            trend = "bull"
+        if last_l and not last_l[1] and cl < last_l[0]:
+            tag, sc = ("CHOCH轉空", -2) if trend == "bull" else ("BOS向下", -1)
+            ev = (tag, sc, last_l[0], k)
+            last_l = (last_l[0], True)
+            trend = "bear"
+    if ev[3] < 0 or n - 1 - ev[3] > lookback:
+        return "", 0, 0.0, -1
+    return ev
+
+
 def detect_bos_choch(candles: list[Candle]) -> tuple[str, int]:
     """
     BOS = 順勢突破結構；CHOCH = 結構性質改變（可能反轉）。
-    回傳 (標籤, 對多空的分數加減)
+    回傳 (標籤, 對多空的分數加減)。
+    以「最近一次事件」為準：突破後回測時仍算 BOS（教材：BOS 後重點是回測守不守得住）。
     """
-    highs_i, lows_i = find_swings(candles, 2, 2)
-    if len(highs_i) < 2 or len(lows_i) < 2:
-        return "", 0
-    px = candles[-1].close
-    last_hh = candles[highs_i[-1]].high
-    prev_hh = candles[highs_i[-2]].high
-    last_ll = candles[lows_i[-1]].low
-    prev_ll = candles[lows_i[-2]].low
-
-    # 先前偏多結構（HL）被跌破 → CHOCH 轉空
-    if len(lows_i) >= 2 and candles[lows_i[-2]].low < candles[lows_i[-1]].low:
-        # 曾是 HL，若收盤跌破最近 HL
-        if px < candles[lows_i[-1]].low:
-            return "CHOCH轉空", -2
-    # 先前偏空結構（LH）被突破 → CHOCH 轉多
-    if len(highs_i) >= 2 and candles[highs_i[-2]].high > candles[highs_i[-1]].high:
-        if px > candles[highs_i[-1]].high:
-            return "CHOCH轉多", 2
-
-    if px > last_hh and last_hh >= prev_hh * 0.999:
-        return "BOS向上", 1
-    if px < last_ll and last_ll <= prev_ll * 1.001:
-        return "BOS向下", -1
-    return "", 0
+    tag, score, _lvl, _k = structure_break_event(candles)
+    return tag, score
 
 
 def is_ranging(candles: list[Candle], atr_v: float) -> bool:
@@ -351,14 +372,11 @@ def detect_structure(candles: list[Candle]) -> tuple[str, str, str, str]:
     clear_bear = "LH" in detail_parts and "LL" in detail_parts
     detail = " / ".join(detail_parts) if detail_parts else ""
 
-    # LH/LL 與 CHOCH轉多／MA多頭同時出現 → 結構打架，標盤整（避免硬做空）
-    if clear_bear and (
-        "CHOCH轉多" in detail_parts or "MA多頭" in detail_parts or score > 0
-    ):
+    # LH/LL 與 CHOCH轉多同時出現 → 結構打架，標盤整（避免硬做空）
+    # 教材：MA 只是輔助、以結構為主 → MA 逆向不再單獨推翻清楚的擺動結構
+    if clear_bear and ("CHOCH轉多" in detail_parts or score > 2):
         return "盤整", (detail or "結構衝突") + "｜多空訊號打架", ma_detail, bos_tag
-    if clear_bull and (
-        "CHOCH轉空" in detail_parts or "MA空頭" in detail_parts or score < 0
-    ):
+    if clear_bull and ("CHOCH轉空" in detail_parts or score < -2):
         return "盤整", (detail or "結構衝突") + "｜多空訊號打架", ma_detail, bos_tag
 
     if ranging and not clear_bull and not clear_bear and abs(score) < 3:
@@ -399,6 +417,15 @@ def build_zones(candles: list[Candle], atr_v: float) -> tuple[list[Zone], list[Z
 
     supports = cluster(lows_i[-12:], False)
     resists = cluster(highs_i[-12:], True)
+
+    # 教材：壓力被突破、回測不破 → 轉支撐；支撐被跌破、回測站不回 → 轉壓力
+    flip_tag, _sc, flip_lv, _k = structure_break_event(candles)
+    if flip_lv > 0:
+        flip_band = band * 0.5
+        if flip_tag in ("BOS向上", "CHOCH轉多"):
+            supports.insert(0, Zone("support", flip_lv - flip_band, flip_lv + flip_band, 3, 1))
+        elif flip_tag in ("BOS向下", "CHOCH轉空"):
+            resists.insert(0, Zone("resistance", flip_lv - flip_band, flip_lv + flip_band, 3, 1))
 
     # 只保留相對現價有意義的區（附近）
     px = candles[-1].close
@@ -1591,22 +1618,18 @@ def compute_targets(
     resists: list[Zone],
     atr_v: float,
 ) -> tuple[float, float]:
-    """目標取對向結構位；並回傳 RR。"""
+    """目標取對向結構位（前高／前低）；並回傳實際 RR（不硬湊門檻）。"""
     risk = abs(entry - stop)
     if risk <= 0:
         return 0.0, 0.0
     if side == "long":
-        # 目標：最近壓力，至少 1.5R
+        # 教材：目標看前高／對向壓力；RR 不夠就不做，不把目標硬推過壓力
         tps = [z.lo for z in resists if z.lo > entry]
-        raw_tp = min(tps) if tps else entry + max(risk * 2.0, atr_v * 2)
-        min_tp = entry + risk * MIN_RR
-        tp = max(raw_tp, min_tp)
+        tp = min(tps) if tps else entry + max(risk * 2.0, atr_v * 2)
         return tp, (tp - entry) / risk
     if side == "short":
         tps = [z.hi for z in supports if z.hi < entry]
-        raw_tp = max(tps) if tps else entry - max(risk * 2.0, atr_v * 2)
-        min_tp = entry - risk * MIN_RR
-        tp = min(raw_tp, min_tp)
+        tp = max(tps) if tps else entry - max(risk * 2.0, atr_v * 2)
         return tp, (entry - tp) / risk
     return 0.0, 0.0
 
@@ -1664,6 +1687,8 @@ def evaluate_setup(
         priority_zone.near(px, atr_v)
         or priority_zone.near(last.low, atr_v)
         or priority_zone.near(last.high, atr_v)
+        # 當根高低點跨過整個區（例如下影掃過支撐後收回）也算回測到
+        or (last.low <= priority_zone.hi and last.high >= priority_zone.lo)
         or (
             structure == "盤整"
             and priority_zone.contains(px, pad=atr_v * 0.1)
@@ -1720,6 +1745,8 @@ def evaluate_setup(
             or active_zone.near(prev.low, atr_v)
             or active_zone.near(prev.high, atr_v)
             or active_zone.near(last.close, atr_v)
+            or (last.low <= active_zone.hi and last.high >= active_zone.lo)
+            or (prev.low <= active_zone.hi and prev.high >= active_zone.lo)
         )
         if touched:
             # 扣板機等級：必須當根硬反應（避免「前一根假突破＋當根多頭吞噬」誤開空）
@@ -1731,13 +1758,10 @@ def evaluate_setup(
 
     # 結構細節與標籤衝突時（如標偏空卻 CHOCH轉多／MA多頭）→ 不給方向單
     struct_conflict = False
-    if structure == "偏空" and (
-        "CHOCH轉多" in struct_detail or "MA多頭" in struct_detail or "多頭排列" in struct_detail
-    ):
+    # 教材：MA 只是輔助 → 只有結構性質改變（CHOCH）才算衝突
+    if structure == "偏空" and "CHOCH轉多" in struct_detail:
         struct_conflict = True
-    if structure == "偏多" and (
-        "CHOCH轉空" in struct_detail or "MA空頭" in struct_detail or "空頭排列" in struct_detail
-    ):
+    if structure == "偏多" and "CHOCH轉空" in struct_detail:
         struct_conflict = True
 
     # 方向 → side（第四章：用來決定優先做多/做空，不是猜未來）
