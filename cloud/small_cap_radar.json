@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-21T18:36:20.873714+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "TRUMPUSDT",
+      "score": 76,
+      "stage": "啟動",
+      "entry_status": "突破確認",
+      "entry_reason": "最新15m收盤站上前20根高點；仍需觀察能否守穩",
+      "reference_entry": 0.884,
+      "reference_stop": 0.864,
+      "reference_target": 0.924,
+      "reference_rr": 2,
+      "risk_pct": 2.26,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 0.887,
+      "volume_ratio": 1.53,
+      "breakout_pct": 0.34,
+      "range_width_pct": 4.12,
+      "change_24h_pct": 4.95,
+      "quote_volume_24h": 3682049.76037,
+      "resistance": 0.884,
+      "candle_open_ms": 1795284900000
+    }
+  ]
+}
