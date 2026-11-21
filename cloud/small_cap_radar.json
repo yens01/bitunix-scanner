@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-21T12:02:06.391467+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "IDOLUSDT",
+      "score": 86,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.026567,
+      "volume_ratio": 2.64,
+      "breakout_pct": 0.86,
+      "range_width_pct": 11.5,
+      "change_24h_pct": 21.6,
+      "quote_volume_24h": 1274702.986405,
+      "resistance": 0.02634,
+      "candle_open_ms": 1795261500000
+    }
+  ]
+}
