@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-21T07:01:29.779021+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "BTWUSDT",
+      "score": 90,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.7061,
+      "volume_ratio": 3.74,
+      "breakout_pct": 1.92,
+      "range_width_pct": 10.56,
+      "change_24h_pct": 13.89,
+      "quote_volume_24h": 2260890.4566,
+      "resistance": 0.6928,
+      "candle_open_ms": 1795243500000
+    },
+    {
+      "symbol": "RAREUSDT",
+      "score": 85,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.01395,
+      "volume_ratio": 2.47,
+      "breakout_pct": 0.65,
+      "range_width_pct": 8.45,
+      "change_24h_pct": 13.01,
+      "quote_volume_24h": 2075407.46472,
+      "resistance": 0.01386,
+      "candle_open_ms": 1795243500000
+    }
+  ]
+}
