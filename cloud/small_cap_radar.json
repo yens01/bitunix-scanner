@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-21T16:55:59.421776+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "ANTHROPICUSDT",
+      "score": 89,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 90.4,
+      "reference_stop": 88.88,
+      "reference_target": 93.44,
+      "reference_rr": 2,
+      "risk_pct": 1.68,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 89.33,
+      "volume_ratio": 3.46,
+      "breakout_pct": -1.18,
+      "range_width_pct": 3.31,
+      "change_24h_pct": 3.92,
+      "quote_volume_24h": 30192535.6191,
+      "resistance": 90.4,
+      "candle_open_ms": 1795278600000
+    },
+    {
+      "symbol": "PIEVERSEUSDT",
+      "score": 89,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 3.1231,
+      "volume_ratio": 3.39,
+      "breakout_pct": 1.19,
+      "range_width_pct": 8.88,
+      "change_24h_pct": 17.18,
+      "quote_volume_24h": 3741317.1523,
+      "resistance": 3.0865,
+      "candle_open_ms": 1795278600000
+    }
+  ]
+}
