@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-21T22:01:13.716207+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "SPCXUSDT",
+      "score": 70,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": 0.14,
+      "plan_note": "停損距離不合理或突破失敗，不提供進場計畫",
+      "last_closed_price": 130.94,
+      "volume_ratio": 1.96,
+      "breakout_pct": -0.13,
+      "range_width_pct": 0.36,
+      "change_24h_pct": 1.28,
+      "quote_volume_24h": 6152916.1245,
+      "resistance": 131.11,
+      "candle_open_ms": 1795297500000
+    }
+  ]
+}
