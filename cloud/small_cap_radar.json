@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-22T20:45:54.072979+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "SPCXUSDT",
+      "score": 87,
+      "stage": "啟動",
+      "entry_status": "突破確認",
+      "entry_reason": "最新15m收盤站上前20根高點；仍需觀察能否守穩",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": 0.16,
+      "plan_note": "停損距離不合理或突破失敗，不提供進場計畫",
+      "last_closed_price": 131.16,
+      "volume_ratio": 2.71,
+      "breakout_pct": 0.04,
+      "range_width_pct": 0.49,
+      "change_24h_pct": 0.12,
+      "quote_volume_24h": 2118588.0907,
+      "resistance": 131.11,
+      "candle_open_ms": 1795379400000
+    },
+    {
+      "symbol": "XAUTUSDT",
+      "score": 81,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 3556.72,
+      "reference_stop": 3538.79,
+      "reference_target": 3592.58,
+      "reference_rr": 2,
+      "risk_pct": 0.5,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 3540.44,
+      "volume_ratio": 4.6,
+      "breakout_pct": -0.46,
+      "range_width_pct": 0.51,
+      "change_24h_pct": -0.35,
+      "quote_volume_24h": 4944815.75691,
+      "resistance": 3556.72,
+      "candle_open_ms": 1795379400000
+    }
+  ]
+}
