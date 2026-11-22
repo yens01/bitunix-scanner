@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-22T22:05:51.655883+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "CLUSDT",
+      "score": 81,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 84.12,
+      "reference_stop": 83.85,
+      "reference_target": 84.66,
+      "reference_rr": 2,
+      "risk_pct": 0.32,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 83.9,
+      "volume_ratio": 9.87,
+      "breakout_pct": -0.26,
+      "range_width_pct": 0.2,
+      "change_24h_pct": -0.08,
+      "quote_volume_24h": 11295174.541,
+      "resistance": 84.12,
+      "candle_open_ms": 1795383900000
+    },
+    {
+      "symbol": "NVDAUSDT",
+      "score": 72,
+      "stage": "潛伏",
+      "entry_status": "突破失敗",
+      "entry_reason": "前一根曾站上壓力，最新收盤跌回原壓力下方",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": 1.08,
+      "plan_note": "停損距離不合理或突破失敗，不提供進場計畫",
+      "last_closed_price": 133.94,
+      "volume_ratio": 2.08,
+      "breakout_pct": -0.25,
+      "range_width_pct": 1.4,
+      "change_24h_pct": 1.64,
+      "quote_volume_24h": 7986171.8021,
+      "resistance": 134.27,
+      "candle_open_ms": 1795383900000
+    }
+  ]
+}
