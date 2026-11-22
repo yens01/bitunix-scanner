@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-22T16:50:57.906438+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "XAUUSDT",
+      "score": 70,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": 0.24,
+      "plan_note": "停損距離不合理或突破失敗，不提供進場計畫",
+      "last_closed_price": 3569.99,
+      "volume_ratio": 1.94,
+      "breakout_pct": -0.12,
+      "range_width_pct": 0.39,
+      "change_24h_pct": 0.15,
+      "quote_volume_24h": 15203721.97235,
+      "resistance": 3574.37,
+      "candle_open_ms": 1795365000000
+    },
+    {
+      "symbol": "TAOUSDT",
+      "score": 66,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 193.12,
+      "reference_stop": 190.32,
+      "reference_target": 198.72,
+      "reference_rr": 2,
+      "risk_pct": 1.45,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 191.15,
+      "volume_ratio": 1.58,
+      "breakout_pct": -1.02,
+      "range_width_pct": 1.84,
+      "change_24h_pct": 2.3,
+      "quote_volume_24h": 6358523.05199,
+      "resistance": 193.12,
+      "candle_open_ms": 1795365000000
+    }
+  ]
+}
