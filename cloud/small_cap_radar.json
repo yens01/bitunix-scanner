@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-22T19:56:07.594478+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "WLDUSDT",
+      "score": 75,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.2388,
+      "volume_ratio": 2.54,
+      "breakout_pct": 0.51,
+      "range_width_pct": 4.26,
+      "change_24h_pct": 4.33,
+      "quote_volume_24h": 2806479.3296,
+      "resistance": 0.2376,
+      "candle_open_ms": 1795375800000
+    }
+  ]
+}
