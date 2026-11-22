@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-22T14:16:13.108486+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "PUMPFUNUSDT",
+      "score": 83,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.002543,
+      "volume_ratio": 2.1,
+      "breakout_pct": 0.95,
+      "range_width_pct": 9.66,
+      "change_24h_pct": 5.62,
+      "quote_volume_24h": 4060933.983976,
+      "resistance": 0.002519,
+      "candle_open_ms": 1795356000000
+    },
+    {
+      "symbol": "LIGHTERUSDT",
+      "score": 79,
+      "stage": "啟動",
+      "entry_status": "突破確認",
+      "entry_reason": "最新15m收盤站上前20根高點；仍需觀察能否守穩",
+      "reference_entry": 2.3638,
+      "reference_stop": 2.3059,
+      "reference_target": 2.4796,
+      "reference_rr": 2,
+      "risk_pct": 2.45,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 2.3745,
+      "volume_ratio": 2.78,
+      "breakout_pct": 0.45,
+      "range_width_pct": 3.16,
+      "change_24h_pct": -0.4,
+      "quote_volume_24h": 1506938.74351,
+      "resistance": 2.3638,
+      "candle_open_ms": 1795356000000
+    }
+  ]
+}
