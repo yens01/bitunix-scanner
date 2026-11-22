@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-22T14:06:05.154202+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "PUMPFUNUSDT",
+      "score": 91,
+      "stage": "啟動",
+      "entry_status": "突破確認",
+      "entry_reason": "最新15m收盤站上前20根高點；仍需觀察能否守穩",
+      "reference_entry": 0.002519,
+      "reference_stop": 0.002478,
+      "reference_target": 0.002601,
+      "reference_rr": 2,
+      "risk_pct": 1.63,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 0.002527,
+      "volume_ratio": 3.43,
+      "breakout_pct": 0.32,
+      "range_width_pct": 5.57,
+      "change_24h_pct": 5.16,
+      "quote_volume_24h": 4000572.662587,
+      "resistance": 0.002519,
+      "candle_open_ms": 1795355100000
+    }
+  ]
+}
