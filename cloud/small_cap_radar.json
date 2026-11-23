@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-23T18:11:40.967975+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "ONEUSDT",
+      "score": 99,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.0010864,
+      "volume_ratio": 15.56,
+      "breakout_pct": 6.85,
+      "range_width_pct": 8.63,
+      "change_24h_pct": 11.08,
+      "quote_volume_24h": 1193178.53564,
+      "resistance": 0.0010168,
+      "candle_open_ms": 1795455900000
+    },
+    {
+      "symbol": "DGAIUSDT",
+      "score": 78,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 1.1066,
+      "volume_ratio": 3.15,
+      "breakout_pct": 4.9,
+      "range_width_pct": 7.04,
+      "change_24h_pct": 8.27,
+      "quote_volume_24h": 1432824.1352,
+      "resistance": 1.0549,
+      "candle_open_ms": 1795455900000
+    }
+  ]
+}
