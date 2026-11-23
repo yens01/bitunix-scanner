@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-23T17:11:44.187625+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "LISTAUSDT",
+      "score": 79,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.09123,
+      "volume_ratio": 3.49,
+      "breakout_pct": 4.44,
+      "range_width_pct": 15.36,
+      "change_24h_pct": 26.7,
+      "quote_volume_24h": 1604534.73962,
+      "resistance": 0.08735,
+      "candle_open_ms": 1795452300000
+    }
+  ]
+}
