@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-23T04:41:13.723442+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "HUSDT",
+      "score": 89,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.01309,
+      "volume_ratio": 11.25,
+      "breakout_pct": 6.08,
+      "range_width_pct": 5.11,
+      "change_24h_pct": 21.43,
+      "quote_volume_24h": 513851.21391,
+      "resistance": 0.01234,
+      "candle_open_ms": 1795407300000
+    },
+    {
+      "symbol": "BERAUSDT",
+      "score": 78,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.0858,
+      "volume_ratio": 3.31,
+      "breakout_pct": 1.78,
+      "range_width_pct": 6.57,
+      "change_24h_pct": 11.36,
+      "quote_volume_24h": 904161.2994,
+      "resistance": 0.0843,
+      "candle_open_ms": 1795407300000
+    }
+  ]
+}
