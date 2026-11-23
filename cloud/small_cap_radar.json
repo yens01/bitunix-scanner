@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-23T08:01:52.442848+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "HUSDT",
+      "score": 88,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.01346,
+      "volume_ratio": 3.29,
+      "breakout_pct": 0.82,
+      "range_width_pct": 13.23,
+      "change_24h_pct": 20.82,
+      "quote_volume_24h": 679463.44506,
+      "resistance": 0.01335,
+      "candle_open_ms": 1795419900000
+    }
+  ]
+}
