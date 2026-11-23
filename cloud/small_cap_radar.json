@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-23T17:51:07.676935+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "DGAIUSDT",
+      "score": 88,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 1.0928,
+      "volume_ratio": 3.24,
+      "breakout_pct": 3.59,
+      "range_width_pct": 7.04,
+      "change_24h_pct": 8.46,
+      "quote_volume_24h": 1528097.8489,
+      "resistance": 1.0549,
+      "candle_open_ms": 1795455000000
+    }
+  ]
+}
