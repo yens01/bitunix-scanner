@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-23T04:06:18.905323+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "BREVUSDT",
+      "score": 89,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.0692,
+      "volume_ratio": 14.53,
+      "breakout_pct": 2.56,
+      "range_width_pct": 8.11,
+      "change_24h_pct": 10.89,
+      "quote_volume_24h": 629502.80642,
+      "resistance": 0.06747,
+      "candle_open_ms": 1795405500000
+    },
+    {
+      "symbol": "BERAUSDT",
+      "score": 86,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.0846,
+      "volume_ratio": 5.15,
+      "breakout_pct": 2.67,
+      "range_width_pct": 4.17,
+      "change_24h_pct": 11.96,
+      "quote_volume_24h": 866649.70878,
+      "resistance": 0.0824,
+      "candle_open_ms": 1795405500000
+    }
+  ]
+}
