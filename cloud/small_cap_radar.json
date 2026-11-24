@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-24T00:41:19.313129+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "MINIMAXUSDT",
+      "score": 83,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 14.05,
+      "volume_ratio": 2.07,
+      "breakout_pct": 0.64,
+      "range_width_pct": 3.87,
+      "change_24h_pct": 19.51,
+      "quote_volume_24h": 1801956.1958,
+      "resistance": 13.96,
+      "candle_open_ms": 1795479300000
+    }
+  ]
+}
