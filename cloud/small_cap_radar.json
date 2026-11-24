@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-24T22:56:23.951935+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "XAUTUSDT",
+      "score": 70,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 3560.13,
+      "reference_stop": 3544.04,
+      "reference_target": 3592.31,
+      "reference_rr": 2,
+      "risk_pct": 0.45,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 3553.99,
+      "volume_ratio": 2.55,
+      "breakout_pct": -0.17,
+      "range_width_pct": 0.61,
+      "change_24h_pct": -2.03,
+      "quote_volume_24h": 9899078.3795,
+      "resistance": 3560.13,
+      "candle_open_ms": 1795559400000
+    },
+    {
+      "symbol": "ZECUSDT",
+      "score": 70,
+      "stage": "啟動",
+      "entry_status": "突破確認",
+      "entry_reason": "最新15m收盤站上前20根高點；仍需觀察能否守穩",
+      "reference_entry": 736.57,
+      "reference_stop": 728.16,
+      "reference_target": 753.39,
+      "reference_rr": 2,
+      "risk_pct": 1.14,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 740.32,
+      "volume_ratio": 2.21,
+      "breakout_pct": 0.51,
+      "range_width_pct": 3.45,
+      "change_24h_pct": -3.65,
+      "quote_volume_24h": 60432596.42978,
+      "resistance": 736.57,
+      "candle_open_ms": 1795559400000
+    }
+  ]
+}
