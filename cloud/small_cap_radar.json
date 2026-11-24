@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-24T21:06:22.535345+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "TSLAUSDT",
+      "score": 74,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 385.93,
+      "reference_stop": 381.22,
+      "reference_target": 395.35,
+      "reference_rr": 2,
+      "risk_pct": 1.22,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 385.24,
+      "volume_ratio": 2.88,
+      "breakout_pct": -0.18,
+      "range_width_pct": 2.58,
+      "change_24h_pct": -0.33,
+      "quote_volume_24h": 13338918.1756,
+      "resistance": 385.93,
+      "candle_open_ms": 1795553100000
+    }
+  ]
+}
