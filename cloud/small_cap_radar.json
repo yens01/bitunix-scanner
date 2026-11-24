@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-24T16:01:31.166486+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "SKDDUSDT",
+      "score": 75,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 11.141,
+      "volume_ratio": 2.49,
+      "breakout_pct": 4.09,
+      "range_width_pct": 13.79,
+      "change_24h_pct": 24.86,
+      "quote_volume_24h": 981334.28719,
+      "resistance": 10.703,
+      "candle_open_ms": 1795535100000
+    }
+  ]
+}
