@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-24T08:01:47.019621+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "BABYUSDT",
+      "score": 89,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.009072,
+      "volume_ratio": 7.8,
+      "breakout_pct": 0.7,
+      "range_width_pct": 8.91,
+      "change_24h_pct": 17.88,
+      "quote_volume_24h": 530992.015462,
+      "resistance": 0.009009,
+      "candle_open_ms": 1795506300000
+    },
+    {
+      "symbol": "1000LUNCUSDT",
+      "score": 84,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.04506,
+      "volume_ratio": 4.81,
+      "breakout_pct": 2.81,
+      "range_width_pct": 5.49,
+      "change_24h_pct": 10.72,
+      "quote_volume_24h": 782644.34747,
+      "resistance": 0.04383,
+      "candle_open_ms": 1795506300000
+    }
+  ]
+}
