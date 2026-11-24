@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-24T12:06:19.612224+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "STRCUSDT",
+      "score": 89,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 98.01,
+      "reference_stop": 96.78,
+      "reference_target": 100.47,
+      "reference_rr": 2,
+      "risk_pct": 1.25,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 97.18,
+      "volume_ratio": 3.7,
+      "breakout_pct": -0.85,
+      "range_width_pct": 1.39,
+      "change_24h_pct": 1.69,
+      "quote_volume_24h": 9947442.4442,
+      "resistance": 98.01,
+      "candle_open_ms": 1795520700000
+    },
+    {
+      "symbol": "SPYUSDT",
+      "score": 76,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 726.56,
+      "reference_stop": 715.71,
+      "reference_target": 748.26,
+      "reference_rr": 2,
+      "risk_pct": 1.49,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 718.55,
+      "volume_ratio": 2.38,
+      "breakout_pct": -1.1,
+      "range_width_pct": 1.52,
+      "change_24h_pct": 1.03,
+      "quote_volume_24h": 8299304.4434,
+      "resistance": 726.56,
+      "candle_open_ms": 1795520700000
+    }
+  ]
+}
