@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-24T11:26:05.343380+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "STRCUSDT",
+      "score": 89,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 98.01,
+      "reference_stop": 96.78,
+      "reference_target": 100.47,
+      "reference_rr": 2,
+      "risk_pct": 1.25,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 97.02,
+      "volume_ratio": 4.78,
+      "breakout_pct": -1.01,
+      "range_width_pct": 1.39,
+      "change_24h_pct": 1.3,
+      "quote_volume_24h": 9248256.1105,
+      "resistance": 98.01,
+      "candle_open_ms": 1795518000000
+    },
+    {
+      "symbol": "SQQQUSDT",
+      "score": 81,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 48.61,
+      "volume_ratio": 3.89,
+      "breakout_pct": 2.14,
+      "range_width_pct": 6.09,
+      "change_24h_pct": -6.27,
+      "quote_volume_24h": 6912111.6566,
+      "resistance": 47.59,
+      "candle_open_ms": 1795518000000
+    }
+  ]
+}
