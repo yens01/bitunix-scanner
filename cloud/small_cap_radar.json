@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-24T01:36:35.664929+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "ZHONGJIUSDT",
+      "score": 99,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 73.52,
+      "volume_ratio": 25.05,
+      "breakout_pct": 1.65,
+      "range_width_pct": 3.03,
+      "change_24h_pct": 12.52,
+      "quote_volume_24h": 2571460.113,
+      "resistance": 72.33,
+      "candle_open_ms": 1795482900000
+    },
+    {
+      "symbol": "LISTAUSDT",
+      "score": 81,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.10011,
+      "volume_ratio": 4.12,
+      "breakout_pct": 4.83,
+      "range_width_pct": 13.42,
+      "change_24h_pct": 28.73,
+      "quote_volume_24h": 1882482.54596,
+      "resistance": 0.0955,
+      "candle_open_ms": 1795482900000
+    }
+  ]
+}
