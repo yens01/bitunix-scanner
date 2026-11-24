@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-24T11:36:08.187854+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "SQQQUSDT",
+      "score": 86,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 48.39,
+      "volume_ratio": 5.16,
+      "breakout_pct": 1.38,
+      "range_width_pct": 6.04,
+      "change_24h_pct": -5.99,
+      "quote_volume_24h": 6931558.6166,
+      "resistance": 47.73,
+      "candle_open_ms": 1795518900000
+    }
+  ]
+}
