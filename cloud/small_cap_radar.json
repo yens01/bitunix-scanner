@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-24T04:31:43.549176+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "AIOTUSDT",
+      "score": 84,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.07784,
+      "volume_ratio": 2.25,
+      "breakout_pct": 1.69,
+      "range_width_pct": 10.46,
+      "change_24h_pct": 35.75,
+      "quote_volume_24h": 694195.40964,
+      "resistance": 0.07655,
+      "candle_open_ms": 1795493700000
+    },
+    {
+      "symbol": "1000LUNCUSDT",
+      "score": 75,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.04316,
+      "volume_ratio": 2.44,
+      "breakout_pct": 1.01,
+      "range_width_pct": 3.61,
+      "change_24h_pct": 9.82,
+      "quote_volume_24h": 703203.09496,
+      "resistance": 0.04273,
+      "candle_open_ms": 1795493700000
+    }
+  ]
+}
