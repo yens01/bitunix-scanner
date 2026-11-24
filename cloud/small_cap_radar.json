@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-24T21:11:12.407746+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "TSLAUSDT",
+      "score": 74,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 385.93,
+      "reference_stop": 381.22,
+      "reference_target": 395.35,
+      "reference_rr": 2,
+      "risk_pct": 1.22,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 385.24,
+      "volume_ratio": 2.88,
+      "breakout_pct": -0.18,
+      "range_width_pct": 2.58,
+      "change_24h_pct": -0.51,
+      "quote_volume_24h": 13333944.3711,
+      "resistance": 385.93,
+      "candle_open_ms": 1795553100000
+    },
+    {
+      "symbol": "NVDAUSDT",
+      "score": 63,
+      "stage": "啟動",
+      "entry_status": "突破確認",
+      "entry_reason": "最新15m收盤站上前20根高點；仍需觀察能否守穩",
+      "reference_entry": 154.56,
+      "reference_stop": 152.21,
+      "reference_target": 159.26,
+      "reference_rr": 2,
+      "risk_pct": 1.52,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 155.68,
+      "volume_ratio": 1.69,
+      "breakout_pct": 0.72,
+      "range_width_pct": 2.52,
+      "change_24h_pct": -6.63,
+      "quote_volume_24h": 82130338.8133,
+      "resistance": 154.56,
+      "candle_open_ms": 1795553100000
+    }
+  ]
+}
