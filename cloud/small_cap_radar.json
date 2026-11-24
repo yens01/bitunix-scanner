@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-24T16:51:08.551490+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "QQQUSDT",
+      "score": 79,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 644.52,
+      "reference_stop": 632.27,
+      "reference_target": 669.02,
+      "reference_rr": 2,
+      "risk_pct": 1.9,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 635.56,
+      "volume_ratio": 3.35,
+      "breakout_pct": -1.39,
+      "range_width_pct": 1.94,
+      "change_24h_pct": -2.17,
+      "quote_volume_24h": 21304952.9556,
+      "resistance": 644.52,
+      "candle_open_ms": 1795537800000
+    }
+  ]
+}
