@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-25T12:06:14.190824+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "XAUUSDT",
+      "score": 74,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 3546.86,
+      "reference_stop": 3485.0,
+      "reference_target": 3670.58,
+      "reference_rr": 2,
+      "risk_pct": 1.74,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 3497.56,
+      "volume_ratio": 4.43,
+      "breakout_pct": -1.39,
+      "range_width_pct": 0.9,
+      "change_24h_pct": -3.54,
+      "quote_volume_24h": 85152083.77376,
+      "resistance": 3546.86,
+      "candle_open_ms": 1795607100000
+    },
+    {
+      "symbol": "XAUTUSDT",
+      "score": 70,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 3532.02,
+      "reference_stop": 3479.4,
+      "reference_target": 3637.26,
+      "reference_rr": 2,
+      "risk_pct": 1.49,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 3485.02,
+      "volume_ratio": 3.16,
+      "breakout_pct": -1.33,
+      "range_width_pct": 0.85,
+      "change_24h_pct": -3.5,
+      "quote_volume_24h": 11100273.53594,
+      "resistance": 3532.02,
+      "candle_open_ms": 1795607100000
+    }
+  ]
+}
