@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-25T19:11:03.348968+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "AAPLUSDT",
+      "score": 67,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 355.45,
+      "reference_stop": 352.98,
+      "reference_target": 360.39,
+      "reference_rr": 2,
+      "risk_pct": 0.69,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 355.11,
+      "volume_ratio": 1.67,
+      "breakout_pct": -0.1,
+      "range_width_pct": 2.81,
+      "change_24h_pct": 0.92,
+      "quote_volume_24h": 4437819.1896,
+      "resistance": 355.45,
+      "candle_open_ms": 1795632300000
+    }
+  ]
+}
