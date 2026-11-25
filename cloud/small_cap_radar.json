@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-25T13:36:03.608216+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "ELSAUSDT",
+      "score": 89,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.08133,
+      "volume_ratio": 7.58,
+      "breakout_pct": 5.66,
+      "range_width_pct": 8.96,
+      "change_24h_pct": -11.41,
+      "quote_volume_24h": 1550888.63086,
+      "resistance": 0.07697,
+      "candle_open_ms": 1795612500000
+    },
+    {
+      "symbol": "XAGUSDT",
+      "score": 67,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 40.56,
+      "reference_stop": 39.66,
+      "reference_target": 42.36,
+      "reference_rr": 2,
+      "risk_pct": 2.22,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 40.14,
+      "volume_ratio": 2.89,
+      "breakout_pct": -1.04,
+      "range_width_pct": 3.0,
+      "change_24h_pct": -6.01,
+      "quote_volume_24h": 51422950.49568,
+      "resistance": 40.56,
+      "candle_open_ms": 1795612500000
+    }
+  ]
+}
