@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-25T10:07:08.860177+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "PIPPINUSDT",
+      "score": 82,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.01987,
+      "volume_ratio": 4.14,
+      "breakout_pct": 0.81,
+      "range_width_pct": 6.77,
+      "change_24h_pct": 12.35,
+      "quote_volume_24h": 1174265.17741,
+      "resistance": 0.01971,
+      "candle_open_ms": 1795599900000
+    },
+    {
+      "symbol": "CLUSDT",
+      "score": 80,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 82.06,
+      "reference_stop": 80.9,
+      "reference_target": 84.38,
+      "reference_rr": 2,
+      "risk_pct": 1.41,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 81.58,
+      "volume_ratio": 2.79,
+      "breakout_pct": -0.58,
+      "range_width_pct": 2.27,
+      "change_24h_pct": 2.21,
+      "quote_volume_24h": 24184467.793,
+      "resistance": 82.06,
+      "candle_open_ms": 1795599900000
+    }
+  ]
+}
