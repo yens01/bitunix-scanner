@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-25T10:36:13.822230+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "BLURUSDT",
+      "score": 99,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.009424,
+      "volume_ratio": 9.58,
+      "breakout_pct": 3.04,
+      "range_width_pct": 9.11,
+      "change_24h_pct": 15.96,
+      "quote_volume_24h": 960850.338055,
+      "resistance": 0.009146,
+      "candle_open_ms": 1795601700000
+    },
+    {
+      "symbol": "SSVUSDT",
+      "score": 89,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 1.773,
+      "volume_ratio": 13.27,
+      "breakout_pct": 1.31,
+      "range_width_pct": 14.98,
+      "change_24h_pct": 12.17,
+      "quote_volume_24h": 517597.19383,
+      "resistance": 1.75,
+      "candle_open_ms": 1795601700000
+    }
+  ]
+}
