@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-25T18:56:28.651184+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "PROMUSDT",
+      "score": 77,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 5.246,
+      "volume_ratio": 2.91,
+      "breakout_pct": 2.18,
+      "range_width_pct": 9.47,
+      "change_24h_pct": 12.02,
+      "quote_volume_24h": 864099.7326,
+      "resistance": 5.134,
+      "candle_open_ms": 1795631400000
+    },
+    {
+      "symbol": "HYPEUSDT",
+      "score": 75,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 60.458,
+      "volume_ratio": 2.48,
+      "breakout_pct": 1.28,
+      "range_width_pct": 6.41,
+      "change_24h_pct": 0.11,
+      "quote_volume_24h": 31336113.95443,
+      "resistance": 59.694,
+      "candle_open_ms": 1795631400000
+    }
+  ]
+}
