@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-25T03:06:05.067136+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "MMTUSDT",
+      "score": 81,
+      "stage": "潛伏",
+      "entry_status": "等待回踩",
+      "entry_reason": "價格回測先前壓力；需再次確認支撐",
+      "reference_entry": 0.2233,
+      "reference_stop": 0.218,
+      "reference_target": 0.2339,
+      "reference_rr": 2,
+      "risk_pct": 2.37,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 0.2232,
+      "volume_ratio": 3.78,
+      "breakout_pct": -0.04,
+      "range_width_pct": 2.95,
+      "change_24h_pct": -1.79,
+      "quote_volume_24h": 7101026.0441,
+      "resistance": 0.2233,
+      "candle_open_ms": 1795574700000
+    }
+  ]
+}
