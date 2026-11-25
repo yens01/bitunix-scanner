@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-25T06:46:22.030661+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "1000PEPEUSDT",
+      "score": 81,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.0035298,
+      "volume_ratio": 3.94,
+      "breakout_pct": 0.55,
+      "range_width_pct": 2.98,
+      "change_24h_pct": -0.4,
+      "quote_volume_24h": 12894191.9288319,
+      "resistance": 0.0035104,
+      "candle_open_ms": 1795588200000
+    },
+    {
+      "symbol": "XAUUSDT",
+      "score": 64,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 3581.81,
+      "reference_stop": 3522.8,
+      "reference_target": 3699.83,
+      "reference_rr": 2,
+      "risk_pct": 1.65,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 3528.64,
+      "volume_ratio": 2.09,
+      "breakout_pct": -1.48,
+      "range_width_pct": 1.68,
+      "change_24h_pct": -2.71,
+      "quote_volume_24h": 77096354.94136,
+      "resistance": 3581.81,
+      "candle_open_ms": 1795588200000
+    }
+  ]
+}
