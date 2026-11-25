@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-25T21:16:20.929219+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "WLDUSDT",
+      "score": 67,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 0.2429,
+      "reference_stop": 0.2384,
+      "reference_target": 0.2519,
+      "reference_rr": 2,
+      "risk_pct": 1.85,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 0.2404,
+      "volume_ratio": 1.7,
+      "breakout_pct": -1.03,
+      "range_width_pct": 7.19,
+      "change_24h_pct": 2.87,
+      "quote_volume_24h": 4654558.0165,
+      "resistance": 0.2429,
+      "candle_open_ms": 1795640400000
+    },
+    {
+      "symbol": "SKHYUSDT",
+      "score": 61,
+      "stage": "啟動",
+      "entry_status": "突破確認",
+      "entry_reason": "最新15m收盤站上前20根高點；仍需觀察能否守穩",
+      "reference_entry": 111.28,
+      "reference_stop": 108.7,
+      "reference_target": 116.44,
+      "reference_rr": 2,
+      "risk_pct": 2.32,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 111.47,
+      "volume_ratio": 1.54,
+      "breakout_pct": 0.17,
+      "range_width_pct": 8.96,
+      "change_24h_pct": -0.45,
+      "quote_volume_24h": 11021647.4733,
+      "resistance": 111.28,
+      "candle_open_ms": 1795640400000
+    }
+  ]
+}
