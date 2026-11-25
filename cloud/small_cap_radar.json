@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-25T21:01:46.216422+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "HBARUSDT",
+      "score": 71,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 0.05204,
+      "reference_stop": 0.05142,
+      "reference_target": 0.05328,
+      "reference_rr": 2,
+      "risk_pct": 1.19,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 0.05196,
+      "volume_ratio": 1.99,
+      "breakout_pct": -0.15,
+      "range_width_pct": 5.94,
+      "change_24h_pct": 4.1,
+      "quote_volume_24h": 3917057.06371,
+      "resistance": 0.05204,
+      "candle_open_ms": 1795639500000
+    },
+    {
+      "symbol": "HYPEUSDT",
+      "score": 62,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 61.926,
+      "reference_stop": 61.028,
+      "reference_target": 63.722,
+      "reference_rr": 2,
+      "risk_pct": 1.45,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 61.874,
+      "volume_ratio": 1.93,
+      "breakout_pct": -0.08,
+      "range_width_pct": 8.78,
+      "change_24h_pct": 3.83,
+      "quote_volume_24h": 35998549.48477,
+      "resistance": 61.926,
+      "candle_open_ms": 1795639500000
+    }
+  ]
+}
