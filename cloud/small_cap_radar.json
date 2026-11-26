@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-26T07:51:01.922349+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "AMDUSDT",
+      "score": 72,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 418.43,
+      "reference_stop": 410.75,
+      "reference_target": 433.79,
+      "reference_rr": 2,
+      "risk_pct": 1.84,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 414.31,
+      "volume_ratio": 2.1,
+      "breakout_pct": -0.98,
+      "range_width_pct": 1.87,
+      "change_24h_pct": 4.83,
+      "quote_volume_24h": 9265489.0915,
+      "resistance": 418.43,
+      "candle_open_ms": 1795678200000
+    }
+  ]
+}
