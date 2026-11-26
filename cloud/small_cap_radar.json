@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-26T15:26:02.158183+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "SSVUSDT",
+      "score": 79,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 2.715,
+      "volume_ratio": 3.47,
+      "breakout_pct": 1.34,
+      "range_width_pct": 14.34,
+      "change_24h_pct": 37.72,
+      "quote_volume_24h": 13636039.69816,
+      "resistance": 2.679,
+      "candle_open_ms": 1795705200000
+    }
+  ]
+}
