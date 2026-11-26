@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-26T16:51:04.768732+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "SEIUSDT",
+      "score": 75,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.03866,
+      "volume_ratio": 2.52,
+      "breakout_pct": 2.14,
+      "range_width_pct": 9.84,
+      "change_24h_pct": 22.58,
+      "quote_volume_24h": 2620838.97131,
+      "resistance": 0.03785,
+      "candle_open_ms": 1795710600000
+    }
+  ]
+}
