@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-26T03:46:11.252983+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "BTWUSDT",
+      "score": 89,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.9816,
+      "volume_ratio": 7.41,
+      "breakout_pct": 6.61,
+      "range_width_pct": 5.61,
+      "change_24h_pct": 17.02,
+      "quote_volume_24h": 2912027.7831,
+      "resistance": 0.9207,
+      "candle_open_ms": 1795663800000
+    },
+    {
+      "symbol": "GOOGLUSDT",
+      "score": 63,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 277.79,
+      "reference_stop": 276.55,
+      "reference_target": 280.27,
+      "reference_rr": 2,
+      "risk_pct": 0.45,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 277.19,
+      "volume_ratio": 2.01,
+      "breakout_pct": -0.22,
+      "range_width_pct": 1.7,
+      "change_24h_pct": -0.26,
+      "quote_volume_24h": 7691344.2084,
+      "resistance": 277.79,
+      "candle_open_ms": 1795663800000
+    }
+  ]
+}
