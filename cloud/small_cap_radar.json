@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-26T20:41:07.404739+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "NVDAUSDT",
+      "score": 82,
+      "stage": "啟動",
+      "entry_status": "突破確認",
+      "entry_reason": "最新15m收盤站上前20根高點；仍需觀察能否守穩",
+      "reference_entry": 151.38,
+      "reference_stop": 150.76,
+      "reference_target": 152.62,
+      "reference_rr": 2,
+      "risk_pct": 0.41,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 151.75,
+      "volume_ratio": 1.97,
+      "breakout_pct": 0.24,
+      "range_width_pct": 1.58,
+      "change_24h_pct": 2.7,
+      "quote_volume_24h": 26011130.7043,
+      "resistance": 151.38,
+      "candle_open_ms": 1795724100000
+    },
+    {
+      "symbol": "SAMSUNGUSDT",
+      "score": 76,
+      "stage": "啟動",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": 0.16,
+      "plan_note": "停損距離不合理或突破失敗，不提供進場計畫",
+      "last_closed_price": 128.26,
+      "volume_ratio": 1.51,
+      "breakout_pct": 0.0,
+      "range_width_pct": 0.83,
+      "change_24h_pct": 1.23,
+      "quote_volume_24h": 3608074.2582,
+      "resistance": 128.26,
+      "candle_open_ms": 1795724100000
+    }
+  ]
+}
