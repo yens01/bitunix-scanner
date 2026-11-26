@@ -1,0 +1,753 @@
+{
+  "schema_version": 1,
+  "source": "paper_state.events (simulated orders, not exchange fills)",
+  "assumptions": {
+    "starting_capital_usdt": 50.0,
+    "pnl": "estimated net after modelled costs; no live execution",
+    "unrealized_pnl": "estimated using last closed candle, not executable quote",
+    "drawdown": "closed-trade equity only; excludes intratrade excursions"
+  },
+  "day_utc": "2026-11-26",
+  "orders_today": 1,
+  "open_position": {
+    "signal_id": "c7825aca0502",
+    "symbol": "BMNRUSDT",
+    "side": "short",
+    "entry": 13.600000000000001,
+    "stop": 13.666064285714286,
+    "tp": 13.406714285714287,
+    "quantity": 2.6045930137373863,
+    "opened_at": "2026-11-26T00:00:55.201429+00:00",
+    "entry_bar_ms": 1795649400000
+  },
+  "mark": null,
+  "estimated_unrealized_pnl_usdt": null,
+  "estimated_marked_equity_usdt": null,
+  "unmatched_close_events": 0,
+  "duplicate_open_events": 0,
+  "duplicate_close_events": 0,
+  "unmatched_open_events": 1,
+  "overall": {
+    "closed_trades": 26,
+    "wins": 7,
+    "losses": 19,
+    "breakeven": 0,
+    "win_rate_pct": 26.92,
+    "estimated_net_pnl_usdt": -1.9247234,
+    "average_net_pnl_usdt": -0.07402782,
+    "average_win_usdt": 0.40399931,
+    "average_loss_usdt": -0.25014308,
+    "profit_factor": 0.595,
+    "max_drawdown_usdt": 3.30790577,
+    "max_drawdown_pct": 6.5671,
+    "ending_equity_usdt": 48.0752766,
+    "equity_curve": [
+      {
+        "signal_id": "93c9aad04348",
+        "equity_usdt": 50.37073822
+      },
+      {
+        "signal_id": "5521c5e60341",
+        "equity_usdt": 50.12053747
+      },
+      {
+        "signal_id": "dbf661ed5c6e",
+        "equity_usdt": 49.87028883
+      },
+      {
+        "signal_id": "9515853ce6de",
+        "equity_usdt": 49.62008557
+      },
+      {
+        "signal_id": "412f4501fc89",
+        "equity_usdt": 49.3698207
+      },
+      {
+        "signal_id": "405c6d2dd4d2",
+        "equity_usdt": 49.11960879
+      },
+      {
+        "signal_id": "37cf86179de4",
+        "equity_usdt": 48.86941556
+      },
+      {
+        "signal_id": "60bd34497617",
+        "equity_usdt": 48.61919161
+      },
+      {
+        "signal_id": "05753547654b",
+        "equity_usdt": 48.36899829
+      },
+      {
+        "signal_id": "025e1f94037b",
+        "equity_usdt": 48.11881281
+      },
+      {
+        "signal_id": "059f8812dd6c",
+        "equity_usdt": 47.86857878
+      },
+      {
+        "signal_id": "0a718b71d453",
+        "equity_usdt": 48.1693598
+      },
+      {
+        "signal_id": "c32ec4343c07",
+        "equity_usdt": 47.91915921
+      },
+      {
+        "signal_id": "9686c0a0ca23",
+        "equity_usdt": 47.66891654
+      },
+      {
+        "signal_id": "c697a5baf7de",
+        "equity_usdt": 48.2934899
+      },
+      {
+        "signal_id": "8aee4756a94f",
+        "equity_usdt": 48.0432799
+      },
+      {
+        "signal_id": "dedefb870fee",
+        "equity_usdt": 47.79307887
+      },
+      {
+        "signal_id": "b6f5d8071c80",
+        "equity_usdt": 47.54286036
+      },
+      {
+        "signal_id": "5a9b330a014e",
+        "equity_usdt": 47.29262276
+      },
+      {
+        "signal_id": "70c6442d2daf",
+        "equity_usdt": 47.56231852
+      },
+      {
+        "signal_id": "ee8bad114caf",
+        "equity_usdt": 47.31256568
+      },
+      {
+        "signal_id": "1af8b55274c7",
+        "equity_usdt": 47.06283245
+      },
+      {
+        "signal_id": "8bf61f2d7d47",
+        "equity_usdt": 47.55215165
+      },
+      {
+        "signal_id": "30e831431553",
+        "equity_usdt": 48.03590516
+      },
+      {
+        "signal_id": "cf85fc8126a9",
+        "equity_usdt": 48.32503928
+      },
+      {
+        "signal_id": "d387879bea98",
+        "equity_usdt": 48.0752766
+      }
+    ]
+  },
+  "groups": [
+    {
+      "dimension": "side",
+      "group": "long",
+      "closed_trades": 5,
+      "wins": 2,
+      "losses": 3,
+      "breakeven": 0,
+      "win_rate_pct": 40.0,
+      "estimated_net_pnl_usdt": 0.22382396,
+      "average_net_pnl_usdt": 0.04476479,
+      "average_win_usdt": 0.48653636,
+      "average_loss_usdt": -0.24974958,
+      "profit_factor": 1.2987
+    },
+    {
+      "dimension": "side",
+      "group": "short",
+      "closed_trades": 21,
+      "wins": 5,
+      "losses": 16,
+      "breakeven": 0,
+      "win_rate_pct": 23.81,
+      "estimated_net_pnl_usdt": -2.14854736,
+      "average_net_pnl_usdt": -0.10231178,
+      "average_win_usdt": 0.3709845,
+      "average_loss_usdt": -0.25021687,
+      "profit_factor": 0.4633
+    },
+    {
+      "dimension": "symbol",
+      "group": "ASTERUSDT",
+      "closed_trades": 1,
+      "wins": 1,
+      "losses": 0,
+      "breakeven": 0,
+      "win_rate_pct": 100.0,
+      "estimated_net_pnl_usdt": 0.62457336,
+      "average_net_pnl_usdt": 0.62457336,
+      "average_win_usdt": 0.62457336,
+      "average_loss_usdt": null,
+      "profit_factor": null
+    },
+    {
+      "dimension": "symbol",
+      "group": "BEAMXUSDT",
+      "closed_trades": 1,
+      "wins": 0,
+      "losses": 1,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "estimated_net_pnl_usdt": -0.25018548,
+      "average_net_pnl_usdt": -0.25018548,
+      "average_win_usdt": null,
+      "average_loss_usdt": -0.25018548,
+      "profit_factor": 0.0
+    },
+    {
+      "dimension": "symbol",
+      "group": "BTWUSDT",
+      "closed_trades": 1,
+      "wins": 0,
+      "losses": 1,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "estimated_net_pnl_usdt": -0.25021851,
+      "average_net_pnl_usdt": -0.25021851,
+      "average_win_usdt": null,
+      "average_loss_usdt": -0.25021851,
+      "profit_factor": 0.0
+    },
+    {
+      "dimension": "symbol",
+      "group": "CSOPHLS2LUSDT",
+      "closed_trades": 1,
+      "wins": 0,
+      "losses": 1,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "estimated_net_pnl_usdt": -0.25024267,
+      "average_net_pnl_usdt": -0.25024267,
+      "average_win_usdt": null,
+      "average_loss_usdt": -0.25024267,
+      "profit_factor": 0.0
+    },
+    {
+      "dimension": "symbol",
+      "group": "DRAMUSDT",
+      "closed_trades": 1,
+      "wins": 0,
+      "losses": 1,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "estimated_net_pnl_usdt": -0.25024864,
+      "average_net_pnl_usdt": -0.25024864,
+      "average_win_usdt": null,
+      "average_loss_usdt": -0.25024864,
+      "profit_factor": 0.0
+    },
+    {
+      "dimension": "symbol",
+      "group": "FETUSDT",
+      "closed_trades": 1,
+      "wins": 0,
+      "losses": 1,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "estimated_net_pnl_usdt": -0.25019323,
+      "average_net_pnl_usdt": -0.25019323,
+      "average_win_usdt": null,
+      "average_loss_usdt": -0.25019323,
+      "profit_factor": 0.0
+    },
+    {
+      "dimension": "symbol",
+      "group": "HMSTRUSDT",
+      "closed_trades": 1,
+      "wins": 0,
+      "losses": 1,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "estimated_net_pnl_usdt": -0.24973323,
+      "average_net_pnl_usdt": -0.24973323,
+      "average_win_usdt": null,
+      "average_loss_usdt": -0.24973323,
+      "profit_factor": 0.0
+    },
+    {
+      "dimension": "symbol",
+      "group": "HUMAUSDT",
+      "closed_trades": 1,
+      "wins": 0,
+      "losses": 1,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "estimated_net_pnl_usdt": -0.25021191,
+      "average_net_pnl_usdt": -0.25021191,
+      "average_win_usdt": null,
+      "average_loss_usdt": -0.25021191,
+      "profit_factor": 0.0
+    },
+    {
+      "dimension": "symbol",
+      "group": "ICNTUSDT",
+      "closed_trades": 1,
+      "wins": 1,
+      "losses": 0,
+      "breakeven": 0,
+      "win_rate_pct": 100.0,
+      "estimated_net_pnl_usdt": 0.4893192,
+      "average_net_pnl_usdt": 0.4893192,
+      "average_win_usdt": 0.4893192,
+      "average_loss_usdt": null,
+      "profit_factor": null
+    },
+    {
+      "dimension": "symbol",
+      "group": "IDOLUSDT",
+      "closed_trades": 1,
+      "wins": 1,
+      "losses": 0,
+      "breakeven": 0,
+      "win_rate_pct": 100.0,
+      "estimated_net_pnl_usdt": 0.48375351,
+      "average_net_pnl_usdt": 0.48375351,
+      "average_win_usdt": 0.48375351,
+      "average_loss_usdt": null,
+      "profit_factor": null
+    },
+    {
+      "dimension": "symbol",
+      "group": "INJUSDT",
+      "closed_trades": 1,
+      "wins": 1,
+      "losses": 0,
+      "breakeven": 0,
+      "win_rate_pct": 100.0,
+      "estimated_net_pnl_usdt": 0.26969576,
+      "average_net_pnl_usdt": 0.26969576,
+      "average_win_usdt": 0.26969576,
+      "average_loss_usdt": null,
+      "profit_factor": null
+    },
+    {
+      "dimension": "symbol",
+      "group": "JCTUSDT",
+      "closed_trades": 1,
+      "wins": 0,
+      "losses": 1,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "estimated_net_pnl_usdt": -0.25020103,
+      "average_net_pnl_usdt": -0.25020103,
+      "average_win_usdt": null,
+      "average_loss_usdt": -0.25020103,
+      "profit_factor": 0.0
+    },
+    {
+      "dimension": "symbol",
+      "group": "KAVAUSDT",
+      "closed_trades": 1,
+      "wins": 0,
+      "losses": 1,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "estimated_net_pnl_usdt": -0.2502376,
+      "average_net_pnl_usdt": -0.2502376,
+      "average_win_usdt": null,
+      "average_loss_usdt": -0.2502376,
+      "profit_factor": 0.0
+    },
+    {
+      "dimension": "symbol",
+      "group": "NIGHTUSDT",
+      "closed_trades": 1,
+      "wins": 1,
+      "losses": 0,
+      "breakeven": 0,
+      "win_rate_pct": 100.0,
+      "estimated_net_pnl_usdt": 0.30078102,
+      "average_net_pnl_usdt": 0.30078102,
+      "average_win_usdt": 0.30078102,
+      "average_loss_usdt": null,
+      "profit_factor": null
+    },
+    {
+      "dimension": "symbol",
+      "group": "ONEUSDT",
+      "closed_trades": 1,
+      "wins": 1,
+      "losses": 0,
+      "breakeven": 0,
+      "win_rate_pct": 100.0,
+      "estimated_net_pnl_usdt": 0.37073822,
+      "average_net_pnl_usdt": 0.37073822,
+      "average_win_usdt": 0.37073822,
+      "average_loss_usdt": null,
+      "profit_factor": null
+    },
+    {
+      "dimension": "symbol",
+      "group": "PHAROSUSDT",
+      "closed_trades": 1,
+      "wins": 0,
+      "losses": 1,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "estimated_net_pnl_usdt": -0.24976268,
+      "average_net_pnl_usdt": -0.24976268,
+      "average_win_usdt": null,
+      "average_loss_usdt": -0.24976268,
+      "profit_factor": 0.0
+    },
+    {
+      "dimension": "symbol",
+      "group": "SNXXUSDT",
+      "closed_trades": 1,
+      "wins": 0,
+      "losses": 1,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "estimated_net_pnl_usdt": -0.25020059,
+      "average_net_pnl_usdt": -0.25020059,
+      "average_win_usdt": null,
+      "average_loss_usdt": -0.25020059,
+      "profit_factor": 0.0
+    },
+    {
+      "dimension": "symbol",
+      "group": "SOXSUSDT",
+      "closed_trades": 3,
+      "wins": 0,
+      "losses": 3,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "estimated_net_pnl_usdt": -0.75066888,
+      "average_net_pnl_usdt": -0.25022296,
+      "average_win_usdt": null,
+      "average_loss_usdt": -0.25022296,
+      "profit_factor": 0.0
+    },
+    {
+      "dimension": "symbol",
+      "group": "UAIUSDT",
+      "closed_trades": 1,
+      "wins": 0,
+      "losses": 1,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "estimated_net_pnl_usdt": -0.25022395,
+      "average_net_pnl_usdt": -0.25022395,
+      "average_win_usdt": null,
+      "average_loss_usdt": -0.25022395,
+      "profit_factor": 0.0
+    },
+    {
+      "dimension": "symbol",
+      "group": "USELESSUSDT",
+      "closed_trades": 1,
+      "wins": 0,
+      "losses": 1,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "estimated_net_pnl_usdt": -0.25021,
+      "average_net_pnl_usdt": -0.25021,
+      "average_win_usdt": null,
+      "average_loss_usdt": -0.25021,
+      "profit_factor": 0.0
+    },
+    {
+      "dimension": "symbol",
+      "group": "UVXYUSDT",
+      "closed_trades": 1,
+      "wins": 1,
+      "losses": 0,
+      "breakeven": 0,
+      "win_rate_pct": 100.0,
+      "estimated_net_pnl_usdt": 0.28913412,
+      "average_net_pnl_usdt": 0.28913412,
+      "average_win_usdt": 0.28913412,
+      "average_loss_usdt": null,
+      "profit_factor": null
+    },
+    {
+      "dimension": "symbol",
+      "group": "VELVETUSDT",
+      "closed_trades": 1,
+      "wins": 0,
+      "losses": 1,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "estimated_net_pnl_usdt": -0.24975284,
+      "average_net_pnl_usdt": -0.24975284,
+      "average_win_usdt": null,
+      "average_loss_usdt": -0.24975284,
+      "profit_factor": 0.0
+    },
+    {
+      "dimension": "symbol",
+      "group": "VVVUSDT",
+      "closed_trades": 1,
+      "wins": 0,
+      "losses": 1,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "estimated_net_pnl_usdt": -0.25019332,
+      "average_net_pnl_usdt": -0.25019332,
+      "average_win_usdt": null,
+      "average_loss_usdt": -0.25019332,
+      "profit_factor": 0.0
+    },
+    {
+      "dimension": "symbol",
+      "group": "XMRUSDT",
+      "closed_trades": 1,
+      "wins": 0,
+      "losses": 1,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "estimated_net_pnl_usdt": -0.25023403,
+      "average_net_pnl_usdt": -0.25023403,
+      "average_win_usdt": null,
+      "average_loss_usdt": -0.25023403,
+      "profit_factor": 0.0
+    }
+  ],
+  "trades": [
+    {
+      "signal_id": "93c9aad04348",
+      "symbol": "ONEUSDT",
+      "side": "short",
+      "opened_at": "2026-11-11T14:45:34.243466+00:00",
+      "closed_at": null,
+      "reason": "tp",
+      "estimated_net_pnl_usdt": 0.37073822
+    },
+    {
+      "signal_id": "5521c5e60341",
+      "symbol": "SOXSUSDT",
+      "side": "short",
+      "opened_at": "2026-11-11T15:00:54.025365+00:00",
+      "closed_at": null,
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.25020075
+    },
+    {
+      "signal_id": "dbf661ed5c6e",
+      "symbol": "DRAMUSDT",
+      "side": "short",
+      "opened_at": "2026-11-12T00:00:54.928077+00:00",
+      "closed_at": "2026-11-12T02:45:33.033137+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.25024864
+    },
+    {
+      "signal_id": "9515853ce6de",
+      "symbol": "SOXSUSDT",
+      "side": "short",
+      "opened_at": "2026-11-12T03:15:35.307158+00:00",
+      "closed_at": "2026-11-12T03:30:43.672140+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.25020326
+    },
+    {
+      "signal_id": "412f4501fc89",
+      "symbol": "SOXSUSDT",
+      "side": "short",
+      "opened_at": "2026-11-13T00:00:52.376606+00:00",
+      "closed_at": "2026-11-13T14:45:34.123131+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.25026487
+    },
+    {
+      "signal_id": "405c6d2dd4d2",
+      "symbol": "HUMAUSDT",
+      "side": "short",
+      "opened_at": "2026-11-13T15:45:36.502285+00:00",
+      "closed_at": "2026-11-13T16:00:51.479674+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.25021191
+    },
+    {
+      "signal_id": "37cf86179de4",
+      "symbol": "FETUSDT",
+      "side": "short",
+      "opened_at": "2026-11-14T00:00:50.535733+00:00",
+      "closed_at": "2026-11-14T00:15:44.853679+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.25019323
+    },
+    {
+      "signal_id": "60bd34497617",
+      "symbol": "UAIUSDT",
+      "side": "short",
+      "opened_at": "2026-11-14T03:15:34.019504+00:00",
+      "closed_at": "2026-11-14T03:30:39.873685+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.25022395
+    },
+    {
+      "signal_id": "05753547654b",
+      "symbol": "VVVUSDT",
+      "side": "short",
+      "opened_at": "2026-11-15T02:15:39.352216+00:00",
+      "closed_at": "2026-11-15T02:30:39.582849+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.25019332
+    },
+    {
+      "signal_id": "025e1f94037b",
+      "symbol": "BEAMXUSDT",
+      "side": "short",
+      "opened_at": "2026-11-15T03:30:39.220228+00:00",
+      "closed_at": "2026-11-15T05:30:45.309381+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.25018548
+    },
+    {
+      "signal_id": "059f8812dd6c",
+      "symbol": "XMRUSDT",
+      "side": "short",
+      "opened_at": "2026-11-16T00:00:59.845700+00:00",
+      "closed_at": "2026-11-16T02:30:52.527502+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.25023403
+    },
+    {
+      "signal_id": "0a718b71d453",
+      "symbol": "NIGHTUSDT",
+      "side": "short",
+      "opened_at": "2026-11-16T02:35:29.381128+00:00",
+      "closed_at": "2026-11-16T04:00:49.067171+00:00",
+      "reason": "tp",
+      "estimated_net_pnl_usdt": 0.30078102
+    },
+    {
+      "signal_id": "c32ec4343c07",
+      "symbol": "SNXXUSDT",
+      "side": "short",
+      "opened_at": "2026-11-17T00:15:39.858452+00:00",
+      "closed_at": "2026-11-17T00:30:53.043233+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.25020059
+    },
+    {
+      "signal_id": "9686c0a0ca23",
+      "symbol": "CSOPHLS2LUSDT",
+      "side": "short",
+      "opened_at": "2026-11-17T01:00:54.839189+00:00",
+      "closed_at": "2026-11-17T01:15:33.499017+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.25024267
+    },
+    {
+      "signal_id": "c697a5baf7de",
+      "symbol": "ASTERUSDT",
+      "side": "short",
+      "opened_at": "2026-11-18T00:00:55.149044+00:00",
+      "closed_at": "2026-11-18T17:15:41.181690+00:00",
+      "reason": "tp",
+      "estimated_net_pnl_usdt": 0.62457336
+    },
+    {
+      "signal_id": "8aee4756a94f",
+      "symbol": "USELESSUSDT",
+      "side": "short",
+      "opened_at": "2026-11-18T17:20:37.240167+00:00",
+      "closed_at": "2026-11-18T17:30:48.773618+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.25021
+    },
+    {
+      "signal_id": "dedefb870fee",
+      "symbol": "JCTUSDT",
+      "side": "short",
+      "opened_at": "2026-11-19T00:15:38.955097+00:00",
+      "closed_at": "2026-11-19T00:45:36.200465+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.25020103
+    },
+    {
+      "signal_id": "b6f5d8071c80",
+      "symbol": "BTWUSDT",
+      "side": "short",
+      "opened_at": "2026-11-19T01:15:51.681558+00:00",
+      "closed_at": "2026-11-19T01:30:45.221361+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.25021851
+    },
+    {
+      "signal_id": "5a9b330a014e",
+      "symbol": "KAVAUSDT",
+      "side": "short",
+      "opened_at": "2026-11-20T00:01:03.359343+00:00",
+      "closed_at": "2026-11-20T00:15:34.203800+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.2502376
+    },
+    {
+      "signal_id": "70c6442d2daf",
+      "symbol": "INJUSDT",
+      "side": "short",
+      "opened_at": "2026-11-20T01:15:35.745598+00:00",
+      "closed_at": "2026-11-20T02:00:50.037578+00:00",
+      "reason": "tp",
+      "estimated_net_pnl_usdt": 0.26969576
+    },
+    {
+      "signal_id": "ee8bad114caf",
+      "symbol": "VELVETUSDT",
+      "side": "long",
+      "opened_at": "2026-11-21T00:00:52.445082+00:00",
+      "closed_at": "2026-11-21T03:45:32.581037+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.24975284
+    },
+    {
+      "signal_id": "1af8b55274c7",
+      "symbol": "HMSTRUSDT",
+      "side": "long",
+      "opened_at": "2026-11-21T03:50:37.286579+00:00",
+      "closed_at": "2026-11-24T08:15:34.277643+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.24973323
+    },
+    {
+      "signal_id": "8bf61f2d7d47",
+      "symbol": "ICNTUSDT",
+      "side": "long",
+      "opened_at": "2026-11-24T08:30:44.576223+00:00",
+      "closed_at": "2026-11-24T08:45:43.192276+00:00",
+      "reason": "tp",
+      "estimated_net_pnl_usdt": 0.4893192
+    },
+    {
+      "signal_id": "30e831431553",
+      "symbol": "IDOLUSDT",
+      "side": "long",
+      "opened_at": "2026-11-24T10:15:36.870299+00:00",
+      "closed_at": "2026-11-24T11:15:35.289587+00:00",
+      "reason": "tp",
+      "estimated_net_pnl_usdt": 0.48375351
+    },
+    {
+      "signal_id": "cf85fc8126a9",
+      "symbol": "UVXYUSDT",
+      "side": "short",
+      "opened_at": "2026-11-25T00:30:45.680768+00:00",
+      "closed_at": "2026-11-25T01:15:35.046895+00:00",
+      "reason": "tp",
+      "estimated_net_pnl_usdt": 0.28913412
+    },
+    {
+      "signal_id": "d387879bea98",
+      "symbol": "PHAROSUSDT",
+      "side": "long",
+      "opened_at": "2026-11-25T01:30:42.406149+00:00",
+      "closed_at": "2026-11-25T01:45:30.643553+00:00",
+      "reason": "stop",
+      "estimated_net_pnl_usdt": -0.24976268
+    }
+  ]
+}
