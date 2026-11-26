@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-26T08:36:04.116637+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "SKHYUSDT",
+      "score": 89,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 113.52,
+      "reference_stop": 111.61,
+      "reference_target": 117.34,
+      "reference_rr": 2,
+      "risk_pct": 1.68,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 111.96,
+      "volume_ratio": 7.11,
+      "breakout_pct": -1.37,
+      "range_width_pct": 2.05,
+      "change_24h_pct": 2.68,
+      "quote_volume_24h": 11446001.0207,
+      "resistance": 113.52,
+      "candle_open_ms": 1795680900000
+    },
+    {
+      "symbol": "INITUSDT",
+      "score": 88,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.09298,
+      "volume_ratio": 3.29,
+      "breakout_pct": 3.9,
+      "range_width_pct": 8.42,
+      "change_24h_pct": 11.61,
+      "quote_volume_24h": 636292.14536,
+      "resistance": 0.08949,
+      "candle_open_ms": 1795680900000
+    }
+  ]
+}
