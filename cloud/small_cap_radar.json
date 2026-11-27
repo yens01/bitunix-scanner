@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-27T23:31:08.169238+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "SKHYUSDT",
+      "score": 69,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 119.03,
+      "reference_stop": 117.64,
+      "reference_target": 121.81,
+      "reference_rr": 2,
+      "risk_pct": 1.17,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 118.42,
+      "volume_ratio": 2.51,
+      "breakout_pct": -0.51,
+      "range_width_pct": 1.51,
+      "change_24h_pct": 6.8,
+      "quote_volume_24h": 12002317.9849,
+      "resistance": 119.03,
+      "candle_open_ms": 1795821300000
+    }
+  ]
+}
