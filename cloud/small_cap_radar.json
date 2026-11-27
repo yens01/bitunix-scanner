@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-27T21:01:37.378094+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "TAOUSDT",
+      "score": 93,
+      "stage": "啟動",
+      "entry_status": "突破確認",
+      "entry_reason": "最新15m收盤站上前20根高點；仍需觀察能否守穩",
+      "reference_entry": 186.0,
+      "reference_stop": 184.26,
+      "reference_target": 189.48,
+      "reference_rr": 2,
+      "risk_pct": 0.94,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 186.48,
+      "volume_ratio": 2.88,
+      "breakout_pct": 0.26,
+      "range_width_pct": 1.64,
+      "change_24h_pct": 1.83,
+      "quote_volume_24h": 8120415.1429,
+      "resistance": 186.0,
+      "candle_open_ms": 1795812300000
+    },
+    {
+      "symbol": "SKYUSDT",
+      "score": 89,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.05095,
+      "volume_ratio": 11.91,
+      "breakout_pct": 4.56,
+      "range_width_pct": 8.87,
+      "change_24h_pct": 12.76,
+      "quote_volume_24h": 1194634.87326,
+      "resistance": 0.04873,
+      "candle_open_ms": 1795812300000
+    }
+  ]
+}
