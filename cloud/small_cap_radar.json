@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-27T12:55:58.162866+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "SOPHUSDT",
+      "score": 79,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.000993,
+      "volume_ratio": 3.6,
+      "breakout_pct": 2.16,
+      "range_width_pct": 6.93,
+      "change_24h_pct": 17.6,
+      "quote_volume_24h": 510653.690767,
+      "resistance": 0.000972,
+      "candle_open_ms": 1795782600000
+    },
+    {
+      "symbol": "CLUSDT",
+      "score": 77,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 86.47,
+      "reference_stop": 85.16,
+      "reference_target": 89.09,
+      "reference_rr": 2,
+      "risk_pct": 1.51,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 85.2,
+      "volume_ratio": 2.51,
+      "breakout_pct": -1.47,
+      "range_width_pct": 1.49,
+      "change_24h_pct": 0.51,
+      "quote_volume_24h": 19425359.523,
+      "resistance": 86.47,
+      "candle_open_ms": 1795782600000
+    }
+  ]
+}
