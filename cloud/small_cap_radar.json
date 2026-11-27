@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-27T11:11:14.161677+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "1000PEPEUSDT",
+      "score": 68,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 0.0036518,
+      "reference_stop": 0.0035922,
+      "reference_target": 0.003771,
+      "reference_rr": 2,
+      "risk_pct": 1.63,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 0.0036454,
+      "volume_ratio": 1.76,
+      "breakout_pct": -0.18,
+      "range_width_pct": 2.19,
+      "change_24h_pct": 2.94,
+      "quote_volume_24h": 13217124.5367539,
+      "resistance": 0.0036518,
+      "candle_open_ms": 1795776300000
+    },
+    {
+      "symbol": "BZUSDT",
+      "score": 68,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 93.08,
+      "reference_stop": 91.91,
+      "reference_target": 95.42,
+      "reference_rr": 2,
+      "risk_pct": 1.26,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 92.09,
+      "volume_ratio": 1.71,
+      "breakout_pct": -1.06,
+      "range_width_pct": 1.0,
+      "change_24h_pct": 1.05,
+      "quote_volume_24h": 5739366.27767,
+      "resistance": 93.08,
+      "candle_open_ms": 1795776300000
+    }
+  ]
+}
