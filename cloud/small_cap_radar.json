@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-27T08:06:01.762867+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "QQQUSDT",
+      "score": 70,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 654.12,
+      "reference_stop": 648.34,
+      "reference_target": 665.68,
+      "reference_rr": 2,
+      "risk_pct": 0.88,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 649.54,
+      "volume_ratio": 1.89,
+      "breakout_pct": -0.7,
+      "range_width_pct": 0.95,
+      "change_24h_pct": 2.09,
+      "quote_volume_24h": 9403966.0863,
+      "resistance": 654.12,
+      "candle_open_ms": 1795765500000
+    },
+    {
+      "symbol": "BZUSDT",
+      "score": 65,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 93.28,
+      "reference_stop": 92.38,
+      "reference_target": 95.08,
+      "reference_rr": 2,
+      "risk_pct": 0.96,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 92.82,
+      "volume_ratio": 1.53,
+      "breakout_pct": -0.49,
+      "range_width_pct": 1.26,
+      "change_24h_pct": 2.26,
+      "quote_volume_24h": 5649218.03385,
+      "resistance": 93.28,
+      "candle_open_ms": 1795765500000
+    }
+  ]
+}
