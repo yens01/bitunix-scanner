@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-11-27T23:01:20.065780+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "ACEUSDT",
+      "score": 89,
+      "stage": "突破延續",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.08209,
+      "volume_ratio": 22.42,
+      "breakout_pct": 13.49,
+      "range_width_pct": 3.42,
+      "change_24h_pct": 14.7,
+      "quote_volume_24h": 517699.0014988,
+      "resistance": 0.07233,
+      "candle_open_ms": 1795819500000
+    }
+  ]
+}
