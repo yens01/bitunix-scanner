@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-28T13:06:12.481313+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "SKYAIUSDT",
+      "score": 86,
+      "stage": "爆發初期",
+      "entry_status": "觀察突破回測",
+      "entry_reason": "已收盤突破整理區；等待回踩與量價確認",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": null,
+      "plan_note": "僅供觀察，不追高；確認滑價與流動性",
+      "last_closed_price": 0.03887,
+      "volume_ratio": 2.65,
+      "breakout_pct": 0.62,
+      "range_width_pct": 9.99,
+      "change_24h_pct": 13.39,
+      "quote_volume_24h": 640351.07556,
+      "resistance": 0.03863,
+      "candle_open_ms": 1795869900000
+    },
+    {
+      "symbol": "SOXSUSDT",
+      "score": 66,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 54.39,
+      "reference_stop": 53.84,
+      "reference_target": 55.49,
+      "reference_rr": 2,
+      "risk_pct": 1.01,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 54.07,
+      "volume_ratio": 1.6,
+      "breakout_pct": -0.59,
+      "range_width_pct": 1.28,
+      "change_24h_pct": 1.1,
+      "quote_volume_24h": 29398299.657,
+      "resistance": 54.39,
+      "candle_open_ms": 1795869900000
+    }
+  ]
+}
