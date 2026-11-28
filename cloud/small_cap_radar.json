@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-11-28T00:51:36.442954+00:00",
+  "disclaimer": "heuristic watchlist; no live orders; not a probability",
+  "candidates": [
+    {
+      "symbol": "BIGTIMEUSDT",
+      "score": 100,
+      "stage": "啟動",
+      "entry_status": "突破確認",
+      "entry_reason": "最新15m收盤站上前20根高點；仍需觀察能否守穩",
+      "reference_entry": null,
+      "reference_stop": null,
+      "reference_target": null,
+      "reference_rr": null,
+      "risk_pct": 4.89,
+      "plan_note": "停損距離不合理或突破失敗，不提供進場計畫",
+      "last_closed_price": 0.005828,
+      "volume_ratio": 5.41,
+      "breakout_pct": 0.78,
+      "range_width_pct": 5.15,
+      "change_24h_pct": 1.39,
+      "quote_volume_24h": 4967799.889604,
+      "resistance": 0.005783,
+      "candle_open_ms": 1795825800000
+    },
+    {
+      "symbol": "SPCXUSDT",
+      "score": 78,
+      "stage": "潛伏",
+      "entry_status": "等待突破",
+      "entry_reason": "尚未收盤站上前20根壓力",
+      "reference_entry": 132.75,
+      "reference_stop": 131.98,
+      "reference_target": 134.29,
+      "reference_rr": 2,
+      "risk_pct": 0.58,
+      "plan_note": "僅供突破後評估；非立即買入",
+      "last_closed_price": 131.99,
+      "volume_ratio": 2.55,
+      "breakout_pct": -0.57,
+      "range_width_pct": 0.66,
+      "change_24h_pct": 1.69,
+      "quote_volume_24h": 28446996.8985,
+      "resistance": 132.75,
+      "candle_open_ms": 1795825800000
+    }
+  ]
+}
